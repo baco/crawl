@@ -123,7 +123,7 @@ const int MAPGEN_BORDER    = 2;
 #define VIEW_BASE_WIDTH 33
 #define VIEW_MIN_WIDTH  ENV_SHOW_DIAMETER
 #define VIEW_MIN_HEIGHT ENV_SHOW_DIAMETER
-#define MSG_MIN_HEIGHT  5
+#define MSG_MIN_HEIGHT  4
 
 // max shops randomly generated in a level.
 // changing this affects the total number of shops in a game
