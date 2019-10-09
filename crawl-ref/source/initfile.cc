@@ -110,11 +110,13 @@ static bool _first_greater(const pair<int, int> &l, const pair<int, int> &r)
 
 const vector<GameOption*> game_options::build_options_list()
 {
+#ifndef DEBUG
     const bool USING_TOUCH =
 #if defined(TOUCH_UI)
         true;
 #else
         false;
+#endif
 #endif
     const bool USING_DGL =
 #if defined(DGAMELAUNCH)
@@ -194,7 +196,11 @@ const vector<GameOption*> game_options::build_options_list()
         new BoolGameOption(SIMPLE_NAME(note_chat_messages), false),
         new BoolGameOption(SIMPLE_NAME(note_dgl_messages), true),
         new BoolGameOption(SIMPLE_NAME(clear_messages), false),
+#ifdef DEBUG
+        new BoolGameOption(SIMPLE_NAME(show_more), false),
+#else
         new BoolGameOption(SIMPLE_NAME(show_more), !USING_TOUCH),
+#endif
         new BoolGameOption(SIMPLE_NAME(small_more), false),
         new BoolGameOption(SIMPLE_NAME(pickup_thrown), true),
         new BoolGameOption(SIMPLE_NAME(show_travel_trail), USING_DGL),
@@ -1027,7 +1033,7 @@ void game_options::reset_options()
 
     char_set      = CSET_DEFAULT;
 
-    incremental_pregen = false;
+    incremental_pregen = true;
     pregen_dungeon = false;
 
     // set it to the .crawlrc default
@@ -3435,13 +3441,6 @@ void game_options::read_option_line(const string &str, bool runscript)
     }
     else if (key == "game_seed")
     {
-#ifdef DGAMELAUNCH
-        // try to avoid confusing online players who put this in their rc
-        // file. N.b. it is still possible to use the -seed CLO.
-        report_error("Your rc file specifies a game seed, but this build of "
-                     "crawl does not support seed selection. I will "
-                     "choose a seed randomly.");
-#else
         // special handling because of the large type.
         uint64_t tmp_seed = 0;
         if (sscanf(field.c_str(), "%" SCNu64, &tmp_seed))
@@ -3451,7 +3450,6 @@ void game_options::read_option_line(const string &str, bool runscript)
             if (!seed_from_rc)
                 seed_from_rc = tmp_seed;
         }
-#endif
     }
     else if (key == "pregen_dungeon")
     {

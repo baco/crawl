@@ -1037,11 +1037,6 @@ void tile_reset_feat(const coord_def &gc)
 
 static void _tile_place_cloud(const coord_def &gc, const cloud_info &cl)
 {
-    // In the Shoals, ink is handled differently. (jpeg)
-    // I'm not sure it is even possible anywhere else, but just to be safe...
-    if (cl.type == CLOUD_INK && player_in_branch(BRANCH_SHOALS))
-        return;
-
     if (you.see_cell(gc))
     {
         const coord_def ep = grid2show(gc);
@@ -1436,15 +1431,10 @@ void tile_apply_properties(const coord_def &gc, packed_cell &cell)
         print_blood = false;
     }
 
-    // Mold has the same restrictions as blood but takes precedence.
     if (print_blood)
     {
-        if (mc.flags & MAP_GLOWING_MOLDY)
-            cell.glowing_mold = true;
-        else if (mc.flags & MAP_MOLDY)
-            cell.is_moldy = true;
         // Corpses have a blood puddle of their own.
-        else if (mc.flags & MAP_BLOODY && !_top_item_is_corpse(mc))
+        if (mc.flags & MAP_BLOODY && !_top_item_is_corpse(mc))
         {
             cell.is_bloody = true;
             cell.blood_rotation = blood_rotation(gc);
@@ -1497,5 +1487,7 @@ void tile_apply_properties(const coord_def &gc, packed_cell &cell)
             }
         }
     }
+
+    cell.flv = env.tile_flv(gc);
 }
 #endif

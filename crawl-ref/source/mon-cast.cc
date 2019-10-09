@@ -1048,16 +1048,13 @@ static bool _set_hex_target(monster* caster, bolt& pbolt)
  * What value do monsters multiply their hd with to get spellpower, for the
  * given spell?
  *
- * XXX: everything except SPELL_CONFUSION_GAZE could be trivially exported to
- * data.
+ * XXX: everything could be trivially exported to data.
  *
  * @param spell     The spell in question.
- * @param random    Whether to randomize powers for weird spells.
- *                  If false, the average value is used.
  * @return          A multiplier to HD for spellpower.
  *                  Value may exceed 200.
  */
-static int _mons_power_hd_factor(spell_type spell, bool random)
+static int _mons_power_hd_factor(spell_type spell)
 {
     const mons_spell_logic* logic = map_find(spell_to_logic, spell);
     if (logic && logic->power_hd_factor)
@@ -1066,9 +1063,7 @@ static int _mons_power_hd_factor(spell_type spell, bool random)
     switch (spell)
     {
         case SPELL_CONFUSION_GAZE:
-            if (random)
-                return 5 * (2 + random2(3)) * ENCH_POW_FACTOR;
-            return 5 * (2 + 1) * ENCH_POW_FACTOR;
+            return 8 * ENCH_POW_FACTOR;
 
         case SPELL_CAUSE_FEAR:
             return 18 * ENCH_POW_FACTOR;
@@ -1116,13 +1111,11 @@ static int _mons_power_hd_factor(spell_type spell, bool random)
  *
  * @param spell     The spell in question.
  * @param hd        The spell_hd of the given monster.
- * @param random    Whether to randomize powers for weird spells.
- *                  If false, the average value is used.
  * @return          A spellpower value for the spell.
  */
-int mons_power_for_hd(spell_type spell, int hd, bool random)
+int mons_power_for_hd(spell_type spell, int hd)
 {
-    const int power = hd * _mons_power_hd_factor(spell, random);
+    const int power = hd * _mons_power_hd_factor(spell);
     if (spell == SPELL_PAIN)
         return max(50 * ENCH_POW_FACTOR, power);
     return power;
@@ -1919,6 +1912,7 @@ bool setup_mons_cast(const monster* mons, bolt &pbolt, spell_type spell_cast,
     case SPELL_GREATER_SERVANT_MAKHLEB:
     case SPELL_BIND_SOULS:
     case SPELL_DREAM_DUST:
+    case SPELL_SPORULATE:
         pbolt.range = 0;
         pbolt.glyph = 0;
         return true;
@@ -3196,8 +3190,8 @@ monster* cast_phantom_mirror(monster* mons, monster* targ, int hp_perc, int summ
     mirror->mark_summoned(5, true, summ_type);
     mirror->add_ench(ENCH_PHANTOM_MIRROR);
     mirror->summoner = mons->mid;
-    mirror->hit_points = mirror->hit_points * 100 / hp_perc;
-    mirror->max_hit_points = mirror->max_hit_points * 100 / hp_perc;
+    mirror->hit_points = max(mirror->hit_points * hp_perc / 100, 1);
+    mirror->max_hit_points = max(mirror->max_hit_points * hp_perc / 100, 1);
 
     // Sometimes swap the two monsters, so as to disguise the original and the
     // copy.
@@ -6885,6 +6879,22 @@ void mons_cast(monster* mons, bolt pbolt, spell_type spell_cast,
     case SPELL_UPHEAVAL:
         _mons_upheaval(*mons, *foe);
         return;
+
+    case SPELL_SPORULATE:
+    {
+        mgen_data mgen (MONS_BALLISTOMYCETE_SPORE,
+                mons->friendly() ? BEH_FRIENDLY : BEH_HOSTILE, mons->pos(),
+                mons->foe);
+        mgen.set_summoned(mons, 0, SPELL_SPORULATE);
+        // Add 1HD to the spore for each additional HD the spawner has.
+        mgen.hd = mons_class_hit_dice(MONS_BALLISTOMYCETE_SPORE) +
+            max(0, mons->spell_hd() - mons_class_hit_dice(mons->type));
+
+        if (monster* const spore = create_monster(mgen))
+            spore->add_ench(ENCH_SHORT_LIVED);
+
+        return;
+    }
 
     }
 

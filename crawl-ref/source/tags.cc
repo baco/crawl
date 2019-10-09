@@ -1670,7 +1670,8 @@ static void tag_construct_you(writer &th)
 
     marshallUByte(th, 1); // number of seeds, for historical reasons: always 1
     marshallUnsigned(th, you.game_seed);
-    marshallBoolean(th, you.game_is_seeded);
+    marshallBoolean(th, you.fully_seeded); // TODO: remove on major version inc?
+    marshallBoolean(th, you.deterministic_levelgen);
     CrawlVector rng_states = rng::generators_to_vector();
     rng_states.write(th);
 
@@ -3695,7 +3696,7 @@ static void tag_read_you(reader &th)
         you.game_seed = count > 0 ? unmarshallInt(th) : rng::get_uint64();
         dprf("Upgrading from unseeded game.");
         crawl_state.seed = you.game_seed;
-        you.game_is_seeded = false;
+        you.fully_seeded = false;
         for (int i = 1; i < count; i++)
             unmarshallInt(th);
     }
@@ -3708,7 +3709,16 @@ static void tag_read_you(reader &th)
         you.game_seed = unmarshallUnsigned(th);
         dprf("Unmarshalling seed %" PRIu64, you.game_seed);
         crawl_state.seed = you.game_seed;
-        you.game_is_seeded = unmarshallBoolean(th);
+        you.fully_seeded = unmarshallBoolean(th);
+#if TAG_MAJOR_VERSION == 34
+        // there is no way to tell the levelgen method for games before this
+        // tag, unfortunately. Though if there are unvisited generated levels,
+        // that guarantees some form of deterministic pregen.
+        if (th.getMinorVersion() < TAG_MINOR_INCREMENTAL_PREGEN)
+            you.deterministic_levelgen = false;
+        else
+#endif
+        you.deterministic_levelgen = unmarshallBoolean(th);
         CrawlVector rng_states;
         rng_states.read(th);
         rng::load_generators(rng_states);
@@ -4447,13 +4457,6 @@ static void tag_construct_level(writer &th)
     marshallInt(th, env.forest_awoken_until);
     marshall_level_vault_data(th);
     marshallInt(th, env.density);
-
-    marshallShort(th, env.sunlight.size());
-    for (const auto &sunspot : env.sunlight)
-    {
-        marshallCoord(th, sunspot.first);
-        marshallInt(th, sunspot.second);
-    }
 }
 
 void marshallItem(writer &th, const item_def &item, bool iinfo)
@@ -6045,15 +6048,19 @@ static void tag_read_level(reader &th)
     env.forest_awoken_until = unmarshallInt(th);
     unmarshall_level_vault_data(th);
     env.density = unmarshallInt(th);
+#if TAG_MAJOR_VERSION == 34
 
-    int num_lights = unmarshallShort(th);
-    ASSERT(num_lights >= 0);
-    env.sunlight.clear();
-    while (num_lights-- > 0)
+    if (th.getMinorVersion() < TAG_MINOR_NO_SUNLIGHT)
     {
-        coord_def c = unmarshallCoord(th);
-        env.sunlight.emplace_back(c, unmarshallInt(th));
+        int num_lights = unmarshallShort(th);
+        ASSERT(num_lights >= 0);
+        while (num_lights-- > 0)
+        {
+            unmarshallCoord(th);
+            unmarshallInt(th);
+        }
     }
+#endif
 }
 
 #if TAG_MAJOR_VERSION == 34

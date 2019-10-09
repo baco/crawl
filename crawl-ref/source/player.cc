@@ -1738,6 +1738,9 @@ int player_spec_conj()
     // Staves
     sc += you.wearing(EQ_STAFF, STAFF_CONJURATION);
 
+    if (player_equip_unrand(UNRAND_BATTLE))
+        sc++;
+
     return sc;
 }
 
@@ -5160,7 +5163,8 @@ player::player()
 
     abyss_speed         = 0;
     game_seed           = 0;
-    game_is_seeded      = true;
+    fully_seeded        = true;
+    deterministic_levelgen = true;
 
     old_hunger          = hunger;
 
@@ -5225,6 +5229,14 @@ bool player_save_info::operator<(const player_save_info& rhs) const
 {
     return experience_level > rhs.experience_level
            || (experience_level == rhs.experience_level && name < rhs.name);
+}
+
+string player_save_info::really_short_desc() const
+{
+    ostringstream desc;
+    desc << name << " the " << species_name << ' ' << class_name;
+
+    return desc.str();
 }
 
 string player_save_info::short_desc() const
@@ -7210,6 +7222,10 @@ bool player::do_shaft()
     {
         return false;
     }
+
+    // Ensure altars, items, and shops discovered at the moment
+    // the player gets shafted are correctly registered.
+    maybe_update_stashes();
 
     duration[DUR_SHAFT_IMMUNITY] = 1;
     down_stairs(DNGN_TRAP_SHAFT);

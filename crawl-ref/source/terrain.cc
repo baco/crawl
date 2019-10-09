@@ -1158,28 +1158,22 @@ static bool _dgn_check_terrain_monsters(const coord_def &pos)
         return false;
 }
 
-// Clear blood or mold off of terrain that shouldn't have it. Also clear
-// of blood if a bloody wall has been dug out and replaced by a floor,
-// or if a bloody floor has been replaced by a wall.
+// Clear blood or off of terrain that shouldn't have it. Also clear of blood if
+// a bloody wall has been dug out and replaced by a floor, or if a bloody floor
+// has been replaced by a wall.
 static void _dgn_check_terrain_covering(const coord_def &pos,
                                      dungeon_feature_type old_feat,
                                      dungeon_feature_type new_feat)
 {
-    if (!testbits(env.pgrid(pos), FPROP_BLOODY)
-        && !is_moldy(pos))
-    {
+    if (!testbits(env.pgrid(pos), FPROP_BLOODY))
         return;
-    }
 
     if (new_feat == DNGN_UNSEEN)
     {
         // Caller has already changed the grid, and old_feat is actually
         // the new feat.
         if (old_feat != DNGN_FLOOR && !feat_is_solid(old_feat))
-        {
             env.pgrid(pos) &= ~(FPROP_BLOODY);
-            remove_mold(pos);
-        }
     }
     else
     {
@@ -1188,7 +1182,6 @@ static void _dgn_check_terrain_covering(const coord_def &pos,
             || feat_is_critical(new_feat))
         {
             env.pgrid(pos) &= ~(FPROP_BLOODY);
-            remove_mold(pos);
         }
     }
 }
@@ -1858,8 +1851,6 @@ void destroy_wall(const coord_def& p)
     if (is_bloodcovered(p))
         env.pgrid(p) &= ~(FPROP_BLOODY);
 
-    remove_mold(p);
-
     _revert_terrain_to_floor(p);
     env.level_map_mask(p) |= MMT_TURNED_TO_FLOOR;
 }
@@ -2114,12 +2105,10 @@ static dungeon_feature_type _destroyed_feat_type()
 static bool _revert_terrain_to_floor(coord_def pos)
 {
     dungeon_feature_type newfeat = _destroyed_feat_type();
-    bool found_marker = false;
     for (map_marker *marker : env.markers.get_markers_at(pos))
     {
         if (marker->get_type() == MAT_TERRAIN_CHANGE)
         {
-            found_marker = true;
             map_terrain_change_marker* tmarker =
                     dynamic_cast<map_terrain_change_marker*>(marker);
 
@@ -2151,11 +2140,8 @@ static bool _revert_terrain_to_floor(coord_def pos)
     grd(pos) = newfeat;
     set_terrain_changed(pos);
 
-    if (found_marker)
-    {
-        tile_clear_flavour(pos);
-        tile_init_flavour(pos);
-    }
+    tile_clear_flavour(pos);
+    tile_init_flavour(pos);
 
     return true;
 }

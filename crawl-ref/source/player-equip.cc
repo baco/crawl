@@ -388,8 +388,6 @@ static void _equip_use_warning(const item_def& item)
 {
     if (is_holy_item(item) && you_worship(GOD_YREDELEMNUL))
         mpr("You really shouldn't be using a holy item like this.");
-    else if (is_corpse_violating_item(item) && you_worship(GOD_FEDHAS))
-        mpr("You really shouldn't be using a corpse-violating item like this.");
     else if (is_evil_item(item) && is_good_god(you.religion))
         mpr("You really shouldn't be using an evil item like this.");
     else if (is_unclean_item(item) && you_worship(GOD_ZIN))
@@ -398,6 +396,8 @@ static void _equip_use_warning(const item_def& item)
         mpr("You really shouldn't be using a chaotic item like this.");
     else if (is_hasty_item(item) && you_worship(GOD_CHEIBRIADOS))
         mpr("You really shouldn't be using a hasty item like this.");
+    else if (is_wizardly_item(item) && you_worship(GOD_TROG))
+        mpr("You really shouldn't be using a wizardly item like this.");
 #if TAG_MAJOR_VERSION == 34
     else if (is_channeling_item(item) && you_worship(GOD_PAKELLAS))
         mpr("You really shouldn't be trying to channel magic like this.");

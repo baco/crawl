@@ -371,19 +371,19 @@ static void _SINGING_SWORD_melee_effects(item_def* weapon, actor* attacker,
                                          actor* defender, bool mondied,
                                          int dam)
 {
-    int tension = get_tension(GOD_NO_GOD);
     int tier;
 
     if (attacker->is_player())
-        tier = max(1, min(4, 1 + tension / 20));
+        tier = max(1, min(4, 1 + get_tension(GOD_NO_GOD) / 20));
     // Don't base the sword on player state when the player isn't wielding it.
     else
         tier = 1;
 
-    dprf(DIAG_COMBAT, "Singing sword tension: %d, tier: %d", tension, tier);
-
     if (silenced(attacker->pos()))
         tier = 0;
+
+    dprf(DIAG_COMBAT, "Singing sword tension: %d, tier: %d",
+                attacker->is_player() ? get_tension(GOD_NO_GOD) : -1, tier);
 
     // Not as spammy at low tension. Max chance reached at tier 3, allowing
     // tier 0 to have a high chance so that the sword is likely to express its
@@ -398,7 +398,7 @@ static void _SINGING_SWORD_melee_effects(item_def* weapon, actor* attacker,
 
     const int loudness[] = {0, 0, 20, 30, 40};
 
-    item_noise(*weapon, msg, loudness[tier]);
+    item_noise(*weapon, *attacker, msg, loudness[tier]);
 
     if (tier < 1)
         return; // Can't cast when silenced.
@@ -559,10 +559,7 @@ static void _ZONGULDROK_melee_effects(item_def* weapon, actor* attacker,
                                       actor* defender, bool mondied, int dam)
 {
     if (attacker->is_player())
-    {
         did_god_conduct(DID_EVIL, 3);
-        did_god_conduct(DID_CORPSE_VIOLATION, 3);
-    }
 }
 
 ///////////////////////////////////////////////////
@@ -1430,5 +1427,24 @@ static void _ZHOR_world_reacts(item_def *item)
         && one_chance_in(7 * div_rand_round(BASELINE_DELAY, you.time_taken)))
     {
         cast_englaciation(30, false);
+    }
+}
+
+////////////////////////////////////////////////////
+
+// XXX: Staff of Battle giving a boost to conjuration spells is hardcoded in
+// player_spec_conj().
+
+static void _BATTLE_unequip(item_def *item, bool *show_msgs)
+{
+    end_battlesphere(find_battlesphere(&you), false);
+}
+
+static void _BATTLE_world_reacts(item_def *item)
+{
+    if (!find_battlesphere(&you) && there_are_monsters_nearby(true, true, false))
+    {
+        your_spells(SPELL_BATTLESPHERE, 0, false);
+        did_god_conduct(DID_SPELL_CASTING, 1);
     }
 }
