@@ -15,10 +15,8 @@
 #include <cstring>
 #include <functional>
 
-#include "areas.h"
 #include "branch.h"
 #include "colour.h"
-#include "coordit.h"
 #include "database.h"
 #include "god-item.h"
 #include "item-name.h"
@@ -132,18 +130,15 @@ static bool _god_fits_artefact(const god_type which_god, const item_def &item,
         break;
 
     case GOD_TROG:
-        // Anti-magic god: no spell use, no enhancing magic.
-        if (brand == SPWPN_PAIN) // Pain involves necromantic spell use.
+        // Limited selection of brands.
+        if (brand != SPWPN_VORPAL
+            && brand != SPWPN_FLAMING
+            && brand != SPWPN_ANTIMAGIC)
+        {
             return false;
+        }
 
         if (artefact_property(item, ARTP_MAGICAL_POWER) > 0)
-            return false;
-        break;
-
-    case GOD_FEDHAS:
-        // Fedhas forbids necromancy involving corpses, only reaping
-        // really applies.
-        if (brand == SPWPN_REAPING)
             return false;
         break;
 
@@ -449,7 +444,8 @@ void artefact_desc_properties(const item_def &item,
         return;
 
     // actual artefact properties
-    artefact_properties(item, proprt, known);
+    artefact_properties(item, proprt);
+    artefact_known_properties(item, known);
 
     // fake artefact properties (intrinsics)
     _populate_item_intrinsic_artps(item, proprt, known);
@@ -983,12 +979,11 @@ static bool _init_artefact_properties(item_def &item)
     return true;
 }
 
-void artefact_properties(const item_def &item,
-                         artefact_properties_t  &proprt,
-                         artefact_known_props_t &known)
+void artefact_known_properties(const item_def &item,
+                               artefact_known_props_t &known)
 {
     ASSERT(is_artefact(item));
-    if (!item.props.exists(KNOWN_PROPS_KEY))
+    if (!item.props.exists(KNOWN_PROPS_KEY)) // randbooks
         return;
 
     const CrawlStoreValue &_val = item.props[KNOWN_PROPS_KEY];
@@ -1008,6 +1003,13 @@ void artefact_properties(const item_def &item,
         for (vec_size i = 0; i < ART_PROPERTIES; i++)
             known[i] = known_vec[i];
     }
+}
+
+void artefact_properties(const item_def &item,
+                         artefact_properties_t  &proprt)
+{
+    ASSERT(is_artefact(item));
+    ASSERT(item.props.exists(ARTEFACT_PROPS_KEY) || is_unrandom_artefact(item));
 
     if (item.props.exists(ARTEFACT_PROPS_KEY))
     {
@@ -1020,60 +1022,60 @@ void artefact_properties(const item_def &item,
         for (vec_size i = 0; i < ART_PROPERTIES; i++)
             proprt[i] = rap_vec[i].get_short();
     }
-    else if (is_unrandom_artefact(item))
+    else // if (is_unrandom_artefact(item))
     {
         const unrandart_entry *unrand = _seekunrandart(item);
 
         for (int i = 0; i < ART_PROPERTIES; i++)
             proprt[i] = static_cast<short>(unrand->prpty[i]);
     }
-    else
-        _get_randart_properties(item, proprt);
-}
-
-void artefact_properties(const item_def &item,
-                         artefact_properties_t &proprt)
-{
-    artefact_known_props_t known;
-
-    artefact_properties(item, proprt, known);
-}
-
-int artefact_property(const item_def &item, artefact_prop_type prop,
-                      bool &_known)
-{
-    artefact_properties_t  proprt;
-    artefact_known_props_t known;
-    proprt.init(0);
-    known.init(0);
-
-    artefact_properties(item, proprt, known);
-
-    _known = known[prop];
-
-    return proprt[prop];
 }
 
 int artefact_property(const item_def &item, artefact_prop_type prop)
 {
-    bool known;
+    ASSERT(is_artefact(item));
+    ASSERT(item.props.exists(ARTEFACT_PROPS_KEY) || is_unrandom_artefact(item));
 
-    return artefact_property(item, prop, known);
+    if (item.props.exists(ARTEFACT_PROPS_KEY))
+    {
+        const CrawlVector &rap_vec =
+            item.props[ARTEFACT_PROPS_KEY].get_vector();
+        return rap_vec[prop].get_short();
+    }
+    else // if (is_unrandom_artefact(item))
+    {
+        const unrandart_entry *unrand = _seekunrandart(item);
+        return static_cast<short>(unrand->prpty[prop]);
+
+    }
 }
 
+/**
+ * Check whether a particular property's value is known to the player.
+ */
+bool artefact_property_known(const item_def &item, artefact_prop_type prop)
+{
+    ASSERT(is_artefact(item));
+    if (item_ident(item, ISFLAG_KNOW_PROPERTIES))
+        return true;
+
+    if (!item.props.exists(KNOWN_PROPS_KEY)) // randbooks
+        return false;
+
+    const CrawlVector &known_vec = item.props[KNOWN_PROPS_KEY].get_vector();
+    ASSERT(known_vec.get_type()     == SV_BOOL);
+    ASSERT(known_vec.size()         == ART_PROPERTIES);
+
+    return known_vec[prop].get_bool();
+}
+
+/**
+ * check what the player knows about an a particular property.
+ */
 int artefact_known_property(const item_def &item, artefact_prop_type prop)
 {
-    artefact_properties_t  proprt;
-    artefact_known_props_t known;
-    proprt.init(0);
-    known.init(0);
-
-    artefact_properties(item, proprt, known);
-
-    if (known[prop])
-        return proprt[prop];
-    else
-        return 0;
+    return artefact_property_known(item, prop) ? artefact_property(item, prop)
+                                               : 0;
 }
 
 static int _artefact_num_props(const artefact_properties_t &proprt)

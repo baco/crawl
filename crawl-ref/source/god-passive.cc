@@ -17,10 +17,8 @@
 #include "eq-type-flags.h"
 #include "fight.h"
 #include "files.h"
-#include "food.h"
 #include "fprop.h"
 #include "god-abil.h"
-#include "god-item.h"
 #include "god-prayer.h"
 #include "invent.h" // in_inventory
 #include "item-name.h"
@@ -40,12 +38,10 @@
 #include "skills.h"
 #include "spl-clouds.h"
 #include "state.h"
-#include "status.h"
 #include "stringutil.h"
 #include "terrain.h"
 #include "throw.h"
 #include "unwind.h"
-#include "view.h"
 
 // TODO: template out the differences between this and god_power.
 // TODO: use the display method rather than dummy powers in god_powers.
@@ -1780,7 +1776,7 @@ static bool _wu_jian_trigger_martial_arts(const coord_def& old_pos)
     return did_wu_jian_attacks;
 }
 
-void wu_jian_wall_jump_effects(const coord_def& old_pos)
+void wu_jian_wall_jump_effects()
 {
     vector<monster*> targets;
     for (adjacent_iterator ai(you.pos(), true); ai; ++ai)

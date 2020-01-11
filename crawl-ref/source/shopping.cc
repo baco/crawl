@@ -13,31 +13,26 @@
 
 #include "artefact.h"
 #include "branch.h"
-#include "butcher.h"
 #include "cio.h"
 #include "colour.h"
-#include "decks.h"
 #include "describe.h"
 #include "dgn-overview.h"
 #include "english.h"
 #include "env.h"
 #include "files.h"
-#include "food.h"
 #include "invent.h"
 #include "item-name.h"
 #include "item-prop.h"
 #include "item-status-flag-type.h"
 #include "items.h"
 #include "libutil.h"
-#include "macro.h"
 #include "menu.h"
 #include "message.h"
 #include "notes.h"
+#include "options.h"
 #include "output.h"
-#include "place.h"
 #include "player.h"
 #include "prompt.h"
-#include "rot.h"
 #include "spl-book.h"
 #include "stash.h"
 #include "state.h"
@@ -1171,10 +1166,11 @@ void ShopMenu::purchase_selected()
         return;
     }
     more = formatted_string::parse_string(make_stringf(
-               "<%s>Purchase items%s for %d gold? (y/N)</%s>\n",
+               "<%s>Purchase items%s for %d gold? (%s/N)</%s>\n",
                col.c_str(),
                buying_from_list ? " in shopping list" : "",
                cost,
+               Options.easy_confirm == easy_confirm_type::none ? "Y" : "y",
                col.c_str()));
     more += old_more;
     update_more();

@@ -4,7 +4,6 @@
 
 #include "tilereg-inv.h"
 
-#include "butcher.h"
 #include "cio.h"
 #include "describe.h"
 #include "env.h"
@@ -18,11 +17,8 @@
 #include "libutil.h"
 #include "macro.h"
 #include "message.h"
-#include "misc.h"
-#include "mon-util.h"
 #include "options.h"
 #include "output.h"
-#include "rot.h"
 #include "spl-book.h"
 #include "stringutil.h"
 #include "terrain.h"
@@ -33,7 +29,6 @@
 #include "tiledef-main.h"
 #include "tilepick.h"
 #include "unicode.h"
-#include "viewgeom.h"
 
 InventoryRegion::InventoryRegion(const TileRegionInit &init) : GridRegion(init)
 {
@@ -122,21 +117,21 @@ void InventoryRegion::pack_buffers()
     }
 }
 
-int InventoryRegion::handle_mouse(MouseEvent &event)
+int InventoryRegion::handle_mouse(wm_mouse_event &event)
 {
     unsigned int item_idx;
     if (!place_cursor(event, item_idx))
         return 0;
 
     // handle paging
-    if (_is_next_button(cursor_index()) && event.button==MouseEvent::LEFT)
+    if (_is_next_button(cursor_index()) && event.button==wm_mouse_event::LEFT)
     {
         // next page
         m_grid_page++;
         update();
         return CK_NO_KEY;
     }
-    else if (m_cursor.x==0 && m_cursor.y==0 && m_grid_page>0 && event.button==MouseEvent::LEFT)
+    else if (m_cursor.x==0 && m_cursor.y==0 && m_grid_page>0 && event.button==wm_mouse_event::LEFT)
     {
         // prev page
         m_grid_page--;
@@ -162,7 +157,7 @@ int InventoryRegion::handle_mouse(MouseEvent &event)
     if (key)
         return key;
 
-    if (event.button == MouseEvent::LEFT)
+    if (event.button == wm_mouse_event::LEFT)
     {
         m_last_clicked_item = item_idx;
         tiles.set_need_redraw();
@@ -185,7 +180,7 @@ int InventoryRegion::handle_mouse(MouseEvent &event)
         update();
         return CK_MOUSE_CMD;
     }
-    else if (event.button == MouseEvent::RIGHT)
+    else if (event.button == wm_mouse_event::RIGHT)
     {
         if (on_floor)
         {

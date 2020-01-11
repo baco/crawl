@@ -13,7 +13,6 @@
 #include "cluautil.h"
 #include "colour.h"
 #include "coord.h"
-#include "enum.h"
 #include "env.h"
 #include "food.h"
 #include "invent.h"
@@ -21,7 +20,6 @@
 #include "item-status-flag-type.h"
 #include "items.h"
 #include "item-use.h"
-#include "l-defs.h"
 #include "libutil.h"
 #include "mon-util.h"
 #include "output.h"
@@ -30,7 +28,6 @@
 #include "shopping.h"
 #include "skills.h"
 #include "spl-book.h"
-#include "spl-summoning.h"
 #include "spl-util.h"
 #include "stash.h"
 #include "stringutil.h"
@@ -100,11 +97,10 @@ static void _lua_push_inv_items(lua_State *ls = nullptr)
 }
 
 #define IDEF(name)                                                      \
-    static int l_item_##name(lua_State *ls, item_def *item,             \
-                             const char *attr)                         \
+    static int l_item_##name(lua_State *ls, item_def *item)             \
 
 #define IDEFN(name, closure)                    \
-    static int l_item_##name(lua_State *ls, item_def *item, const char *attrs) \
+    static int l_item_##name(lua_State *ls, item_def *item) \
     {                                                                   \
         clua_push_item(ls, item);                                            \
         lua_pushcclosure(ls, l_item_##closure, 1);                      \
@@ -1534,7 +1530,7 @@ static int l_item_shopping_list(lua_State *ls)
 struct ItemAccessor
 {
     const char *attribute;
-    int (*accessor)(lua_State *ls, item_def *item, const char *attr);
+    int (*accessor)(lua_State *ls, item_def *item);
 };
 
 static ItemAccessor item_attrs[] =
@@ -1613,7 +1609,7 @@ static int item_get(lua_State *ls)
 
     for (const ItemAccessor &ia : item_attrs)
         if (!strcmp(attr, ia.attribute))
-            return ia.accessor(ls, iw, attr);
+            return ia.accessor(ls, iw);
 
     return 0;
 }

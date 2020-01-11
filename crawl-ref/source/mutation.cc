@@ -15,8 +15,6 @@
 #include <sstream>
 
 #include "ability.h"
-#include "act-iter.h"
-#include "butcher.h"
 #include "cio.h"
 #include "coordit.h"
 #include "dactions.h"
@@ -31,20 +29,17 @@
 #include "libutil.h"
 #include "menu.h"
 #include "message.h"
-#include "mon-death.h"
 #include "mon-place.h"
 #include "notes.h"
 #include "output.h"
 #include "player-equip.h" // lose_permafly_source
 #include "player-stats.h"
 #include "religion.h"
-#include "scroller.h"
 #include "skills.h"
 #include "state.h"
 #include "stringutil.h"
 #include "transform.h"
 #include "unicode.h"
-#include "viewchar.h"
 #include "xom.h"
 
 using namespace ui;
@@ -386,6 +381,9 @@ mutation_activity_type mutation_activity_level(mutation_type mut)
     }
 #endif
 
+    if (mut == MUT_BERSERK && you.species == SP_VAMPIRE && !you.vampire_alive)
+        return mutation_activity_type::INACTIVE;
+
     if (!form_can_bleed(you.form) && mut == MUT_SANGUINE_ARMOUR)
         return mutation_activity_type::INACTIVE;
 
@@ -645,6 +643,7 @@ string describe_mutations(bool drop_title)
         {
             result += "<green>You do not regenerate when monsters are visible.</green>\n";
             result += "<green>You are frail without blood (-20% HP).</green>\n";
+            result += "<green>You can heal yourself when you bite living creatures.</green>\n";
         }
         else
             result += "<green>Your natural rate of healing is unusually fast.</green>\n";
@@ -775,16 +774,18 @@ static string _display_vampire_attributes()
 
     string result;
 
-    const int lines = 11;
+    const int lines = 12;
     string column[lines][3] =
     {
         {"                     ", "<green>Alive</green>      ", "<lightred>Bloodless</lightred>"},
                                  //Full       Bloodless
         {"Regeneration         ", "fast       ", "none with monsters in sight"},
 
-        {"HP Modifier          ", "none       ", "-20%"},
+        {"HP modifier          ", "none       ", "-20%"},
 
         {"Stealth boost        ", "none       ", "major "},
+
+        {"Heal on bite         ", "no         ", "yes "},
 
         {"\n<w>Resistances</w>\n"
          "Poison resistance    ", "           ", "immune"},
@@ -843,11 +844,14 @@ void display_mutations()
     trim_string_right(mutation_s);
 
     auto vbox = make_shared<Box>(Widget::VERT);
+    vbox->set_cross_alignment(Widget::STRETCH);
 
     const char *title_text = "Innate Abilities, Weirdness & Mutations";
     auto title = make_shared<Text>(formatted_string(title_text, WHITE));
-    title->align_self = Widget::CENTER;
-    vbox->add_child(move(title));
+    auto title_hbox = make_shared<Box>(Widget::HORZ);
+    title_hbox->add_child(move(title));
+    title_hbox->set_main_alignment(Widget::CENTER);
+    vbox->add_child(move(title_hbox));
 
     auto switcher = make_shared<Switcher>();
 
@@ -858,23 +862,24 @@ void display_mutations()
         auto scroller = make_shared<Scroller>();
         auto text = make_shared<Text>(formatted_string::parse_string(
                 descs[static_cast<int>(i)]));
-        text->wrap_text = true;
+        text->set_wrap_text(true);
         scroller->set_child(text);
         switcher->add_child(move(scroller));
     }
 
     switcher->current() = 0;
-    switcher->set_margin_for_sdl({20, 0, 0, 0});
-    switcher->set_margin_for_crt({1, 0, 0, 0});
+    switcher->set_margin_for_sdl(20, 0, 0, 0);
+    switcher->set_margin_for_crt(1, 0, 0, 0);
     switcher->expand_h = false;
+    switcher->align_x = Widget::STRETCH;
 #ifdef USE_TILE_LOCAL
-    switcher->max_size()[0] = tiles.get_crt_font()->char_width()*80;
+    switcher->max_size().width = tiles.get_crt_font()->char_width()*80;
 #endif
     vbox->add_child(switcher);
 
     auto bottom = make_shared<Text>(_vampire_Ascreen_footer(true));
-    bottom->set_margin_for_sdl({20, 0, 0, 0});
-    bottom->set_margin_for_crt({1, 0, 0, 0});
+    bottom->set_margin_for_sdl(20, 0, 0, 0);
+    bottom->set_margin_for_crt(1, 0, 0, 0);
     if (you.species == SP_VAMPIRE)
         vbox->add_child(bottom);
 
@@ -882,10 +887,8 @@ void display_mutations()
 
     bool done = false;
     int lastch;
-    popup->on(Widget::slots.event, [&](wm_event ev) {
-        if (ev.type != WME_KEYDOWN)
-            return false;
-        lastch = ev.key.keysym.sym;
+    popup->on_keydown_event([&](const KeyEvent& ev) {
+        lastch = ev.key();
         if (you.species == SP_VAMPIRE && (lastch == '!' || lastch == CK_MOUSE_CMD || lastch == '^'))
         {
             int& c = switcher->current();
@@ -899,7 +902,7 @@ void display_mutations()
             tiles.ui_state_change("mutations", 0);
 #endif
         } else
-            done = !vbox->on_event(ev);
+            done = !switcher->current_widget()->on_event(ev);
         return true;
     });
 

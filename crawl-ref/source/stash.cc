@@ -53,8 +53,7 @@
 // Global
 StashTracker StashTrack;
 
-string userdef_annotate_item(const char *s, const item_def *item,
-                             bool exclusive)
+string userdef_annotate_item(const char *s, const item_def *item)
 {
 #ifdef CLUA_BINDINGS
     lua_stack_cleaner cleaner(clua);
@@ -70,9 +69,9 @@ string userdef_annotate_item(const char *s, const item_def *item,
 #endif
 }
 
-string stash_annotate_item(const char *s, const item_def *item, bool exclusive)
+string stash_annotate_item(const char *s, const item_def *item)
 {
-    string text = userdef_annotate_item(s, item, exclusive);
+    string text = userdef_annotate_item(s, item);
 
     if (item->has_spells())
     {
@@ -490,17 +489,6 @@ vector<stash_search_result> Stash::matches_search(
     return results;
 }
 
-/// Fedhas: rot away all corpses.
-void Stash::rot_all_corpses()
-{
-    for (int i = items.size() - 1; i >= 0; i--)
-    {
-        item_def &item = items[i];
-        if (item.is_type(OBJ_CORPSES, CORPSE_BODY) && item.stash_freshness >= 0)
-            item.stash_freshness = -1;
-    }
-}
-
 void Stash::_update_corpses(int rot_time)
 {
     for (int i = items.size() - 1; i >= 0; i--)
@@ -728,7 +716,7 @@ vector<stash_search_result> ShopInfo::matches_search(
     {
         const string sname = shop_item_name(item);
         const string ann   = stash_annotate_item(STASH_LUA_SEARCH_ANNOTATE,
-                                                 &item, true);
+                                                 &item);
 
         if (search.matches(prefix + " " + ann + " " + sname +
                                                     " {" + shoptitle + "}")
@@ -968,13 +956,6 @@ void LevelStashes::get_matching_stashes(
             results.push_back(res);
         }
     }
-}
-
-/// Fedhas: rot away all corpses.
-void LevelStashes::rot_all_corpses()
-{
-    for (auto &entry : m_stashes)
-        entry.second.rot_all_corpses();
 }
 
 void LevelStashes::_update_corpses(int rot_time)

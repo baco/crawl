@@ -8,7 +8,6 @@
 
 #include "fineff.h"
 
-#include "act-iter.h"
 #include "bloodspatter.h"
 #include "coordit.h"
 #include "dactions.h"
@@ -32,7 +31,6 @@
 #include "terrain.h"
 #include "transform.h"
 #include "view.h"
-#include "viewchar.h"
 
 /*static*/ void final_effect::schedule(final_effect *eff)
 {
@@ -113,7 +111,7 @@ bool shock_serpent_discharge_fineff::mergeable(const final_effect &fe) const
     return o && def == o->def;
 }
 
-bool delayed_action_fineff::mergeable(const final_effect &fe) const
+bool delayed_action_fineff::mergeable(const final_effect &) const
 {
     return false;
 }
@@ -123,6 +121,13 @@ bool rakshasa_clone_fineff::mergeable(const final_effect &fe) const
     const rakshasa_clone_fineff *o =
         dynamic_cast<const rakshasa_clone_fineff *>(&fe);
     return o && att == o->att && def == o->def && posn == o->posn;
+}
+
+bool summon_dismissal_fineff::mergeable(const final_effect &fe) const
+{
+    const summon_dismissal_fineff *o =
+        dynamic_cast<const summon_dismissal_fineff *>(&fe);
+    return o && def == o->def;
 }
 
 void mirror_damage_fineff::merge(const final_effect &fe)
@@ -173,6 +178,12 @@ void shock_serpent_discharge_fineff::merge(const final_effect &fe)
     const shock_serpent_discharge_fineff *ssdfe =
         dynamic_cast<const shock_serpent_discharge_fineff *>(&fe);
     power += ssdfe->power;
+}
+
+void summon_dismissal_fineff::merge(const final_effect &)
+{
+    // no damage to accumulate, but no need to fire this more than once
+    return;
 }
 
 void mirror_damage_fineff::fire()
@@ -581,6 +592,17 @@ void make_derived_undead_fineff::fire()
     }
 }
 
+const actor *mummy_death_curse_fineff::fixup_attacker(const actor *a)
+{
+    if (a && a->is_monster() && a->as_monster()->friendly()
+        && !crawl_state.game_is_arena())
+    {
+        // Mummies are smart enough not to waste curses on summons or allies.
+        return &you;
+    }
+    return a;
+}
+
 void mummy_death_curse_fineff::fire()
 {
     if (pow <= 0)
@@ -615,13 +637,6 @@ void mummy_death_curse_fineff::fire()
     if (!victim->alive())
         return;
 
-    // Mummies are smart enough not to waste curses on summons or allies.
-    if (victim->is_monster() && victim->as_monster()->friendly()
-        && !crawl_state.game_is_arena())
-    {
-        victim = &you;
-    }
-
     // Stepped from time?
     if (!in_bounds(victim->pos()))
         return;
@@ -637,6 +652,12 @@ void mummy_death_curse_fineff::fire()
                             apostrophise(name).c_str());
     MiscastEffect(victim, nullptr, {miscast_source::mummy}, spschool::necromancy,
                   pow, random2avg(88, 3), cause.c_str());
+}
+
+void summon_dismissal_fineff::fire()
+{
+    if (defender() && defender()->alive())
+        monster_die(*(defender()->as_monster()), KILL_DISMISSED, NON_MONSTER);
 }
 
 // Effects that occur after all other effects, even if the monster is dead.

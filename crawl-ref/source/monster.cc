@@ -412,7 +412,7 @@ random_var monster::attack_delay(const item_def *projectile,
     return (random_var(10) + delay) / 2;
 }
 
-int monster::has_claws(bool allow_tran) const
+int monster::has_claws(bool /*allow_tran*/) const
 {
     for (int i = 0; i < MAX_NUM_ATTACKS; i++)
     {
@@ -2165,7 +2165,7 @@ void monster::wield_melee_weapon(maybe_bool msg)
     }
 }
 
-item_def *monster::slot_item(equipment_type eq, bool include_melded) const
+item_def *monster::slot_item(equipment_type eq, bool /*include_melded*/) const
 {
     return mslot_item(equip_slot_to_mslot(eq));
 }
@@ -2712,6 +2712,8 @@ bool monster::fumbles_attack()
         {
             mprf("%s %s", name(DESC_THE).c_str(), liquefied(pos())
                  ? "becomes momentarily stuck in the liquid earth."
+                 : grd(pos()) == DNGN_TOXIC_BOG
+                 ? "becomes momentarily stuck in the toxic bog."
                  : "splashes around in the water.");
         }
         else if (player_can_hear(pos(), LOS_RADIUS))
@@ -3179,12 +3181,12 @@ void monster::ablate_deflection()
     // TODO: deduplicate this code
     if (has_ench(ENCH_DEFLECT_MISSILES))
     {
-        if (one_chance_in(2 + spell_hd(SPELL_DEFLECT_MISSILES)))
+        if (one_chance_in(2 + spell_hd()))
             del_ench(ENCH_DEFLECT_MISSILES);
     }
     else if (has_ench(ENCH_REPEL_MISSILES))
     {
-        if (one_chance_in(2 + spell_hd(SPELL_REPEL_MISSILES)))
+        if (one_chance_in(2 + spell_hd()))
             del_ench(ENCH_REPEL_MISSILES);
     }
 }
@@ -3556,7 +3558,7 @@ bool monster::undead_or_demonic() const
     return bool(holi & (MH_UNDEAD | MH_DEMONIC));
 }
 
-bool monster::is_holy(bool check_spells) const
+bool monster::is_holy(bool /*check_spells*/) const
 {
     return bool(holiness() & MH_HOLY);
 }
@@ -3853,6 +3855,12 @@ int monster::res_poison(bool temp) const
 {
     int u = get_mons_resist(*this, MR_RES_POISON);
 
+    if (const item_def* w = primary_weapon())
+    {
+        if (is_unrandom_artefact(*w, UNRAND_OLGREB))
+            return 3;
+    }
+
     if (temp && has_ench(ENCH_POISON_VULN))
         u--;
 
@@ -4096,7 +4104,7 @@ int monster::res_magic(bool calc_unid) const
     return u;
 }
 
-bool monster::no_tele(bool calc_unid, bool permit_id, bool blinking) const
+bool monster::no_tele(bool calc_unid, bool /*permit_id*/, bool /*blinking*/) const
 {
     // Plants can't survive without roots, so it's either this or auto-kill.
     // Statues have pedestals so moving them is weird.
@@ -4170,7 +4178,7 @@ bool monster::poison(actor *agent, int amount, bool force)
     return poison_monster(this, agent, amount, force);
 }
 
-int monster::skill(skill_type sk, int scale, bool real, bool drained, bool temp) const
+int monster::skill(skill_type sk, int scale, bool /*real*/, bool /*drained*/, bool /*temp*/) const
 {
     // Let spectral weapons have necromancy skill for pain brand.
     if (mons_intel(*this) < I_HUMAN && !mons_is_avatar(type))
@@ -4269,7 +4277,7 @@ god_type monster::deity() const
     return god;
 }
 
-bool monster::drain_exp(actor *agent, bool quiet, int pow)
+bool monster::drain_exp(actor *agent, bool quiet, int /*pow*/)
 {
     if (res_negative_energy() >= 3)
         return false;
@@ -4526,21 +4534,21 @@ int monster::hurt(const actor *agent, int amount, beam_type flavour,
 
 void monster::confuse(actor *atk, int strength)
 {
-    if (!check_clarity(false))
+    if (!check_clarity())
         enchant_actor_with_flavour(this, atk, BEAM_CONFUSION, strength);
 }
 
-void monster::paralyse(actor *atk, int strength, string cause)
+void monster::paralyse(actor *atk, int strength, string /*cause*/)
 {
     enchant_actor_with_flavour(this, atk, BEAM_PARALYSIS, strength);
 }
 
-void monster::petrify(actor *atk, bool force)
+void monster::petrify(actor *atk, bool /*force*/)
 {
     enchant_actor_with_flavour(this, atk, BEAM_PETRIFY);
 }
 
-bool monster::fully_petrify(actor *atk, bool quiet)
+bool monster::fully_petrify(actor */*atk*/, bool quiet)
 {
     bool msg = !quiet && simple_monster_message(*this, mons_is_immotile(*this) ?
                          " turns to stone!" : " stops moving altogether!");
@@ -5237,7 +5245,7 @@ bool monster::can_mutate() const
     return !(holi & (MH_UNDEAD | MH_NONLIVING));
 }
 
-bool monster::can_safely_mutate(bool temp) const
+bool monster::can_safely_mutate(bool /*temp*/) const
 {
     return can_mutate();
 }
@@ -5437,6 +5445,8 @@ void monster::check_redraw(const coord_def &old, bool clear_tiles) const
 #ifdef USE_TILE
             if (clear_tiles && !see_old)
                 tile_reset_fg(old);
+#else
+            UNUSED(clear_tiles);
 #endif
         }
         update_screen();
@@ -5574,9 +5584,7 @@ bool monster::swap_with(monster* other)
     }
 
     if (!monster_habitable_grid(this, grd(new_pos))
-         && !can_cling_to(new_pos)
-        || !monster_habitable_grid(other, grd(old_pos))
-            && !other->can_cling_to(old_pos))
+        || !monster_habitable_grid(other, grd(old_pos)))
     {
         return false;
     }
@@ -5608,7 +5616,7 @@ bool monster::do_shaft()
         return false;
     }
 
-    level_id lev = shaft_dest(false);
+    level_id lev = shaft_dest();
 
     if (lev == level_id::current())
         return false;
@@ -5634,7 +5642,7 @@ bool monster::do_shaft()
     return reveal;
 }
 
-void monster::put_to_sleep(actor *attacker, int strength, bool hibernate)
+void monster::put_to_sleep(actor */*attacker*/, int /*strength*/, bool hibernate)
 {
     const bool valid_target = hibernate ? can_hibernate() : can_sleep();
     if (!valid_target)
@@ -5661,7 +5669,7 @@ void monster::check_awaken(int)
     // XXX
 }
 
-int monster::beam_resists(bolt &beam, int hurted, bool doEffects, string source)
+int monster::beam_resists(bolt &beam, int hurted, bool doEffects, string /*source*/)
 {
     return mons_adjust_flavoured(this, beam, hurted, doEffects);
 }
@@ -6051,6 +6059,15 @@ void monster::react_to_damage(const actor *oppressor, int damage,
     if (!alive())
         return;
 
+    if (!mons_is_tentacle_or_tentacle_segment(type)
+        && has_ench(ENCH_INNER_FLAME) && oppressor && damage)
+    {
+        mon_enchant i_f = get_ench(ENCH_INNER_FLAME);
+        if (you.see_cell(pos()))
+            mprf("Flame seeps out of %s.", name(DESC_THE).c_str());
+        check_place_cloud(CLOUD_FIRE, pos(), 3, actor_by_mid(i_f.source));
+    }
+
 
     if (mons_species() == MONS_BUSH
         && res_fire() < 0 && flavour == BEAM_FIRE
@@ -6062,7 +6079,8 @@ void monster::react_to_damage(const actor *oppressor, int damage,
     {
         if (hit_points + damage > max_hit_points / 2)
             damage = max_hit_points / 2 - hit_points;
-        if (damage > 0 && x_chance_in_y(damage, damage + hit_points))
+        if (damage > 0 && x_chance_in_y(damage, damage + hit_points)
+            && flavour != BEAM_TORMENT_DAMAGE)
         {
             bool fly_died = coinflip();
             int old_hp                = hit_points;
@@ -6179,11 +6197,6 @@ reach_type monster::reach_range() const
     if (wpn)
         return weapon_reach(*wpn);
     return REACH_NONE;
-}
-
-bool monster::can_cling_to_walls() const
-{
-    return mons_can_cling_to_walls(*this);
 }
 
 void monster::steal_item_from_player()
@@ -6575,12 +6588,9 @@ void monster::id_if_worn(mon_inv_type mslot, object_class_type base_type,
         set_ident_type(*item, true);
 }
 
-bool monster::check_clarity(bool silent) const
+bool monster::check_clarity() const
 {
-    if (!clarity())
-        return false;
-
-    return true;
+    return clarity();
 }
 
 bool monster::stasis() const
@@ -6622,6 +6632,7 @@ bool monster::is_jumpy() const
 // Currently only used for Aura of Brilliance and Hep ancestors.
 int monster::spell_hd(spell_type spell) const
 {
+    UNUSED(spell);
     int hd = get_hit_dice();
     if (mons_is_hepliaklqana_ancestor(type))
         hd = max(1, hd * 2 / 3);
@@ -6708,6 +6719,7 @@ bool monster::angered_by_attacks() const
     return !has_ench(ENCH_INSANE)
             && !mons_is_avatar(type)
             && type != MONS_SPELLFORGED_SERVITOR
+            && !mons_is_conjured(type)
             && !testbits(flags, MF_DEMONIC_GUARDIAN)
             && !mons_is_hepliaklqana_ancestor(type);
 }

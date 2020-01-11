@@ -21,3 +21,10 @@ void job_stat_init(job_type job);
 void debug_jobdata();
 job_type random_starting_job();
 bool is_starting_job(job_type job);
+
+bool job_is_removed(job_type job);
+
+static inline bool job_type_valid(job_type job)
+{
+    return 0 <= job && job < NUM_JOBS;
+}

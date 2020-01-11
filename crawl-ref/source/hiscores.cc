@@ -69,7 +69,7 @@ static int hs_list_size = 0;
 static bool hs_list_initalized = false;
 
 static FILE *_hs_open(const char *mode, const string &filename);
-static void  _hs_close(FILE *handle, const string &filename);
+static void  _hs_close(FILE *handle);
 static bool  _hs_read(FILE *scores, scorefile_entry &dest);
 static void  _hs_write(FILE *scores, scorefile_entry &entry);
 static time_t _parse_time(const string &st);
@@ -158,7 +158,7 @@ int hiscores_new_entry(const scorefile_entry &ne)
     // If we've still not inserted it, it's not a highscore.
     if (!inserted)
     {
-        _hs_close(scores, _score_file_name());
+        _hs_close(scores);
         return -1;
     }
 
@@ -182,7 +182,7 @@ int hiscores_new_entry(const scorefile_entry &ne)
     }
 
     // close scorefile.
-    _hs_close(scores, _score_file_name());
+    _hs_close(scores);
     return newest_entry;
 }
 
@@ -204,7 +204,7 @@ void logfile_new_entry(const scorefile_entry &ne)
     _hs_write(logfile, le);
 
     // close logfile.
-    _hs_close(logfile, _log_file_name());
+    _hs_close(logfile);
 }
 
 template <class t_printf>
@@ -251,7 +251,7 @@ void hiscores_read_to_memory()
     hs_list_initalized = true;
 
     //close off
-    _hs_close(scores, _score_file_name());
+    _hs_close(scores);
 }
 
 // Writes all entries in the scorefile to stdout in human-readable form.
@@ -279,7 +279,7 @@ void hiscores_print_all(int display_count, int format)
             _hiscores_print_entry(se, entry, format, printf);
     }
 
-    _hs_close(scores, _score_file_name());
+    _hs_close(scores);
 }
 
 // Displays high scores using curses. For output to the console, use
@@ -317,7 +317,7 @@ string hiscores_print_list(int display_count, int format, int newest_entry, int&
         if (i == newest_entry)
             ret += "<yellow>";
 
-        _hiscores_print_entry(*hs_list[i], i, format, [&ret](const char *fmt, const char *s){
+        _hiscores_print_entry(*hs_list[i], i, format, [&ret](const char */*fmt*/, const char *s){
             ret += string(s);
         });
 
@@ -358,7 +358,7 @@ static void _show_morgue(scorefile_entry& se)
         morgue_text += "<w>" + replace_all(line, "<", "<<") + "</w>" + '\n';
     }
 
-    lk_close(morgue, morgue_path);
+    lk_close(morgue);
 
     column_composer cols(2, 40);
     cols.add_formatted(
@@ -380,14 +380,13 @@ class UIHiscoresMenu : public Widget
 public:
     UIHiscoresMenu();
 
-    virtual shared_ptr<Widget> get_child_at_offset(int x, int y) override {
+    virtual shared_ptr<Widget> get_child_at_offset(int, int) override {
         return static_pointer_cast<Widget>(m_root);
     }
 
     virtual void _render() override;
     virtual SizeReq _get_preferred_size(Direction dim, int prosp_width) override;
     virtual void _allocate_region() override;
-    virtual bool on_event(const wm_event& event) override;
 
     void on_show();
 
@@ -410,19 +409,34 @@ static int nhsr;
 UIHiscoresMenu::UIHiscoresMenu()
 {
     m_root = make_shared<Box>(Widget::VERT);
-    m_root->_set_parent(this);
+    add_internal_child(m_root);
+    m_root->set_cross_alignment(Widget::STRETCH);
+
+    auto title_hbox = make_shared<Box>(Widget::HORZ);
+    title_hbox->set_margin_for_sdl(0, 0, 20, 0);
+    title_hbox->set_margin_for_crt(0, 0, 1, 0);
+
+#ifdef USE_TILE
+    auto tile = make_shared<Image>();
+    tile->set_tile(tile_def(TILEG_STARTUP_HIGH_SCORES, TEX_GUI));
+    title_hbox->add_child(move(tile));
+#endif
 
     auto title = make_shared<Text>(formatted_string(
                 "Dungeon Crawl Stone Soup: High Scores", YELLOW));
-    title->align_self = Widget::CENTER;
-    title->set_margin_for_sdl({0, 0, 20, 0});
+    title->set_margin_for_sdl(0, 0, 0, 16);
+    title_hbox->add_child(move(title));
+
+    title_hbox->set_main_alignment(Widget::CENTER);
+    title_hbox->set_cross_alignment(Widget::CENTER);
+
     m_description = make_shared<Text>(string(9, '\n'));
 
     m_score_entries= make_shared<OuterMenu>(true, 1, 100);
     nhsr = 0;
     _construct_hiscore_table();
 
-    m_root->add_child(move(title));
+    m_root->add_child(move(title_hbox));
     if (initial_focus)
     {
         m_root->add_child(m_description);
@@ -434,6 +448,10 @@ UIHiscoresMenu::UIHiscoresMenu()
         m_root->add_child(make_shared<Text>(placeholder));
         initial_focus = this;
     }
+
+    on_hotkey_event([this](const KeyEvent& ev) {
+        return done = (key_is_escape(ev.key()) || ev.key() == CK_MOUSE_CMD);
+    });
 }
 
 void UIHiscoresMenu::_construct_hiscore_table()
@@ -452,7 +470,7 @@ void UIHiscoresMenu::_construct_hiscore_table()
             break;
     }
 
-    _hs_close(scores, _score_file_name());
+    _hs_close(scores);
 
     for (int j=0; j<i; j++)
         _add_hiscore_row(*hs_list[j], j);
@@ -462,23 +480,18 @@ void UIHiscoresMenu::_add_hiscore_row(scorefile_entry& se, int id)
 {
     auto tmp = make_shared<Text>();
 
-    tmp->set_text(formatted_string(hiscores_format_single(se)));
+    tmp->set_text(hiscores_format_single(se));
     auto btn = make_shared<MenuButton>();
-    tmp->set_margin_for_sdl({2,2,2,2});
+    tmp->set_margin_for_sdl(2);
     btn->set_child(move(tmp));
-    btn->on(Widget::slots.event, [this, id, se](wm_event ev) {
-        if (ev.type == WME_MOUSEBUTTONUP && ev.mouse_event.button == MouseEvent::LEFT
-                || ev.type == WME_KEYDOWN && ev.key.keysym.sym == CK_ENTER)
-        {
-            _show_morgue(*hs_list[id]);
-            return true;
-        }
-        if (ev.type == WME_FOCUSIN)
-        {
-            formatted_string desc(hiscores_format_single_long(se, true));
-            desc.cprintf(string(max(0, 9-count_linebreaks(desc)), '\n'));
-            m_description->set_text(move(desc));
-        }
+    btn->on_activate_event([id](const ActivateEvent&) {
+        _show_morgue(*hs_list[id]);
+        return true;
+    });
+    btn->on_focusin_event([this, se](const FocusEvent&) {
+        formatted_string desc(hiscores_format_single_long(se, true));
+        desc.cprintf(string(max(0, 9-count_linebreaks(desc)), '\n'));
+        m_description->set_text(move(desc));
         return false;
     });
 
@@ -510,16 +523,6 @@ void UIHiscoresMenu::_allocate_region()
         on_show();
     }
     m_root->allocate_region(m_region);
-}
-
-bool UIHiscoresMenu::on_event(const wm_event& ev)
-{
-    if (ev.type != WME_KEYDOWN)
-        return false;
-    int key = ev.key.keysym.sym;
-    if (key_is_escape(key) || key == CK_MOUSE_CMD)
-        return done = true;
-    return true;
 }
 
 void show_hiscore_table()
@@ -597,9 +600,9 @@ static FILE *_hs_open(const char *mode, const string &scores)
     return lk_open(mode, scores);
 }
 
-static void _hs_close(FILE *handle, const string &scores)
+static void _hs_close(FILE *handle)
 {
-    lk_close(handle, scores);
+    lk_close(handle);
 }
 
 static bool _hs_read(FILE *scores, scorefile_entry &dest)
@@ -782,6 +785,7 @@ void scorefile_entry::init_from(const scorefile_entry &se)
     zigmax             = se.zigmax;
     scrolls_used       = se.scrolls_used;
     potions_used       = se.potions_used;
+    seed               = se.seed;
     fixup_char_name();
 
     // We could just reset raw_line to "" instead.
@@ -1085,6 +1089,8 @@ void scorefile_entry::init_with_fields()
     scrolls_used = fields->int_field("scrollsused");
     potions_used = fields->int_field("potionsused");
 
+    seed = fields->str_field("seed");
+
     fixup_char_name();
 }
 
@@ -1233,6 +1239,8 @@ void scorefile_entry::set_score_fields() const
 
     if (!killer_map.empty())
         fields->add_field("killermap", "%s", killer_map.c_str());
+
+    fields->add_field("seed", "%s", seed.c_str());
 
 #ifdef DGL_EXTENDED_LOGFILES
     const string short_msg = short_kill_message();
@@ -1519,6 +1527,7 @@ void scorefile_entry::reset()
     zigmax               = 0;
     scrolls_used         = 0;
     potions_used         = 0;
+    seed.clear();
 }
 
 static int _award_modified_experience()
@@ -1758,6 +1767,7 @@ void scorefile_entry::init(time_t dt)
 
     wiz_mode = (you.wizard || you.suppress_wizard ? 1 : 0);
     explore_mode = (you.explore ? 1 : 0);
+    seed = make_stringf("%" PRIu64, crawl_state.seed);
 }
 
 string scorefile_entry::hiscore_line(death_desc_verbosity verbosity) const
@@ -1961,6 +1971,7 @@ scorefile_entry::character_description(death_desc_verbosity verbosity) const
         ASSERT(birth_time);
         desc += " on ";
         desc += _hiscore_date_string(birth_time);
+        // TODO: show seed here?
 
         desc = _append_sentence_delimiter(desc, ".");
         desc += _hiscore_newline_string();
@@ -2972,8 +2983,10 @@ void mark_milestone(const string &type, const string &milestone,
     if (FILE *fp = lk_open("a", milestone_file))
     {
         fprintf(fp, "%s\n", xlog_line.c_str());
-        lk_close(fp, milestone_file);
+        lk_close(fp);
     }
+#else
+    UNUSED(type, milestone, origin_level, milestone_time);
 #endif // DGL_MILESTONES
 }
 

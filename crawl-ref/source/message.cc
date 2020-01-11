@@ -12,7 +12,6 @@
 #include "areas.h"
 #include "colour.h"
 #include "delay.h"
-#include "english.h"
 #include "hints.h"
 #include "initfile.h"
 #include "libutil.h"
@@ -685,8 +684,17 @@ public:
         if (_pre_more())
             return;
 
-        print_stats();
-        show();
+        if (you.running)
+        {
+            mouse_control mc(MOUSE_MODE_MORE);
+            redraw_screen();
+        }
+        else
+        {
+            print_stats();
+            show();
+        }
+
         int last_row = crawl_view.msgsz.y;
         if (first_col_more())
         {
@@ -966,7 +974,7 @@ message_tee::~message_tee()
     current_message_tees.erase(this);
 }
 
-void message_tee::append(const string &s, msg_channel_type ch)
+void message_tee::append(const string &s, msg_channel_type /*ch*/)
 {
     // could use a more c++y external interface -- but that just complicates things
     store << s;
@@ -1292,7 +1300,7 @@ static bool _check_flash_screen(const string& line, msg_channel_type channel)
     return _check_option(line, channel, Options.flash_screen_message);
 }
 
-static bool _check_join(const string& line, msg_channel_type channel)
+static bool _check_join(const string& /*line*/, msg_channel_type channel)
 {
     switch (channel)
     {
@@ -1538,49 +1546,51 @@ int msgwin_get_line(string prompt, char *buf, int len,
     if (use_popup)
     {
         mouse_control mc(MOUSE_MODE_PROMPT);
-        resumable_line_reader reader(buf, len);
-        reader.set_input_history(mh);
-        reader.read_line(fill);
-        reader.putkey(CK_END);
 
         linebreak_string(prompt, 79);
         msg_colour_type colour = prepare_message(prompt, MSGCH_PROMPT, 0);
-        const string colour_prompt = colour_string(prompt, colour_msg(colour));
+        const auto colour_prompt = formatted_string(prompt, colour_msg(colour));
 
         bool done = false;
-        auto text = make_shared<ui::Text>();
-        auto popup = make_shared<ui::Popup>(text);
-        auto update_text = [&]() {
-            formatted_string p = formatted_string::parse_string(colour_prompt);
-            p.cprintf("\n\n%s", reader.get_text().c_str());
-            text->set_text(p);
-#ifdef USE_TILE_WEB
-            tiles.json_open_object();
-            tiles.json_write_string("text", reader.get_text().c_str());
-            tiles.ui_state_change("msgwin-get-line", 0);
+        auto vbox = make_shared<ui::Box>(ui::Widget::VERT);
+        auto popup = make_shared<ui::Popup>(vbox);
+
+        vbox->add_child(make_shared<ui::Text>(colour_prompt + "\n"));
+
+        auto input = make_shared<ui::TextEntry>();
+        input->set_sync_id("input");
+        input->set_text(fill);
+        input->set_input_history(mh);
+#ifndef USE_TILE_LOCAL
+        input->max_size().width = 20;
 #endif
-        };
-        popup->on(ui::Widget::slots.event, [&](wm_event ev) {
-            if (ev.type != WME_KEYDOWN)
-                return false;
-            ret = reader.putkey(ev.key.keysym.sym);
-            if (ret != -1)
-                done = true;
-            update_text();
-            return true;
+        vbox->add_child(input);
+
+        popup->on_hotkey_event([&](const ui::KeyEvent& ev) {
+            switch (ev.key())
+            {
+            CASE_ESCAPE
+                ret = CK_ESCAPE;
+                return done = true;
+            case CK_ENTER:
+                ret = 0;
+                return done = true;
+            default:
+                return done = false;
+            }
         });
 
 #ifdef USE_TILE_WEB
         tiles.json_open_object();
-        tiles.json_write_string("prompt", colour_prompt);
-        tiles.json_write_string("text", fill);
-        tiles.push_ui_layout("msgwin-get-line", 1);
+        tiles.json_write_string("prompt", colour_prompt.to_colour_string());
+        tiles.push_ui_layout("msgwin-get-line", 0);
 #endif
-        update_text();
-        ui::run_layout(move(popup), done);
+        ui::run_layout(move(popup), done, input);
 #ifdef USE_TILE_WEB
-    tiles.pop_ui_layout();
+        tiles.pop_ui_layout();
 #endif
+        strncpy(buf, input->get_text().c_str(), len - 1);
+        buf[len - 1] = '\0';
     }
     else
     {
@@ -2158,6 +2168,8 @@ static void _replay_messages_core(formatted_scroller &hist)
         if (channel_message_history(msgs[i].channel))
         {
             string text = msgs[i].full_text();
+            if (!text.size())
+                continue;
             linebreak_string(text, cgetsize(GOTO_CRT).x - 1);
             vector<formatted_string> parts;
             formatted_string::parse_string_to_multiple(text, parts, 80);
@@ -2193,8 +2205,7 @@ void replay_messages_during_startup()
     formatted_scroller hist(FS_PREWRAPPED_TEXT);
     hist.set_more();
     hist.set_more(formatted_string::parse_string(
-                        "<cyan>Press Esc or Enter to continue, "
-                        "arrows/pgup/pgdn to scroll.</cyan>"));
+            "<cyan>Press Esc to close, arrows/pgup/pgdn to scroll.</cyan>"));
     hist.set_title(formatted_string::parse_string(recent_error_messages()
         ? "<yellow>Crawl encountered errors during initialization:</yellow>"
         : "<yellow>Initialization log:</yellow>"));

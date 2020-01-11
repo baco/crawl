@@ -72,14 +72,15 @@ tileidx_t tileidx_enchant_equ(const item_def &item, tileidx_t tile,
 #ifdef USE_TILE
 void bind_item_tile(item_def &item);
 #else
-static inline void bind_item_tile(item_def &item) {}
+static inline void bind_item_tile(item_def &/*item*/) {}
 #endif
 
 // For a given fg/bg set of tile indices and a 1 character prefix,
 // return index, flag, and tile name as a printable string.
-string tile_debug_string(tileidx_t fg, tileidx_t bg, tileidx_t cloud, char prefix);
+string tile_debug_string(tileidx_t fg, tileidx_t bg, char prefix);
 
 void tile_init_props(monster* mon);
-tileidx_t tileidx_monster_base(int type, bool in_water = false, int colour = 0,
-                               int number = 4, int tile_num_prop = 0, bool vary = true);
+tileidx_t tileidx_monster_base(int type, int mon_id, bool in_water = false,
+                               int colour = 0, int number = 4, int tile_num_prop = 0,
+                               bool vary = true);
 tileidx_t tileidx_mon_clamp(tileidx_t tile, int offset);

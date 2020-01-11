@@ -13,7 +13,6 @@
 #include "ability.h"
 #include "areas.h"
 #include "artefact.h"
-#include "attitude-change.h"
 #include "bloodspatter.h"
 #include "butcher.h"
 #include "clua.h"
@@ -24,18 +23,12 @@
 #include "directn.h"
 #include "dungeon.h"
 #include "english.h"
-#include "enum.h"
 #include "env.h"
-#include "exclude.h"
-#include "exercise.h"
 #include "fineff.h"
 #include "food.h"
 #include "fprop.h"
-#include "god-abil.h"
 #include "god-companions.h"
-#include "god-conduct.h"
 #include "god-passive.h"
-#include "god-prayer.h"
 #include "god-wrath.h"
 #include "hints.h"
 #include "invent.h"
@@ -62,14 +55,11 @@
 #include "prompt.h"
 #include "random.h"
 #include "religion.h"
-#include "rot.h"
 #include "shout.h"
 #include "sound.h"
-#include "spl-other.h"
 #include "spl-selfench.h"
 #include "spl-util.h"
 #include "stairs.h"
-#include "stash.h"
 #include "state.h"
 #include "stringutil.h"
 #include "teleport.h"
@@ -77,19 +67,7 @@
 #include "transform.h"
 #include "traps.h"
 #include "travel.h"
-#include "view.h"
 #include "xom.h"
-
-class interrupt_block
-{
-public:
-    interrupt_block() { ++interrupts_blocked; }
-    ~interrupt_block() { --interrupts_blocked; }
-
-    static bool blocked() { return interrupts_blocked > 0; }
-private:
-    static int interrupts_blocked;
-};
 
 int interrupt_block::interrupts_blocked = 0;
 
@@ -767,7 +745,7 @@ void JewelleryOnDelay::finish()
 #ifdef USE_SOUND
     parse_sound(WEAR_JEWELLERY_SOUND);
 #endif
-    puton_ring(jewellery.link, false, false);
+    puton_ring(jewellery, false, false);
 }
 
 void ArmourOnDelay::finish()

@@ -103,11 +103,10 @@ struct duration_def
         return name_text[0] ? name_text : short_text;
     }
 
-    const bool duration_has_flag(uint64_t flag_wanted) const
+    bool duration_has_flag(uint64_t flag_wanted) const
     {
         return flags & flag_wanted;
     }
-
 };
 
 /**
@@ -576,9 +575,6 @@ static const duration_def duration_data[] =
     { DUR_FLIGHT, 0, "", "", "flight", "", D_DISPELLABLE /*but special-cased*/, {}, 10},
     { DUR_POISONING, 0, "", "", "poisoning", "", D_NO_FLAGS},
     { DUR_PIETY_POOL, 0, "", "", "piety pool", "", D_NO_FLAGS},
-    { DUR_REGENERATION, 0, "", "", "regeneration", "", D_DISPELLABLE,
-      {{ "Your skin stops crawling." },
-          { "Your skin is crawling a little less now.", 1}}, 6},
     { DUR_TRANSFORMATION, 0, "", "", "transformation", "", D_DISPELLABLE /*but special-cased*/, {}, 10},
     { DUR_EXCRUCIATING_WOUNDS, 0, "", "", "excruciating wounds", "", D_DISPELLABLE,
       {{ "", _end_weapon_brand }}},
@@ -612,6 +608,11 @@ static const duration_def duration_data[] =
     { DUR_GRASPING_ROOTS, 0, "", "grasped by roots", "grasping roots",
       "You are constricted by grasping roots.", D_NO_FLAGS},
     { DUR_SHAFT_IMMUNITY, 0, "", "", "shaft immunity", "", D_NO_FLAGS, {{""}}},
+    { DUR_NOXIOUS_BOG,
+      MAGENTA, "Bog",
+      "noxious spew", "noxious bog",
+      "You are spewing a noxious bog.", D_DISPELLABLE,
+      {{ "Your noxious spew wanes." }}},
 
 #if TAG_MAJOR_VERSION == 34
     // And removed ones
@@ -649,6 +650,7 @@ static const duration_def duration_data[] =
     { DUR_MAGIC_SHIELD, 0, "", "", "old magic shield", "", D_NO_FLAGS},
     { DUR_FORTITUDE, 0, "", "", "old fortitude", "", D_NO_FLAGS},
     { DUR_WATER_HOLD_IMMUNITY, 0, "", "", "old drowning immunity", "", D_NO_FLAGS, {{""}}},
+    { DUR_REGENERATION, 0, "", "", "old regeneration", "", D_NO_FLAGS},
     { DUR_NO_CAST, 0, "", "", "old no cast", "", D_NO_FLAGS},
 #endif
 };

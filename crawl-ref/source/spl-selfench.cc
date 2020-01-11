@@ -10,26 +10,22 @@
 #include <cmath>
 
 #include "areas.h"
-#include "art-enum.h"
 #include "coordit.h" // radius_iterator
-#include "god-conduct.h"
+#include "env.h"
 #include "god-passive.h"
 #include "hints.h"
 #include "items.h" // stack_iterator
 #include "libutil.h"
-#include "macro.h"
 #include "message.h"
 #include "output.h"
 #include "prompt.h"
 #include "religion.h"
-#include "showsymb.h"
-#include "spl-transloc.h"
 #include "spl-util.h"
 #include "stringutil.h"
+#include "terrain.h"
 #include "transform.h"
 #include "tilepick.h"
 #include "view.h"
-#include "viewchar.h"
 
 spret cast_deaths_door(int pow, bool fail)
 {
@@ -74,20 +70,11 @@ spret ice_armour(int pow, bool fail)
     return spret::success;
 }
 
-spret deflection(int pow, bool fail)
+spret deflection(int /*pow*/, bool fail)
 {
     fail_check();
     you.attribute[ATTR_DEFLECT_MISSILES] = 1;
     mpr("You feel very safe from missiles.");
-
-    return spret::success;
-}
-
-spret cast_regen(int pow, bool fail)
-{
-    fail_check();
-    you.increase_duration(DUR_REGENERATION, 5 + roll_dice(2, pow / 3 + 1), 100,
-                          "Your skin crawls.");
 
     return spret::success;
 }
@@ -194,7 +181,7 @@ spret cast_song_of_slaying(int pow, bool fail)
     if (you.duration[DUR_SONG_OF_SLAYING])
         mpr("You start a new song!");
     else
-        mpr("You start singing a song of slaying.");
+        mpr("You start singing a sleighing song.");
 
     you.set_duration(DUR_SONG_OF_SLAYING, 20 + random2avg(pow, 2));
 
@@ -254,4 +241,30 @@ spret cast_transform(int pow, transformation which_trans, bool fail)
     fail_check();
     transform(pow, which_trans);
     return spret::success;
+}
+
+spret cast_noxious_bog(int pow, bool fail)
+{
+    fail_check();
+    flash_view_delay(UA_PLAYER, LIGHTGREEN, 100);
+
+    if (!you.duration[DUR_NOXIOUS_BOG])
+        mpr("You begin spewing toxic sludge!");
+    else
+        mpr("Your toxic spew intensifies!");
+
+    you.props[NOXIOUS_BOG_KEY] = pow;
+    you.increase_duration(DUR_NOXIOUS_BOG, 5 + random2(pow / 10), 24);
+    return spret::success;
+}
+
+void noxious_bog_cell(coord_def p)
+{
+    if (grd(p) == DNGN_DEEP_WATER || grd(p) == DNGN_LAVA)
+        return;
+
+    const int turns = 10
+                    + random2avg(you.props[NOXIOUS_BOG_KEY].get_int() / 20, 2);
+    temp_change_terrain(p, DNGN_TOXIC_BOG, turns * BASELINE_DELAY,
+            TERRAIN_CHANGE_BOG, you.as_monster());
 }

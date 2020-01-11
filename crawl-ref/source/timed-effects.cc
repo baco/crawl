@@ -11,13 +11,11 @@
 #include "act-iter.h"
 #include "areas.h"
 #include "beam.h"
-#include "bloodspatter.h"
 #include "cloud.h"
 #include "coordit.h"
 #include "database.h"
 #include "dgn-shoals.h"
 #include "dgn-event.h"
-#include "dungeon.h"
 #include "env.h"
 #include "exercise.h"
 #include "externs.h"
@@ -387,7 +385,7 @@ static void _jiyva_effects(int /*time_delta*/)
         jiyva_eat_offlevel_items();
 }
 
-static void _evolve(int time_delta)
+static void _evolve(int /*time_delta*/)
 {
     if (int lev = you.get_mutation_level(MUT_EVOLUTION))
         if (one_chance_in(2 / lev)
@@ -898,7 +896,7 @@ void update_level(int elapsedTime)
 #endif
 
     rot_floor_items(elapsedTime);
-    shoals_apply_tides(turns, true, turns < 5);
+    shoals_apply_tides(turns, true);
     timeout_tombs(turns);
 
     if (env.sanctuary_time)
@@ -1184,6 +1182,12 @@ void timeout_terrain_changes(int duration, bool force)
             continue;
         }
 
+        if (marker->change_type == TERRAIN_CHANGE_BOG
+            && !you.see_cell(marker->pos))
+        {
+            marker->duration = 0;
+        }
+
         monster* mon_src = monster_by_mid(marker->mon_num);
         if (marker->duration <= 0
             || (marker->mon_num != 0
@@ -1281,7 +1285,7 @@ void run_environment_effects()
 
     run_corruption_effects(you.time_taken);
     shoals_apply_tides(div_rand_round(you.time_taken, BASELINE_DELAY),
-                       false, true);
+                       false);
     timeout_tombs(you.time_taken);
     timeout_malign_gateways(you.time_taken);
     timeout_terrain_changes(you.time_taken);

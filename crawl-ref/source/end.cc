@@ -52,6 +52,7 @@ using namespace ui;
 bool crawl_should_restart(game_exit exit)
 {
 #ifdef DGAMELAUNCH
+    UNUSED(exit);
     return false;
 #else
 #ifdef USE_TILE_WEB
@@ -133,25 +134,21 @@ bool fatal_error_notification(string error_msg)
 
     auto prompt_ui =
                 make_shared<Text>(formatted_string::parse_string(error_msg));
+    auto popup = make_shared<ui::Popup>(prompt_ui);
     bool done = false;
-    prompt_ui->on(Widget::slots.event, [&](wm_event ev) {
-        if (ev.type == WME_KEYDOWN)
+
+    popup->on_hotkey_event([&](const KeyEvent& ev) {
+        if (ev.key() == CONTROL('P'))
         {
-            if (ev.key.keysym.sym == CONTROL('P'))
-            {
-                done = false;
-                replay_messages();
-            }
-            else
-                done = true;
+            replay_messages();
+            return true;
         }
-        else
-            done = false;
-        return done;
+        return false;
     });
 
+    popup->on_keydown_event([&](const KeyEvent&) { return done = true; });
+
     mouse_control mc(MOUSE_MODE_MORE);
-    auto popup = make_shared<ui::Popup>(prompt_ui);
     ui::run_layout(move(popup), done);
 #endif
 
@@ -250,13 +247,11 @@ NORETURN void screen_end_game(string text)
     {
         auto prompt_ui = make_shared<Text>(
                 formatted_string::parse_string(text));
+        auto popup = make_shared<ui::Popup>(prompt_ui);
         bool done = false;
-        prompt_ui->on(Widget::slots.event, [&](wm_event ev)  {
-            return done = ev.type == WME_KEYDOWN;
-        });
+        popup->on_keydown_event([&](const KeyEvent&) { return done = true; });
 
         mouse_control mc(MOUSE_MODE_MORE);
-        auto popup = make_shared<ui::Popup>(prompt_ui);
         ui::run_layout(move(popup), done);
     }
 
@@ -300,7 +295,7 @@ public:
 
 void HiscoreScroller::_allocate_region()
 {
-    m_scroll = scroll_target - m_region[3]/2;
+    m_scroll = scroll_target - m_region.height/2;
     Scroller::_allocate_region();
 }
 
@@ -473,14 +468,14 @@ NORETURN void end_game(scorefile_entry &se)
         death_tile = tile_def(TILE_DNGN_GRAVESTONE+1, TEX_FEAT);
 
     auto tile = make_shared<Image>(death_tile);
-    tile->set_margin_for_sdl({0, 10, 0, 0});
+    tile->set_margin_for_sdl(0, 10, 0, 0);
     title_hbox->add_child(move(tile));
 #endif
     string goodbye_title = make_stringf("Goodbye, %s.", you.your_name.c_str());
     title_hbox->add_child(make_shared<Text>(goodbye_title));
-    title_hbox->align_items = Widget::CENTER;
-    title_hbox->set_margin_for_sdl({0, 0, 20, 0});
-    title_hbox->set_margin_for_crt({0, 0, 1, 0});
+    title_hbox->set_cross_alignment(Widget::CENTER);
+    title_hbox->set_margin_for_sdl(0, 0, 20, 0);
+    title_hbox->set_margin_for_crt(0, 0, 1, 0);
 
     auto vbox = make_shared<Box>(Box::VERT);
     vbox->add_child(move(title_hbox));
@@ -524,9 +519,7 @@ NORETURN void end_game(scorefile_entry &se)
 
     auto popup = make_shared<ui::Popup>(move(vbox));
     bool done = false;
-    popup->on(Widget::slots.event, [&](wm_event ev)  {
-        return done = ev.type == WME_KEYDOWN;
-    });
+    popup->on_keydown_event([&](const KeyEvent&) { return done = true; });
 
     if (!crawl_state.seen_hups && !crawl_state.disables[DIS_CONFIRMATIONS])
     {

@@ -47,6 +47,7 @@
 #    USE_ICC       -- set to use Intel's compiler
 #    LTO           -- set for better optimization but slower compilation,
 #                     requires gcc4.6+
+#    NO_TRY_LLD    -- if set don't try to detect a working lld linker
 #    NO_TRY_GOLD   -- if set don't try to detect a working gold linker
 #    NOASSERTS     -- set to disable assertion checks (ignored in debug mode)
 #    NOWIZARD      -- set to disable wizard mode.  Use if you have untrusted
@@ -82,9 +83,11 @@ MAKEFLAGS += -rR # This only works for recursive makes, i.e. contribs ...
 .SUFFIXES:       # ... so zap the suffix list to neutralize most predifined rules, too
 
 .PHONY: all test install clean clean-contrib clean-rltiles clean-android \
+        clean-catch2 clean-plug-and-play-tests \
+		clean-coverage clean-coverage-full \
         distclean debug debug-lite profile package-source source \
         build-windows package-windows docs greet api api-dev android FORCE \
-	monster
+        monster catch2-tests plug-and-play-tests
 
 include Makefile.obj
 
@@ -116,8 +119,20 @@ ifdef FORCE_SSE
 CFOTHERS += -mfpmath=sse -msse2
 endif
 
-CFWARN := 
+CFWARN :=
 CFWARN_L := -Wall -Wformat-security -Wundef
+
+# Exceptions:
+#  -Wmissing-field-initializers: need c++14 to set default struct fields
+#  -Wimplicit-fallthrough: need c++17 for [[fallthrough]]
+#  -Wtype-limits: mostly complains about ASSERT_RANGE, and _Pragma is buggy on
+#      old g++ anyway: re-enable when we bump the minimum g++ version
+#  -Wuninitialized: added later in this makefile, conditional on NO_OPTIMIZE
+CFWARN_L += -Wextra \
+	    -Wno-missing-field-initializers \
+	    -Wno-implicit-fallthrough \
+	    -Wno-type-limits \
+	    -Wno-uninitialized \
 
 DEFINES := $(EXTERNAL_DEFINES)
 
@@ -241,7 +256,7 @@ ifeq ($(uname_S),Darwin)
 		BUILD_SDL2 = YesPlease
 		BUILD_SDL2IMAGE = YesPlease
 		ifdef SOUND
-			ifndef WIN32 
+			ifndef WIN32
 				BUILD_SDL2MIXER = YesPlease
 			endif
 		endif
@@ -273,7 +288,7 @@ ifdef BUILD_ALL
 
 	BUILD_PCRE = YesPlease
 	ifdef SOUND
-		ifndef WIN32 
+		ifndef WIN32
 			BUILD_SDL2MIXER = YesPlease
 		endif
 	endif
@@ -706,7 +721,7 @@ SDL2_LDFLAGS := $(shell $(PKGCONFIG) sdl2 --libs-only-L) $(shell $(PKGCONFIG) sd
 endif
 
 ifdef SOUND
-ifndef WIN32 
+ifndef WIN32
 LIBS += -lSDL2_mixer
 endif
 endif
@@ -769,6 +784,7 @@ ifneq (,$(filter debug,$(MAKECMDGOALS)))
 	FULLDEBUG=YesPlease
 	DEBUG=YesPlease
 	NO_OPTIMIZE=YesPlease
+	COVERAGE=YesPlease
 endif
 
 # Debug-Lite
@@ -776,6 +792,7 @@ endif
 ifneq (,$(filter debug-lite,$(MAKECMDGOALS)))
 	DEBUG=YesPlease
 	NO_OPTIMIZE=YesPlease
+	COVERAGE=YesPlease
 endif
 
 # Profile
@@ -783,10 +800,26 @@ endif
 ifneq (,$(filter profile,$(MAKECMDGOALS)))
 	FULLDEBUG=YesPlease
 	DEBUG=YesPlease
+	COVERAGE=YesPlease
+endif
+
+# Unit tests
+ifneq (,$(filter catch2-tests,$(MAKECMDGOALS)))
+	COVERAGE=YesPlease
 endif
 
 ifdef HURRY
 	NO_OPTIMIZE=YesPlease
+endif
+
+ifdef COVERAGE
+    # GCC
+    ifeq ($(shell $(GXX) -v 2>&1|grep clang),)
+		CFOPTIMIZE_L = -fprofile-arcs -ftest-coverage
+    else
+    # Clang
+		CFOPTIMIZE_L = -fprofile-instr-generate -fcoverage-mapping
+    endif
 endif
 
 ifdef FULLDEBUG
@@ -997,7 +1030,7 @@ endif
 
 ifdef BUILD_PCRE
 DEFINES += -DREGEX_PCRE
-else 
+else
   ifdef USE_PCRE
   DEFINES += -DREGEX_PCRE
   LIBS += -lpcre
@@ -1015,10 +1048,21 @@ CFWARN := -wd383,810,869,981,1418 -we14,193,304
 CFWARN_L :=
 endif
 
+LINKER_LDFLAG=
+ifndef NO_TRY_LLD
+ifeq (,$(shell echo 'int main(){return 1;}'|$(GXX) -x c++ - -o /dev/null -fuse-ld=lld 2>&1))
+ LINKER_LDFLAG = -fuse-ld=lld
+endif
+endif
+ifeq ($(LINKER_LDFLAG),)
 ifndef NO_TRY_GOLD
 ifeq (,$(shell echo 'int main(){return 1;}'|$(GXX) -x c++ - -o /dev/null -fuse-ld=gold 2>&1))
-  LDFLAGS += -fuse-ld=gold
+  LINKER_LDFLAG = -fuse-ld=gold
 endif
+endif
+endif
+ifneq ($(LINKER_LDFLAG),)
+LDFLAGS += $(LINKER_LDFLAG)
 endif
 
 LDFLAGS += $(CFOPTIMIZE) $(CFOPTIMIZE_L) $(EXTERNAL_LDFLAGS)
@@ -1043,17 +1087,17 @@ endif
 
 ifneq ($(findstring s,$(MAKEFLAGS)),s)
 ifndef V
-        QUIET_CC       = @echo '   ' CC $@;
-        QUIET_CXX      = @echo '   ' CXX $@;
-        QUIET_PCH      = @echo '   ' PCH $@;
-        QUIET_LINK     = @echo '   ' LINK $@;
-        QUIET_GEN      = @echo '   ' GEN $@;
-        QUIET_COPY     = @echo '   ' COPY $@;
-        QUIET_DEPEND   = @echo '   ' DEPEND $@;
-        QUIET_WINDRES  = @echo '   ' WINDRES $@;
-        QUIET_HOSTCC   = @echo '   ' HOSTCC $@;
-        QUIET_PNGCRUSH = @echo '   ' $(PNGCRUSH_LABEL) $@;
-        QUIET_ADVPNG   = @echo '   ' ADVPNG $@;
+        QUIET_CC          = @echo '   ' CC $@;
+        QUIET_CXX         = @echo '   ' CXX $@;
+        QUIET_PCH         = @echo '   ' PCH $@;
+        QUIET_LINK        = @echo '   ' LINK $@;
+        QUIET_GEN         = @echo '   ' GEN $@;
+        QUIET_COPY        = @echo '   ' COPY $@;
+        QUIET_DEPEND      = @echo '   ' DEPEND $@;
+        QUIET_WINDRES     = @echo '   ' WINDRES $@;
+        QUIET_HOSTCC      = @echo '   ' HOSTCC $@;
+        QUIET_PNGCRUSH    = @echo '   ' $(PNGCRUSH_LABEL) $@;
+        QUIET_ADVPNG      = @echo '   ' ADVPNG $@;
         export V
 endif
 endif
@@ -1228,6 +1272,21 @@ endif
 
 GAME_OBJS=$(OBJECTS) main.o $(EXTRA_OBJECTS)
 MONSTER_OBJS=$(OBJECTS) util/monster/monster-main.o $(EXTRA_OBJECTS)
+CATCH2_TEST_OBJECTS = $(OBJECTS) $(TEST_OBJECTS) catch2-tests/test_main.o $(EXTRA_OBJECTS)
+
+
+ifneq (,$(filter plug-and-play-tests,$(MAKECMDGOALS)))
+    ifeq ("$(wildcard catch2-tests/test_plug_and_play.cc)","")
+$(info  ----------------------------------------------------------------)
+$(info  ERROR: 'catch2-tests_files/test_plug_and_play.cc' is not present)
+$(info  you must create a catch2-tests_files/test_plug_and_play.cc file)
+$(info  in order to use the 'make plug-and-play-tests' option. See )
+$(info  'docs/develop/test_plug_and_play_cc.txt' for more details.)
+$(info  ----------------------------------------------------------------)
+$(error See above ^ ^ ^ ^ ^ ^ ^)
+
+    endif
+endif
 
 # There might not have been any goals passed on the commandline, so...
 GOALS = $(or $(MAKECMDGOALS),$(.DEFAULT_GOAL))
@@ -1286,7 +1345,8 @@ DEPS := $(ALL_OBJECTS:.o=.d)
 # That rebuild will overwrite the stopgap .d file with a good one for
 # the next build.
 ifndef NEED_REBUILD
-  VALID_DEPS := $(shell for x_d in $(DEPS); do \
+  VALID_DEPS := $(shell checkdep () { \
+                          x_d="$$1"; \
                           x="$${x_d%%.d}"; x_cc="$${x}.cc"; x_o="$${x}.o"; \
                           if [ "$$x_cc" -ot "$$x_d" \
                                -a "$$x_d" -nt .cflags ]; \
@@ -1295,6 +1355,9 @@ ifndef NEED_REBUILD
                               || echo "$$x_o: FORCE" > "$$x_d"; \
                             echo "$$x_d"; \
                           fi; \
+                        }; \
+                        for x_d in $(DEPS); do \
+                          checkdep "$$x_d" & \
                         done)
 endif
 -include $(VALID_DEPS)
@@ -1480,7 +1543,8 @@ ifeq ($(USE_DGAMELAUNCH),)
 	$(CHMOD) $(MCHMOD) $(prefix_fp)/$(bin_prefix)/$(GAME) || true
 endif
 
-clean: clean-rltiles clean-webserver clean-android clean-monster
+clean: clean-rltiles clean-webserver clean-android clean-monster clean-catch2 \
+       clean-plug-and-play-tests clean-coverage-full
 	+$(MAKE) -C $(UTIL) clean
 	$(RM) $(GAME) $(GAME).exe $(GENERATED_FILES) $(EXTRA_OBJECTS) libw32c.o\
 	    libunix.o $(ALL_OBJECTS) $(ALL_OBJECTS:.o=.d) *.ixx  \
@@ -1531,6 +1595,33 @@ install-monster: monster
 	if [ -f ~/source/announcements.log ]; then \
 	  echo 'Monster database of master branch on crawl.develz.org updated to: $(VERSION)' >>~/source/announcements.log;\
 	fi
+
+catch2-tests-executable: $(CATCH2_TEST_OBJECTS) $(CONTRIB_LIBS) dat/dlua/tags.lua
+	+$(QUIET_LINK)$(CXX) $(LDFLAGS) $(CATCH2_TEST_OBJECTS) -o catch2-tests-executable $(LIBS)
+
+CATCH2_PNP_OBJECTS = $(OBJECTS) catch2-tests/test_plug_and_play.o \
+                     catch2-tests/test_main.o $(EXTRA_OBJECTS)
+
+plug-and-play-tests: $(CATCH2_PNP_OBJECTS) $(CONTRIB_LIBS) dat/dlua/tags.lua
+	+$(QUIET_LINK)$(CXX) $(LDFLAGS) $(CATCH2_PNP_OBJECTS) -o $@ $(LIBS)
+
+catch2-tests: catch2-tests-executable
+	./catch2-tests-executable
+
+clean-coverage-full: clean-coverage
+	find . -type f -name '*.gcno' -delete
+
+clean-coverage:
+	$(RM) default.profraw default.profdata coverage.info coverage.profdata
+	find . -type f \( -name '*.gcda' -or -name '*.gcov' \) -delete
+	$(RM) -r coverage-html-report
+
+clean-catch2:
+	$(RM) catch2-tests-executable catch2-tests-executable.exe
+
+clean-plug-and-play-tests:
+	$(RM) plug-and-play-tests plug-and-play-tests.exe
+
 debug: all
 debug-lite: all
 profile: all

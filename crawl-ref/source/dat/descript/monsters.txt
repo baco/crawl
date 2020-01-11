@@ -297,6 +297,14 @@ This tall and powerful demon is Mara, Lord of Illusions, mighty among dreamers.
 He is capable of creating intricately detailed illusions, so real that they are
 almost as deadly as the creatures they impersonate.
 %%%%
+Maggie
+
+A former Hell Knight apprentice. Impatient with the progress she was making
+with her former master, Maggie entered the Dungeon in search of a shortcut to
+fame and fortune. Lacking any sort of imagination on how to achieve this, she
+has settled on trying to slay a dragon - or two or three dragons, if one is not
+enough.
+%%%%
 Margery
 
 A lithe spellcaster in service to the powers of Hell; it is her duty to ensure
@@ -575,13 +583,14 @@ A small snake that can augment its bite by constricting small creatures.
 ballistomycete
 
 A lumpy reddish fungus covered in knobbly rhizome growths, growing well in the
-dank underground dungeon. When active it will occasionally produce giant
-spores, which in turn will give rise to more ballistomycetes.
+dank underground dungeon. When it senses a threat, the ballistomycete may
+release a deadly floating spore that explodes on its victims.
 %%%%
 ballistomycete spore
 
-A deceptively fast, floating ball filled with gas and spores, prone to burst at
-the slightest disturbance.
+A fast, gas-filled floating spore released by a ballistomycete when it senses a
+threat. After seeking out its foe, the spore will explode, damaging anything
+caught in the blast and further confusing living creatures.
 %%%%
 balrug
 
@@ -1139,6 +1148,11 @@ formicid
 
 A sentient ant that walks upright and is competent at digging.
 %%%%
+foxfire
+
+A thin wisp of flaming swamp gas. It will burn anything that ventures too
+close, friend or foe.
+%%%%
 freezing wraith
 
 An incorporeal skeletal form surrounded by a cloud of freezing air, likely the
@@ -1549,8 +1563,7 @@ at passers-by.
 %%%%
 leopard gecko
 
-A brightly-coloured lizard with huge, sharp teeth. The pads on its toes allow
-it to cling to walls and ceilings.
+A brightly-coloured lizard with huge, sharp teeth.
 %%%%
 lich
 

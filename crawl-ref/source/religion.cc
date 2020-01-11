@@ -32,7 +32,6 @@
 #include "dlua.h"
 #include "english.h"
 #include "env.h"
-#include "exercise.h"
 #include "god-abil.h"
 #include "god-companions.h"
 #include "god-conduct.h"
@@ -196,13 +195,10 @@ const vector<god_power> god_powers[NUM_GODS] =
       { 1, ABIL_TROG_BERSERK, "go berserk at will" },
       { 2, ABIL_TROG_REGEN_MR,
            "call upon Trog for regeneration and magic resistance" },
-      { 3, "Trog will now gift you ammunition as you gain piety.",
-           "Trog will no longer gift you ammunition.",
-           "Trog will gift you ammunition as you gain piety." },
       { 4, ABIL_TROG_BROTHERS_IN_ARMS, "call in reinforcements" },
-      { 5, "Trog will now gift you weapons as you gain piety.",
+      { 5, "Trog will now gift you melee weapons as you gain piety.",
            "Trog will no longer gift you weapons.",
-           "Trog will gift you weapons as you gain piety." },
+           "Trog will gift you melee weapons as you gain piety." },
     },
 
     // Nemelex
@@ -517,7 +513,7 @@ god_iterator::operator bool() const
     return i < NUM_GODS;
 }
 
-const god_type god_iterator::operator*() const
+god_type god_iterator::operator*() const
 {
     if (i < NUM_GODS)
         return (god_type)i;
@@ -525,7 +521,7 @@ const god_type god_iterator::operator*() const
         return GOD_NO_GOD;
 }
 
-const god_type god_iterator::operator->() const
+god_type god_iterator::operator->() const
 {
     return **this;
 }
@@ -1051,7 +1047,7 @@ static int _preferably_unseen_item(const vector<int> &item_types,
 }
 #endif
 
-static void _delayed_gift_callback(const mgen_data &mg, monster *&mon,
+static void _delayed_gift_callback(const mgen_data &/*mg*/, monster *&mon,
                                    int placed)
 {
     if (placed <= 0)
@@ -1356,7 +1352,6 @@ static bool _give_pakellas_gift()
 
 static bool _give_trog_oka_gift(bool forced)
 {
-    bool success = false;
     // Break early if giving a gift now means it would be lost.
     if (!(feat_has_solid_floor(grd(you.pos()))
         || feat_is_watery(grd(you.pos())) && species_likes_water(you.species)))
@@ -1368,28 +1363,31 @@ static bool _give_trog_oka_gift(bool forced)
     if (you.species == SP_FELID)
         return false;
 
-    const bool need_missiles = _need_missile_gift(forced);
+    const bool need_missiles = you_worship(GOD_OKAWARU)
+                               && _need_missile_gift(forced);
     object_class_type gift_type;
 
-    if (forced && coinflip()
-        || (!forced && you.piety >= piety_breakpoint(4)
-            && random2(you.piety) > 120
-            && one_chance_in(4)))
-    {
-        if (you_worship(GOD_TROG)
-            || (you_worship(GOD_OKAWARU) && coinflip()))
-        {
+    if (you_worship(GOD_TROG) && (forced || you.piety >= piety_breakpoint(4)))
             gift_type = OBJ_WEAPONS;
-        }
-        else
-            gift_type = OBJ_ARMOUR;
+    else if (forced)
+        gift_type = random_choose_weighted(
+            1, OBJ_WEAPONS,
+            1, OBJ_ARMOUR,
+            need_missiles ? 1 : 0, OBJ_MISSILES);
+    else if (you.piety >= piety_breakpoint(4)
+             && random2(you.piety) > 120
+             && one_chance_in(4))
+    {
+        gift_type = coinflip() ? OBJ_WEAPONS : OBJ_ARMOUR;
     }
     else if (need_missiles)
         gift_type = OBJ_MISSILES;
     else
         return false;
 
-    success = acquirement(gift_type, you.religion);
+    const bool success =
+        acquirement_create_item(gift_type, you.religion,
+                false, you.pos()) != NON_ITEM;
     if (success)
     {
         if (gift_type == OBJ_MISSILES)
@@ -2619,15 +2617,14 @@ void lose_piety(int pgn)
 static bool _fedhas_protects_species(monster_type mc)
 {
     return mons_class_is_plant(mc)
-           && mons_class_holiness(mc) & MH_PLANT
-           && mc != MONS_BALLISTOMYCETE_SPORE
-           && mc != MONS_SNAPLASHER_VINE
-           && mc != MONS_SNAPLASHER_VINE_SEGMENT;
+           && mons_class_holiness(mc) & MH_PLANT;
 }
 
-bool fedhas_protects(const monster& target)
+bool fedhas_protects(const monster *target)
 {
-    return _fedhas_protects_species(mons_base_type(target));
+    return target
+        ? _fedhas_protects_species(mons_base_type(*target))
+        : false;
 }
 
 // Fedhas neutralises most plants and fungi
@@ -3565,7 +3562,7 @@ static void _join_zin()
         // rich. In that case, you have to donate again more... That the poor
         // widow is not spared doesn't mean the rich can't be milked for more.
         lucre.props[ACQUIRE_KEY] = 0;
-        you.gold -= zin_tithe(lucre, lucre.quantity, false, true);
+        you.gold -= zin_tithe(lucre, lucre.quantity, true);
     }
 }
 
@@ -3649,9 +3646,9 @@ void join_religion(god_type which_god)
     whereis_record();
 #endif
 
-    _set_initial_god_piety();
-
     set_god_ability_slots();    // remove old god's slots, reserve new god's
+
+    _set_initial_god_piety();
 
     // When you start worshipping a good god, you make all non-hostile
     // unholy and evil beings hostile.
@@ -3870,7 +3867,7 @@ bool god_hates_killing(god_type god, const monster& mon)
         retval = (god == GOD_ELYVILON);
 
     if (god == GOD_FEDHAS)
-        retval = (fedhas_protects(mon));
+        retval = (fedhas_protects(&mon));
 
     return retval;
 }
@@ -4009,7 +4006,7 @@ lifesaving_chance elyvilon_lifesaving()
     if (you.piety < piety_breakpoint(0))
         return lifesaving_chance::never;
 
-    return you.piety > 130 ? lifesaving_chance::always
+    return you.piety >= piety_breakpoint(4) ? lifesaving_chance::always
                            : lifesaving_chance::sometimes;
 }
 

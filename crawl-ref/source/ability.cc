@@ -15,11 +15,9 @@
 #include <sstream>
 
 #include "abyss.h"
-#include "acquire.h"
 #include "areas.h"
 #include "art-enum.h"
 #include "branch.h"
-#include "butcher.h"
 #include "chardump.h"
 #include "cleansing-flame-source-type.h"
 #include "cloud.h"
@@ -37,13 +35,10 @@
 #include "god-abil.h"
 #include "god-companions.h"
 #include "god-conduct.h"
-#include "god-prayer.h"
-#include "god-wrath.h"
 #include "hints.h"
 #include "invent.h"
 #include "item-prop.h"
 #include "items.h"
-#include "item-status-flag-type.h"
 #include "item-use.h"
 #include "level-state-type.h"
 #include "libutil.h"
@@ -446,7 +441,7 @@ static const ability_def Ability_List[] =
     { ABIL_TROG_BERSERK, "Berserk",
       0, 0, 600, 0, {fail_basis::invo}, abflag::none },
     { ABIL_TROG_REGEN_MR, "Trog's Hand",
-      0, 0, 200, 2, {fail_basis::invo, piety_breakpoint(2), 0, 1}, abflag::none },
+      0, 0, 250, 2, {fail_basis::invo, piety_breakpoint(2), 0, 1}, abflag::none },
     { ABIL_TROG_BROTHERS_IN_ARMS, "Brothers in Arms",
       0, 0, 250, generic_cost::range(5, 6),
       {fail_basis::invo, piety_breakpoint(5), 0, 1}, abflag::none },
@@ -1365,7 +1360,7 @@ static bool _check_ability_possible(const ability_def& abil, bool quiet = false)
     if ((abil.ability == ABIL_EVOKE_FLIGHT
          || abil.ability == ABIL_TRAN_BAT
          || abil.ability == ABIL_FLY)
-        && !flight_allowed())
+        && !flight_allowed(quiet))
     {
         return false;
     }
@@ -1383,7 +1378,7 @@ static bool _check_ability_possible(const ability_def& abil, bool quiet = false)
         || you.duration[DUR_WATER_HOLD] && !you.res_water_drowning())
     {
         talent tal = get_talent(abil.ability, false);
-        if (tal.is_invocation)
+        if (tal.is_invocation && abil.ability != ABIL_RENOUNCE_RELIGION)
         {
             if (!quiet)
             {
@@ -1560,7 +1555,7 @@ static bool _check_ability_possible(const ability_def& abil, bool quiet = false)
         return true;
 
     case ABIL_SIF_MUNA_DIVINE_EXEGESIS:
-        return can_cast_spells();
+        return can_cast_spells(quiet, true);
 
     case ABIL_ASHENZARI_TRANSFER_KNOWLEDGE:
         if (!trainable_skills(true))
@@ -2362,7 +2357,7 @@ static spret _do_ability(const ability_def& abil, bool fail)
 
     case ABIL_TSO_CLEANSING_FLAME:
     {
-        targeter_los hitfunc(&you, LOS_SOLID, 2);
+        targeter_radius hitfunc(&you, LOS_SOLID, 2);
         {
             if (stop_attack_prompt(hitfunc, "harm", _cleansing_flame_affects))
                 return spret::abort;
@@ -3227,8 +3222,7 @@ static spret _do_ability(const ability_def& abil, bool fail)
         fail_check();
         if (yesno("Really renounce your faith, foregoing its fabulous benefits?",
                   false, 'n')
-            && yesno("Are you sure you won't change your mind later?",
-                     false, 'n'))
+            && yesno("Are you sure?", false, 'n'))
         {
             excommunication(true);
         }

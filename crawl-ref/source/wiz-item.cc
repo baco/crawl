@@ -29,7 +29,6 @@
 #include "makeitem.h"
 #include "mapdef.h"
 #include "message.h"
-#include "misc.h"
 #include "mon-death.h"
 #include "options.h"
 #include "orb-type.h"
@@ -757,6 +756,14 @@ static void _forget_item(item_def &item)
     unset_ident_flags(item, ISFLAG_IDENT_MASK);
     item.flags &= ~(ISFLAG_SEEN | ISFLAG_HANDLED | ISFLAG_THROWN
                     | ISFLAG_DROPPED | ISFLAG_NOTED_ID | ISFLAG_NOTED_GET);
+    if (is_artefact(item) && item.props.exists(KNOWN_PROPS_KEY))
+    {
+        ASSERT(item.props.exists(KNOWN_PROPS_KEY));
+        CrawlVector &known = item.props[KNOWN_PROPS_KEY].get_vector();
+        ASSERT(known.size() == ART_PROPERTIES);
+        for (vec_size i = 0; i < ART_PROPERTIES; i++)
+            known[i] = static_cast<bool>(false);
+    }
 }
 
 void wizard_unidentify_pack()
@@ -919,11 +926,10 @@ static void _debug_acquirement_stats(FILE *ostat)
             break;
         }
 
-        int item_index = NON_ITEM;
+        const int item_index = acquirement_create_item(type, AQ_WIZMODE, true,
+                you.pos());
 
-        if (!acquirement(type, AQ_WIZMODE, true, &item_index, true)
-            || item_index == NON_ITEM
-            || !mitm[item_index].defined())
+        if (item_index == NON_ITEM || !mitm[item_index].defined())
         {
             mpr("Acquirement failed, stopping early.");
             break;

@@ -26,18 +26,15 @@
 #include "lookup-help.h"
 #include "macro.h"
 #include "message.h"
-#include "output.h"
 #include "prompt.h"
 #include "scroller.h"
 #include "showsymb.h"
-#include "sound.h"
 #include "state.h"
 #include "stringutil.h"
 #include "syscalls.h"
 #include "unicode.h"
 #include "version.h"
 #include "viewchar.h"
-#include "view.h"
 
 using namespace ui;
 
@@ -210,7 +207,7 @@ static void _print_version()
     auto vbox = make_shared<Box>(Widget::VERT);
 
 #ifdef USE_TILE_LOCAL
-    vbox->max_size()[0] = tiles.get_crt_font()->char_width()*80;
+    vbox->max_size().width = tiles.get_crt_font()->char_width()*80;
 #endif
 
     auto title_hbox = make_shared<Box>(Widget::HORZ);
@@ -221,29 +218,26 @@ static void _print_version()
 #endif
 
     auto title = make_shared<Text>(formatted_string::parse_string(info));
-    title->set_margin_for_crt({0, 0, 0, 0});
-    title->set_margin_for_sdl({0, 0, 0, 10});
+    title->set_margin_for_sdl(0, 0, 0, 10);
     title_hbox->add_child(move(title));
 
-    title_hbox->align_items = Widget::CENTER;
-    title_hbox->set_margin_for_crt({0, 0, 1, 0});
-    title_hbox->set_margin_for_sdl({0, 0, 20, 0});
+    title_hbox->set_cross_alignment(Widget::CENTER);
+    title_hbox->set_margin_for_crt(0, 0, 1, 0);
+    title_hbox->set_margin_for_sdl(0, 0, 20, 0);
     vbox->add_child(move(title_hbox));
 
     auto scroller = make_shared<Scroller>();
     auto content = formatted_string::parse_string(feats + "\n\n" + changes);
     auto text = make_shared<Text>(move(content));
-    text->wrap_text = true;
+    text->set_wrap_text(true);
     scroller->set_child(move(text));
     vbox->add_child(scroller);
 
     auto popup = make_shared<ui::Popup>(vbox);
 
     bool done = false;
-    popup->on(Widget::slots.event, [&done, &vbox](wm_event ev) {
-        if (ev.type != WME_KEYDOWN)
-            return false;
-        done = !vbox->on_event(ev);
+    popup->on_keydown_event([&](const KeyEvent& ev) {
+        done = !scroller->on_event(ev);
         return true;
     });
 
@@ -1127,7 +1121,7 @@ static formatted_string _col_conv(void (*func)(column_composer &))
     for (const auto& line : cols.formatted_lines())
     {
         contents += line;
-        contents += formatted_string("\n");
+        contents += "\n";
     }
     contents.ops.pop_back();
     return contents;
@@ -1155,7 +1149,7 @@ static int _get_help_section(int section, formatted_string &header_out, formatte
             ASSERTM(fp, "Failed to open '%s'!", fname.c_str());
             while (fgets(buf, sizeof buf, fp))
             {
-                text += formatted_string(buf);
+                text += string(buf);
                 if (next_is_hotkey && (isaupper(buf[0]) || isadigit(buf[0])))
                 {
                     int hotkey = tolower_safe(buf[0]);

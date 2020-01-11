@@ -22,7 +22,6 @@
 #include "art-enum.h"
 #include "artefact.h"
 #include "branch.h"
-#include "butcher.h"
 #include "cloud.h" // cloud_type_name
 #include "clua.h"
 #include "colour.h"
@@ -51,15 +50,11 @@
 #include "libutil.h"
 #include "macro.h"
 #include "message.h"
-#include "mon-book.h"
 #include "mon-cast.h" // mons_spell_range
 #include "mon-death.h"
 #include "mon-tentacle.h"
-#include "options.h"
 #include "output.h"
-#include "prompt.h"
 #include "religion.h"
-#include "scroller.h"
 #include "skills.h"
 #include "species.h"
 #include "spl-book.h"
@@ -94,16 +89,8 @@ int show_description(const string &body, const tile_def *tile)
 {
     describe_info inf;
     inf.body << body;
-    return show_description(inf);
+    return show_description(inf, tile);
 }
-
-/// A message explaining how the player can toggle between quote &
-static const formatted_string _toggle_message = formatted_string::parse_string(
-    "Press '<w>!</w>'"
-#ifdef USE_TILE_LOCAL
-    " or <w>Right-click</w>"
-#endif
-    " to toggle between the description and quote.");
 
 int show_description(const describe_info &inf, const tile_def *tile)
 {
@@ -118,25 +105,41 @@ int show_description(const describe_info &inf, const tile_def *tile)
         {
             auto icon = make_shared<Image>();
             icon->set_tile(*tile);
-            icon->set_margin_for_sdl({0, 10, 0, 0});
+            icon->set_margin_for_sdl(0, 10, 0, 0);
             title_hbox->add_child(move(icon));
         }
+#else
+        UNUSED(tile);
 #endif
 
         auto title = make_shared<Text>(inf.title);
         title_hbox->add_child(move(title));
 
-        title_hbox->align_items = Widget::CENTER;
-        title_hbox->set_margin_for_sdl({0, 0, 20, 0});
-        title_hbox->set_margin_for_crt({0, 0, 1, 0});
+        title_hbox->set_cross_alignment(Widget::CENTER);
+        title_hbox->set_margin_for_sdl(0, 0, 20, 0);
+        title_hbox->set_margin_for_crt(0, 0, 1, 0);
         vbox->add_child(move(title_hbox));
     }
 
-    auto switcher = make_shared<Switcher>();
+    auto desc_sw = make_shared<Switcher>();
+    auto more_sw = make_shared<Switcher>();
+    desc_sw->current() = 0;
+    more_sw->current() = 0;
 
     const string descs[2] =  {
         trimmed_string(process_description(inf, false)),
         trimmed_string(inf.quote),
+    };
+
+#ifdef USE_TILE_LOCAL
+# define MORE_PREFIX "[<w>!</w>" "|<w>Right-click</w>" "]: "
+#else
+# define MORE_PREFIX "[<w>!</w>" "]: "
+#endif
+
+    const char* mores[2] = {
+        MORE_PREFIX "<w>Description</w>|Quote",
+        MORE_PREFIX "Description|<w>Quote</w>",
     };
 
     for (int i = 0; i < (inf.quote.empty() ? 1 : 2); i++)
@@ -145,38 +148,35 @@ int show_description(const describe_info &inf, const tile_def *tile)
         auto scroller = make_shared<Scroller>();
         auto fs = formatted_string::parse_string(trimmed_string(desc));
         auto text = make_shared<Text>(fs);
-        text->wrap_text = true;
+        text->set_wrap_text(true);
         scroller->set_child(text);
-        switcher->add_child(move(scroller));
+        desc_sw->add_child(move(scroller));
+        more_sw->add_child(make_shared<Text>(
+                formatted_string::parse_string(mores[i])));
     }
 
-    switcher->current() = 0;
-    switcher->expand_h = false;
-#ifdef USE_TILE_LOCAL
-    switcher->max_size()[0] = tiles.get_crt_font()->char_width()*80;
-#endif
-    vbox->add_child(switcher);
-
+    more_sw->set_margin_for_sdl(20, 0, 0, 0);
+    more_sw->set_margin_for_crt(1, 0, 0, 0);
+    desc_sw->expand_h = false;
+    desc_sw->align_x = Widget::STRETCH;
+    vbox->add_child(desc_sw);
     if (!inf.quote.empty())
-    {
-        auto footer = make_shared<Text>(_toggle_message);
-        footer->set_margin_for_sdl({20, 0, 0, 0});
-        footer->set_margin_for_crt({1, 0, 0, 0});
-        vbox->add_child(move(footer));
-    }
+        vbox->add_child(more_sw);
+
+#ifdef USE_TILE_LOCAL
+    vbox->max_size().width = tiles.get_crt_font()->char_width()*80;
+#endif
 
     auto popup = make_shared<ui::Popup>(vbox);
 
     bool done = false;
     int lastch;
-    popup->on(Widget::slots.event, [&](wm_event ev) {
-        if (ev.type != WME_KEYDOWN)
-            return false;
-        lastch = ev.key.keysym.sym;
+    popup->on_keydown_event([&](const KeyEvent& ev) {
+        lastch = ev.key();
         if (!inf.quote.empty() && (lastch == '!' || lastch == CK_MOUSE_CMD || lastch == '^'))
-            switcher->current() = 1 - switcher->current();
+            desc_sw->current() = more_sw->current() = 1 - desc_sw->current();
         else
-            done = !vbox->on_event(ev);
+            done = !desc_sw->current_widget()->on_event(ev);
         return true;
     });
 
@@ -1355,6 +1355,8 @@ static string _describe_weapon(const item_def &item, bool verbose)
             "and up to half again as much damage against particularly "
             "susceptible opponents.";
     }
+    else if (is_unrandom_artefact(item, UNRAND_OLGREB))
+        description += "\n\nIt grants immunity to poison.";
 
     if (you.duration[DUR_EXCRUCIATING_WOUNDS] && &item == you.weapon())
     {
@@ -2324,17 +2326,16 @@ void describe_feature_wide(const coord_def& pos)
         title_hbox->add_child(move(icon));
 #endif
         auto title = make_shared<Text>(feat.title);
-        title->set_margin_for_crt({0, 0, 0, 0});
-        title->set_margin_for_sdl({0, 0, 0, 10});
+        title->set_margin_for_sdl(0, 0, 0, 10);
         title_hbox->add_child(move(title));
-        title_hbox->align_items = Widget::CENTER;
+        title_hbox->set_cross_alignment(Widget::CENTER);
 
         const bool has_desc = feat.body != feat.title && feat.body != "";
 
         if (has_desc || &feat != &feats.back())
         {
-            title_hbox->set_margin_for_crt({0, 0, 1, 0});
-            title_hbox->set_margin_for_sdl({0, 0, 20, 0});
+            title_hbox->set_margin_for_crt(0, 0, 1, 0);
+            title_hbox->set_margin_for_sdl(0, 0, 20, 0);
         }
         vbox->add_child(move(title_hbox));
 
@@ -2349,24 +2350,22 @@ void describe_feature_wide(const coord_def& pos)
             auto text = make_shared<Text>(desc_text);
             if (&feat != &feats.back())
             {
-                text->set_margin_for_sdl({0, 0, 20, 0});
-                text->set_margin_for_crt({0, 0, 1, 0});
+                text->set_margin_for_sdl(0, 0, 20, 0);
+                text->set_margin_for_crt(0, 0, 1, 0);
             }
-            text->wrap_text = true;
+            text->set_wrap_text(true);
             vbox->add_child(text);
         }
     }
 #ifdef USE_TILE_LOCAL
-    vbox->max_size()[0] = tiles.get_crt_font()->char_width()*80;
+    vbox->max_size().width = tiles.get_crt_font()->char_width()*80;
 #endif
     scroller->set_child(move(vbox));
 
     auto popup = make_shared<ui::Popup>(scroller);
 
     bool done = false;
-    popup->on(Widget::slots.event, [&](wm_event ev) {
-        if (ev.type != WME_KEYDOWN)
-            return false;
+    popup->on_keydown_event([&](const KeyEvent& ev) {
         done = !scroller->on_event(ev);
         return true;
     });
@@ -2700,18 +2699,17 @@ bool describe_item(item_def &item, function<void (string&)> fixup_desc)
 #endif
 
     auto title = make_shared<Text>(name);
-    title->set_margin_for_crt({0, 0, 0, 0});
-    title->set_margin_for_sdl({0, 0, 0, 10});
+    title->set_margin_for_sdl(0, 0, 0, 10);
     title_hbox->add_child(move(title));
 
-    title_hbox->align_items = Widget::CENTER;
-    title_hbox->set_margin_for_crt({0, 0, 1, 0});
-    title_hbox->set_margin_for_sdl({0, 0, 20, 0});
+    title_hbox->set_cross_alignment(Widget::CENTER);
+    title_hbox->set_margin_for_crt(0, 0, 1, 0);
+    title_hbox->set_margin_for_sdl(0, 0, 20, 0);
     vbox->add_child(move(title_hbox));
 
     auto scroller = make_shared<Scroller>();
     auto text = make_shared<Text>(fs_desc.trim());
-    text->wrap_text = true;
+    text->set_wrap_text(true);
     scroller->set_child(text);
     vbox->add_child(scroller);
 
@@ -2723,13 +2721,13 @@ bool describe_item(item_def &item, function<void (string&)> fixup_desc)
         footer_text += formatted_string(_actions_desc(actions, item));
         auto footer = make_shared<Text>();
         footer->set_text(footer_text);
-        footer->set_margin_for_crt({1, 0, 0, 0});
-        footer->set_margin_for_sdl({20, 0, 0, 0});
+        footer->set_margin_for_crt(1, 0, 0, 0);
+        footer->set_margin_for_sdl(20, 0, 0, 0);
         vbox->add_child(move(footer));
     }
 
 #ifdef USE_TILE_LOCAL
-    vbox->max_size()[0] = tiles.get_crt_font()->char_width()*80;
+    vbox->max_size().width = tiles.get_crt_font()->char_width()*80;
 #endif
 
     auto popup = make_shared<ui::Popup>(move(vbox));
@@ -2737,17 +2735,16 @@ bool describe_item(item_def &item, function<void (string&)> fixup_desc)
     bool done = false;
     command_type action;
     int lastch;
-    popup->on(Widget::slots.event, [&](wm_event ev) {
-        if (ev.type != WME_KEYDOWN)
-            return false;
-        int key = ev.key.keysym.sym;
-        key = key == '{' ? 'i' : key;
+    popup->on_keydown_event([&](const KeyEvent& ev) {
+        const auto key = ev.key() == '{' ? 'i' : ev.key();
         lastch = key;
         action = _get_action(key, actions);
         if (action != CMD_NO_CMD)
             done = true;
         else if (key == ' ' || key == CK_ESCAPE)
             done = true;
+        else if (scroller->on_event(ev))
+            return true;
         const vector<pair<spell_type,char>> spell_map = map_chars_to_spells(spells, &item);
         auto entry = find_if(spell_map.begin(), spell_map.end(),
                 [key](const pair<spell_type,char>& e) { return e.second == key; });
@@ -2956,6 +2953,20 @@ static string _player_spell_desc(spell_type spell)
         return ""; // all info is player-dependent
 
     ostringstream description;
+
+    if (spell == SPELL_SPELLFORGED_SERVITOR)
+    {
+        spell_type servitor_spell = player_servitor_spell();
+        description << "Your servitor";
+        if (servitor_spell == SPELL_NO_SPELL)
+            description << " would be unable to mimic any of your spells";
+        else
+        {
+            description << " will cast "
+                        << spell_title(player_servitor_spell());
+        }
+        description << ".\n";
+    }
 
     // Report summon cap
     const int limit = summons_limit(spell);
@@ -3174,7 +3185,7 @@ void describe_spell(spell_type spell, const monster_info *mon_owner,
 
     auto vbox = make_shared<Box>(Widget::VERT);
 #ifdef USE_TILE_LOCAL
-    vbox->max_size()[0] = tiles.get_crt_font()->char_width()*80;
+    vbox->max_size().width = tiles.get_crt_font()->char_width()*80;
 #endif
 
     auto title_hbox = make_shared<Box>(Widget::HORZ);
@@ -3188,20 +3199,19 @@ void describe_spell(spell_type spell, const monster_info *mon_owner,
     trim_string(desc);
 
     auto title = make_shared<Text>();
-    title->set_text(formatted_string(spl_title));
-    title->set_margin_for_crt({0, 0, 0, 0});
-    title->set_margin_for_sdl({0, 0, 0, 10});
+    title->set_text(spl_title);
+    title->set_margin_for_sdl(0, 0, 0, 10);
     title_hbox->add_child(move(title));
 
-    title_hbox->align_items = Widget::CENTER;
-    title_hbox->set_margin_for_crt({0, 0, 1, 0});
-    title_hbox->set_margin_for_sdl({0, 0, 20, 0});
+    title_hbox->set_cross_alignment(Widget::CENTER);
+    title_hbox->set_margin_for_crt(0, 0, 1, 0);
+    title_hbox->set_margin_for_sdl(0, 0, 20, 0);
     vbox->add_child(move(title_hbox));
 
     auto scroller = make_shared<Scroller>();
     auto text = make_shared<Text>();
     text->set_text(formatted_string::parse_string(desc));
-    text->wrap_text = true;
+    text->set_wrap_text(true);
     scroller->set_child(move(text));
     vbox->add_child(scroller);
 
@@ -3209,8 +3219,8 @@ void describe_spell(spell_type spell, const monster_info *mon_owner,
     {
         auto more = make_shared<Text>();
         more->set_text(formatted_string("(M)emorise this spell.", CYAN));
-        more->set_margin_for_crt({1, 0, 0, 0});
-        more->set_margin_for_sdl({20, 0, 0, 0});
+        more->set_margin_for_crt(1, 0, 0, 0);
+        more->set_margin_for_sdl(20, 0, 0, 0);
         vbox->add_child(move(more));
     }
 
@@ -3218,12 +3228,12 @@ void describe_spell(spell_type spell, const monster_info *mon_owner,
 
     bool done = false;
     int lastch;
-    popup->on(Widget::slots.event, [&done, &lastch, &can_mem](wm_event ev) {
-        if (ev.type != WME_KEYDOWN)
-            return false;
-        lastch = ev.key.keysym.sym;
+    popup->on_keydown_event([&](const KeyEvent& ev) {
+        lastch = ev.key();
         done = (toupper_safe(lastch) == 'M' && can_mem || lastch == CK_ESCAPE
             || lastch == CK_ENTER || lastch == ' ');
+        if (scroller->on_event(ev))
+            return true;
         return done;
     });
 
@@ -3694,6 +3704,20 @@ static string _monster_attacks_description(const monster_info& mi)
     return result.str();
 }
 
+static string _monster_missiles_description(const monster_info& mi)
+{
+    item_def *missile = mi.inv[MSLOT_MISSILE].get();
+    if (!missile)
+        return "";
+
+    string desc;
+    desc += uppercase_first(mi.pronoun(PRONOUN_SUBJECTIVE));
+    desc += mi.pronoun_plurality() ? " are quivering " : " is quivering ";
+    desc += missile->name(DESC_A, false, false, true, false, ISFLAG_KNOW_CURSE);
+    desc += ".\n";
+    return desc;
+}
+
 static string _monster_spells_description(const monster_info& mi)
 {
     // Show monster spells and spell-like abilities.
@@ -3867,7 +3891,7 @@ COMPILE_CHECK(ARRAYSZ(size_adj) == NUM_SIZE_LEVELS);
 // This is used in monster description and on '%' screen for player size
 const char* get_size_adj(const size_type size, bool ignore_medium)
 {
-    ASSERT_RANGE(static_cast<int>(size), 0, ARRAYSZ(size_adj));
+    ASSERT_RANGE(size, 0, ARRAYSZ(size_adj));
     if (ignore_medium && size == SIZE_MEDIUM)
         return nullptr; // don't mention medium size
     return size_adj[size];
@@ -4185,6 +4209,7 @@ static string _monster_stat_description(const monster_info& mi)
     }
 
     result << _monster_attacks_description(mi);
+    result << _monster_missiles_description(mi);
     result << _monster_spells_description(mi);
 
     return result.str();
@@ -4214,7 +4239,7 @@ string serpent_of_hell_flavour(monster_type m)
 
 // Fetches the monster's database description and reads it into inf.
 void get_monster_db_desc(const monster_info& mi, describe_info &inf,
-                         bool &has_stat_desc, bool force_seen)
+                         bool &has_stat_desc)
 {
     if (inf.title.empty())
         inf.title = getMiscString(mi.common_name(DESC_DBNAME) + " title");
@@ -4533,14 +4558,13 @@ void get_monster_db_desc(const monster_info& mi, describe_info &inf,
 #endif
 }
 
-int describe_monsters(const monster_info &mi, bool force_seen,
-                      const string &footer)
+int describe_monsters(const monster_info &mi, const string& /*footer*/)
 {
     bool has_stat_desc = false;
     describe_info inf;
     formatted_string desc;
 
-    get_monster_db_desc(mi, inf, has_stat_desc, force_seen);
+    get_monster_db_desc(mi, inf, has_stat_desc);
 
     spellset spells = monster_spellset(mi);
 
@@ -4555,20 +4579,19 @@ int describe_monsters(const monster_info &mi, bool force_seen,
 #endif
 
     auto title = make_shared<Text>();
-    title->set_text(formatted_string(inf.title));
-    title->set_margin_for_crt({0, 0, 0, 0});
-    title->set_margin_for_sdl({0, 0, 0, 10});
+    title->set_text(inf.title);
+    title->set_margin_for_sdl(0, 0, 0, 10);
     title_hbox->add_child(move(title));
 
-    title_hbox->align_items = Widget::CENTER;
-    title_hbox->set_margin_for_crt({0, 0, 1, 0});
-    title_hbox->set_margin_for_sdl({0, 0, 20, 0});
+    title_hbox->set_cross_alignment(Widget::CENTER);
+    title_hbox->set_margin_for_crt(0, 0, 1, 0);
+    title_hbox->set_margin_for_sdl(0, 0, 20, 0);
     vbox->add_child(move(title_hbox));
 
-    desc += formatted_string(inf.body.str());
+    desc += inf.body.str();
     if (crawl_state.game_is_hints())
         desc += formatted_string(hints_describe_monster(mi, has_stat_desc));
-    desc += formatted_string(inf.footer);
+    desc += inf.footer;
     desc = formatted_string::parse_string(trimmed_string(desc));
 
     const formatted_string quote = formatted_string(trimmed_string(inf.quote));
@@ -4594,7 +4617,7 @@ int describe_monsters(const monster_info &mi, bool force_seen,
         const formatted_string *content[2] = { &desc, &quote };
         auto scroller = make_shared<Scroller>();
         auto text = make_shared<Text>(content[i]->trim());
-        text->wrap_text = true;
+        text->set_wrap_text(true);
         scroller->set_child(text);
         desc_sw->add_child(move(scroller));
 
@@ -4602,25 +4625,24 @@ int describe_monsters(const monster_info &mi, bool force_seen,
                 formatted_string::parse_string(mores[i])));
     }
 
-    more_sw->set_margin_for_sdl({20, 0, 0, 0});
-    more_sw->set_margin_for_crt({1, 0, 0, 0});
+    more_sw->set_margin_for_sdl(20, 0, 0, 0);
+    more_sw->set_margin_for_crt(1, 0, 0, 0);
     desc_sw->expand_h = false;
+    desc_sw->align_x = Widget::STRETCH;
     vbox->add_child(desc_sw);
     if (!inf.quote.empty())
         vbox->add_child(more_sw);
 
 #ifdef USE_TILE_LOCAL
-    vbox->max_size()[0] = tiles.get_crt_font()->char_width()*80;
+    vbox->max_size().width = tiles.get_crt_font()->char_width()*80;
 #endif
 
     auto popup = make_shared<ui::Popup>(move(vbox));
 
     bool done = false;
     int lastch;
-    popup->on(Widget::slots.event, [&](wm_event ev) {
-        if (ev.type != WME_KEYDOWN)
-            return false;
-        int key = ev.key.keysym.sym;
+    popup->on_keydown_event([&](const KeyEvent& ev) {
+        const auto key = ev.key();
         lastch = key;
         done = key == CK_ESCAPE;
         if (!inf.quote.empty() && (key == '!' || key == CK_MOUSE_CMD))
@@ -4633,6 +4655,8 @@ int describe_monsters(const monster_info &mi, bool force_seen,
             tiles.ui_state_change("describe-monster", 0);
 #endif
         }
+        if (desc_sw->current_widget()->on_event(ev))
+            return true;
         const vector<pair<spell_type,char>> spell_map = map_chars_to_spells(spells, nullptr);
         auto entry = find_if(spell_map.begin(), spell_map.end(),
                 [key](const pair<spell_type,char>& e) { return e.second == key; });

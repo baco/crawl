@@ -23,9 +23,7 @@
 #include "item-use.h"
 #include "libutil.h" // map_find
 #include "message.h"
-#include "misc.h"
 #include "notes.h"
-#include "options.h"
 #include "orb-type.h"
 #include "potion-type.h"
 #include "random.h"
@@ -1571,32 +1569,30 @@ bool is_known_empty_wand(const item_def &item)
 #endif
 
 /**
- * For purpose of Ashenzari's monster equipment identification & warning
- * passive, what wands are a potential threat to the player in monsters'
- * hands?
+ * What wands could a monster use to directly harm the player?
  *
  * @param item      The wand to be examined.
- * @return          Whether the player should be warned about the given wand.
+ * @return          True if the wand could harm the player, false otherwise.
  */
 bool is_offensive_wand(const item_def& item)
 {
     switch (item.sub_type)
     {
-    // Monsters don't use those, so no need to warn the player about them.
-    case WAND_CLOUDS:
-    case WAND_ICEBLAST:
+    // Monsters don't use it
     case WAND_RANDOM_EFFECTS:
-    case WAND_SCATTERSHOT:
     // Monsters use it, but it's not an offensive wand
     case WAND_DIGGING:
         return false;
 
+    case WAND_ACID:
+    case WAND_CLOUDS:
+    case WAND_DISINTEGRATION:
     case WAND_ENSLAVEMENT:
     case WAND_FLAME:
+    case WAND_ICEBLAST:
     case WAND_PARALYSIS:
     case WAND_POLYMORPH:
-    case WAND_ACID:
-    case WAND_DISINTEGRATION:
+    case WAND_SCATTERSHOT:
         return true;
     }
     return false;
@@ -1684,9 +1680,13 @@ int single_damage_type(const item_def &item)
 // Not adjusted by species or anything, which is why it's "basic".
 hands_reqd_type basic_hands_reqd(const item_def &item, size_type size)
 {
-    const int wpn_type = OBJ_WEAPONS == item.base_type ? item.sub_type :
-                         OBJ_STAVES == item.base_type  ? WPN_STAFF :
-                                                         WPN_UNKNOWN;
+    const auto wpn_type = [&item]() {
+        if (item.base_type == OBJ_WEAPONS)
+            return static_cast<weapon_type>(item.sub_type);
+        if (item.base_type == OBJ_STAVES)
+            return WPN_STAFF;
+        return WPN_UNKNOWN;
+    }();
 
     // Non-weapons.
     if (wpn_type == WPN_UNKNOWN)
@@ -1992,7 +1992,7 @@ bool is_weapon_wieldable(const item_def &item, size_type size)
 {
     ASSERT(is_weapon(item));
 
-    const int subtype = OBJ_STAVES == item.base_type ? WPN_STAFF
+    const int subtype = OBJ_STAVES == item.base_type ? int{WPN_STAFF}
                                                      : item.sub_type;
     return Weapon_prop[Weapon_index[subtype]].min_2h_size <= size;
 }

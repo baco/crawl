@@ -52,6 +52,7 @@
 #define EMERGENCY_FLIGHT_KEY "emergency_flight"
 #define PARALYSED_BY_KEY "paralysed_by"
 #define PETRIFIED_BY_KEY "petrified_by"
+#define NOXIOUS_BOG_KEY "noxious_bog_pow"
 
 // display/messaging breakpoints for penalties from Ru's MUT_HORROR
 #define HORROR_LVL_EXTREME  3
@@ -503,7 +504,6 @@ public:
     bool can_swim(bool permanently = false) const;
     bool can_water_walk() const;
     int visible_igrd(const coord_def&) const;
-    bool can_cling_to_walls() const override;
     bool is_banished() const override;
     bool is_sufficiently_rested() const; // Up to rest_wait_percent HP and MP.
     bool is_web_immune() const override;
@@ -964,7 +964,7 @@ int player_armour_shield_spell_penalty();
 
 int player_movement_speed();
 
-int player_hunger_rate(bool temp = true);
+int player_hunger_rate();
 
 int calc_hunger(int food_cost);
 
@@ -1021,7 +1021,7 @@ int player_spec_charm();
 int player_spec_poison();
 int player_spec_summ();
 
-const int player_adjust_evoc_power(const int power, int enhancers = 0);
+int player_adjust_evoc_power(const int power, int enhancers = 0);
 
 int player_speed();
 

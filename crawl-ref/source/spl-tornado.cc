@@ -17,7 +17,6 @@
 #include "god-conduct.h"
 #include "libutil.h"
 #include "message.h"
-#include "misc.h"
 #include "mon-behv.h"
 #include "mon-tentacle.h"
 #include "ouch.h"
@@ -104,7 +103,7 @@ bool WindSystem::has_wind(coord_def c)
     return wind(c - org);
 }
 
-static void _set_tornado_durations(int powc)
+static void _set_tornado_durations()
 {
     int dur = 60;
     you.duration[DUR_TORNADO] = dur;
@@ -115,7 +114,7 @@ static void _set_tornado_durations(int powc)
     }
 }
 
-spret cast_tornado(int powc, bool fail)
+spret cast_tornado(int /*powc*/, bool fail)
 {
     bool friendlies = false;
     for (radius_iterator ri(you.pos(), TORNADO_RADIUS, C_SQUARE); ri; ++ri)
@@ -149,7 +148,7 @@ spret cast_tornado(int powc, bool fail)
         merfolk_stop_swimming();
 
     you.props["tornado_since"].get_int() = you.elapsed_time;
-    _set_tornado_durations(powc);
+    _set_tornado_durations();
     if (you.species == SP_TENGU)
         you.redraw_evasion = true;
 
@@ -319,7 +318,8 @@ void tornado_damage(actor *caster, int dur, bool is_vortex)
         vector<coord_def> clouds;
         for (; dam_i && dam_i.radius() == r; ++dam_i)
         {
-            if (feat_is_tree(grd(*dam_i)) && dur > 0
+            if ((feat_is_tree(grd(*dam_i)) && !is_temp_terrain(*dam_i))
+                && dur > 0
                 && bernoulli(rdur * 0.01, 0.05)) // 5% chance per 10 aut
             {
                 grd(*dam_i) = DNGN_FLOOR;
@@ -382,7 +382,9 @@ void tornado_damage(actor *caster, int dur, bool is_vortex)
                             float_player();
                     }
 
-                    if (dur > 0)
+                    // alive check here in case the annoy event above dismissed
+                    // the victim.
+                    if (dur > 0 && victim->alive())
                     {
                         int dmg = victim->apply_ac(
                                     div_rand_round(roll_dice(9, rpow), 15),

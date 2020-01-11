@@ -16,7 +16,6 @@
 
 #include "artefact.h"
 #include "art-enum.h"
-#include "food.h"
 #include "god-conduct.h"
 #include "god-passive.h"
 #include "item-name.h"
@@ -24,7 +23,6 @@
 #include "items.h"
 #include "libutil.h"
 #include "potion-type.h"
-#include "religion.h"
 #include "skills.h"
 #include "spl-book.h"
 #include "spl-util.h"
@@ -329,6 +327,8 @@ bool is_channeling_item(const item_def& item, bool calc_unid)
 
 bool is_wizardly_item(const item_def& item, bool calc_unid)
 {
+    UNUSED(calc_unid);
+
     if (is_unrandom_artefact(item, UNRAND_BATTLE))
         return true;
 

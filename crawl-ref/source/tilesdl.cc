@@ -160,7 +160,6 @@ bool HiDPIState::update(int ndevice, int nlogical)
 
 TilesFramework::TilesFramework() :
     m_windowsz(1024, 768),
-    m_viewsc(0, 0),
     m_fullscreen(false),
     m_need_redraw(false),
     m_active_layer(LAYER_CRT),
@@ -518,13 +517,14 @@ void TilesFramework::load_dungeon(const crawl_view_buffer &vbuf,
 
     m_region_tile->load_dungeon(vbuf, gc);
 
-    int ox = m_region_tile->mx/2;
-    int oy = m_region_tile->my/2;
-    coord_def win_start(gc.x - ox, gc.y - oy);
-    coord_def win_end(gc.x + ox + 1, gc.y + oy + 1);
-
     if (m_region_map)
+    {
+        int ox = m_region_tile->mx/2;
+        int oy = m_region_tile->my/2;
+        coord_def win_start(gc.x - ox, gc.y - oy);
+        coord_def win_end(gc.x + ox + 1, gc.y + oy + 1);
         m_region_map->set_window(win_start, win_end);
+    }
 }
 
 void TilesFramework::load_dungeon(const coord_def &cen)
@@ -569,7 +569,7 @@ void TilesFramework::resize_event(int w, int h)
     wm->resize(m_windowsz);
 }
 
-int TilesFramework::handle_mouse(MouseEvent &event)
+int TilesFramework::handle_mouse(wm_mouse_event &event)
 {
     // Note: the mouse event goes to all regions in the active layer because
     // we want to be able to start some GUI event (e.g. far viewing) and
@@ -598,11 +598,11 @@ int TilesFramework::handle_mouse(MouseEvent &event)
     if ((mouse_control::current_mode() == MOUSE_MODE_MORE
          || mouse_control::current_mode() == MOUSE_MODE_PROMPT
          || mouse_control::current_mode() == MOUSE_MODE_YESNO)
-        && event.event == MouseEvent::PRESS)
+        && event.event == wm_mouse_event::PRESS)
     {
-        if (event.button == MouseEvent::LEFT)
+        if (event.button == wm_mouse_event::LEFT)
             return CK_MOUSE_CLICK;
-        else if (event.button == MouseEvent::RIGHT)
+        else if (event.button == wm_mouse_event::RIGHT)
             return CK_MOUSE_CMD;
     }
 
@@ -611,7 +611,7 @@ int TilesFramework::handle_mouse(MouseEvent &event)
 
 static unsigned int _timer_callback(unsigned int ticks, void *param)
 {
-    UNUSED(param);
+    UNUSED(ticks, param);
 
     // force the event loop to break
     wm->raise_custom_event();
@@ -870,18 +870,19 @@ static int round_up_to_multiple(int a, int b)
  */
 void TilesFramework::do_layout()
 {
-    // View size in pixels is (m_viewsc * crawl_view.viewsz)
+    /**
+     * XXX: don't layout unless we're in a game / arena
+     * this is to prevent layout code from accessing `you` while it's invalid.
+     */
+    if (!species_type_valid(you.species))
+        return;
+
+    // View size in pixels is ((dx, dy) * crawl_view.viewsz)
     const int scale = m_map_mode_enabled ? Options.tile_map_scale
                                          : Options.tile_viewport_scale;
-    m_viewsc.x = Options.tile_cell_pixels * scale / 100;
-    m_viewsc.y = Options.tile_cell_pixels * scale / 100;
+    m_region_tile->dx = Options.tile_cell_pixels * scale / 100;
+    m_region_tile->dy = Options.tile_cell_pixels * scale / 100;
 
-    crawl_view.viewsz.x = Options.view_max_width;
-    crawl_view.viewsz.y = Options.view_max_height;
-
-    // Initial sizes.
-    m_region_tile->dx = m_viewsc.x;
-    m_region_tile->dy = m_viewsc.y;
     int message_y_divider = 0;
     int sidebar_pw;
 
@@ -1012,9 +1013,6 @@ void TilesFramework::do_layout()
     m_region_tile->tile_iw = tile_iw;
     m_region_tile->tile_ih = tile_ih;
 
-    crawl_view.viewsz.x = m_region_tile->mx;
-    crawl_view.viewsz.y = m_region_tile->my;
-
     // Resize and place the message window.
     m_region_msg->set_overlay(message_overlay);
     if (message_overlay)
@@ -1030,9 +1028,6 @@ void TilesFramework::do_layout()
         m_region_msg->place(0, tile_ih, 0);
     }
 
-    crawl_view.msgsz.x = m_region_msg->mx;
-    crawl_view.msgsz.y = m_region_msg->my;
-
     if (use_small_layout)
         m_stat_col = m_stat_x_divider;
     else
@@ -1046,6 +1041,12 @@ void TilesFramework::do_layout()
     m_region_crt->place(0, 0, 0);
     m_region_crt->resize_to_fit(m_windowsz.x, m_windowsz.y);
 
+    crawl_view.viewsz.x = m_region_tile->mx;
+    crawl_view.viewsz.y = m_region_tile->my;
+    crawl_view.msgsz.x = m_region_msg->mx;
+    crawl_view.msgsz.y = m_region_msg->my;
+    crawl_view.hudsz.x = m_region_stat->mx;
+    crawl_view.hudsz.y = m_region_stat->my;
     crawl_view.init_view();
 }
 
@@ -1153,9 +1154,11 @@ void TilesFramework::autosize_minimap()
     const int vert = (m_statcol_bottom - (m_region_map->sy ? m_region_map->sy
                                                            : m_statcol_top)
                      - map_margin * 2) / GYM;
-    m_region_map->dx = m_region_map->dy = min(horiz, vert);
+
+    int sz = min(horiz, vert);
     if (Options.tile_map_pixels)
-        m_region_map->dx = min(m_region_map->dx, Options.tile_map_pixels);
+        sz = min(sz, Options.tile_map_pixels);
+    m_region_map->dx = m_region_map->dy = sz;
 }
 
 void TilesFramework::place_minimap()
@@ -1299,14 +1302,10 @@ void TilesFramework::layout_statcol()
         // resize stats to be up to beginning of command tabs
         //  ... this works because the margin (ox) on m_region_tab contains the tabs themselves
         m_region_stat->resize_to_fit((m_windowsz.x - m_stat_x_divider) - m_region_tab->ox*m_region_tab->dx/32, m_statcol_bottom-m_statcol_top);
-        crawl_view.hudsz.y = m_region_stat->my;
-        crawl_view.hudsz.x = m_region_stat->mx;
     }
     else
     {
-        crawl_view.hudsz.x = m_region_stat->mx;
-        crawl_view.hudsz.y = min_stat_height;
-        m_region_stat->resize(m_region_stat->mx, crawl_view.hudsz.y);
+        m_region_stat->resize(m_region_stat->mx, min_stat_height);
 
         m_statcol_top = m_region_stat->ey;
 
@@ -1320,7 +1319,7 @@ void TilesFramework::layout_statcol()
         m_region_tab->place(m_stat_col, m_windowsz.y - m_region_tab->wy);
         m_statcol_bottom = m_region_tab->sy - m_tab_margin;
 
-        m_region_stat->resize(m_region_stat->mx, crawl_view.hudsz.y);
+        m_region_stat->resize(m_region_stat->mx, min_stat_height);
         m_statcol_top += m_region_stat->dy;
         bool resized_inventory = false;
 
@@ -1439,7 +1438,7 @@ void TilesFramework::redraw()
 #endif
     m_need_redraw = false;
 
-    glmanager->reset_view_for_redraw(m_viewsc.x, m_viewsc.y);
+    glmanager->reset_view_for_redraw();
 
     for (Region *region : m_layers[m_active_layer].m_regions)
         region->render();
@@ -1450,8 +1449,8 @@ void TilesFramework::redraw()
         const int buffer = 5;
         const coord_def min_pos = coord_def() + buffer;
         const coord_def max_pos = m_windowsz - buffer;
-        m_tip_font->render_tooltip(m_mouse.x, m_mouse.y, formatted_string(m_tooltip),
-                min_pos, max_pos);
+        m_tip_font->render_tooltip(m_mouse.x, m_mouse.y,
+                formatted_string(m_tooltip), min_pos, max_pos);
     }
     wm->swap_buffers();
 
@@ -1541,7 +1540,7 @@ void TilesFramework::add_text_tag(text_tag_type type, const string &tag,
     m_region_tile->add_text_tag(type, tag, gc);
 }
 
-void TilesFramework::add_text_tag(text_tag_type type, const monster_info& mon)
+void TilesFramework::add_text_tag(text_tag_type /*type*/, const monster_info& mon)
 {
     // HACK. Large-tile monsters don't interact well with name tags.
     if (mons_class_flag(mon.type, M_TALL_TILE)

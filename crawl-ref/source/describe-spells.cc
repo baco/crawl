@@ -7,19 +7,16 @@
 
 #include "describe-spells.h"
 
-#include "cio.h"
 #include "delay.h"
 #include "describe.h"
 #include "english.h"
 #include "externs.h"
 #include "invent.h"
 #include "libutil.h"
-#include "macro.h"
 #include "menu.h"
 #include "mon-book.h"
 #include "mon-cast.h"
 #include "monster.h" // SEEN_SPELLS_KEY
-#include "prompt.h"
 #include "religion.h"
 #include "shopping.h"
 #include "spl-book.h"
@@ -510,7 +507,7 @@ static void _describe_book(const spellbook_contents &book,
     if (source_item)
     {
         description.cprintf(
-            "\n Spells                           Type                      Level");
+            "\n Spells                           Type                      Level       Known");
     }
     description.cprintf("\n");
 
@@ -580,9 +577,16 @@ static void _describe_book(const spellbook_contents &book,
                                                :
 #endif
                          _spell_schools(spell);
-        description.cprintf("%s%d\n",
+
+        string known = "";
+        if (!mon_owner) {
+            known = you.spell_library[spell] ? "         yes" : "          no";
+        }
+
+        description.cprintf("%s%d%s\n",
                             chop_string(schools, 30).c_str(),
-                            spell_difficulty(spell));
+                            spell_difficulty(spell),
+                            known.c_str());
     }
 
     // are we halfway through a column?

@@ -30,111 +30,71 @@
 #include "abyss.h" // abyss_maybe_spawn_xp_exit
 #include "act-iter.h"
 #include "areas.h"
+#include "artefact.h"
 #include "beam.h"
-#include "cio.h"
 #include "cloud.h"
 #include "clua.h"
 #include "colour.h"
-#include "command.h"
 #include "coord.h"
 #include "coordit.h"
-#include "crash.h"
 #include "database.h"
 #include "dbg-util.h"
 #include "delay.h"
-#include "describe.h"
 #ifdef DGL_SIMPLE_MESSAGING
 #include "dgl-message.h"
 #endif
-#include "dgn-overview.h"
-#include "dgn-shoals.h"
 #include "dlua.h"
 #include "dungeon.h"
 #include "env.h"
-#include "evoke.h"
 #include "exercise.h"
-#include "fight.h"
 #include "files.h"
-#include "fineff.h"
 #include "food.h"
-#include "fprop.h"
 #include "god-abil.h"
 #include "god-companions.h"
-#include "god-conduct.h"
-#include "god-item.h"
 #include "god-passive.h"
-#include "god-prayer.h"
-#include "hints.h"
-#include "initfile.h"
 #include "invent.h"
-#include "item-name.h"
 #include "item-prop.h"
-#include "items.h"
-#include "item-status-flag-type.h"
 #include "item-use.h"
 #include "level-state-type.h"
 #include "libutil.h"
-#include "luaterp.h"
-#include "macro.h"
-#include "map-knowledge.h"
-#include "mapmark.h"
 #include "maps.h"
-#include "melee-attack.h"
 #include "message.h"
-#include "misc.h"
 #include "mon-abil.h"
-#include "mon-act.h"
 #include "mon-cast.h"
 #include "mon-death.h"
 #include "mon-place.h"
 #include "mon-tentacle.h"
 #include "mon-util.h"
 #include "mutation.h"
-#include "options.h"
 #include "ouch.h"
-#include "output.h"
 #include "player.h"
 #include "player-stats.h"
-#include "quiver.h"
 #include "random.h"
 #include "religion.h"
 #include "shopping.h"
 #include "shout.h"
 #include "skills.h"
-#include "species.h"
 #include "spl-cast.h"
 #include "spl-clouds.h"
 #include "spl-damage.h"
 #include "spl-goditem.h"
 #include "spl-other.h"
-#include "spl-selfench.h"
 #include "spl-summoning.h"
 #include "spl-transloc.h"
 #include "spl-util.h"
-#include "stairs.h"
-#include "startup.h"
-#include "stash.h"
 #include "state.h"
 #include "status.h"
 #include "stepdown.h"
 #include "stringutil.h"
-#include "tags.h"
-#include "target.h"
 #include "terrain.h"
-#include "throw.h"
 #ifdef USE_TILE
 #include "tiledef-dngn.h"
 #include "tilepick.h"
 #endif
-#include "timed-effects.h"
 #include "transform.h"
 #include "traps.h"
 #include "travel.h"
-#include "version.h"
-#include "viewchar.h"
-#include "viewgeom.h"
 #include "view.h"
-#include "viewmap.h"
 #include "xom.h"
 
 /**
@@ -457,7 +417,7 @@ void player_reacts_to_monsters()
         update_can_currently_train();
 
     if (you.duration[DUR_FIRE_SHIELD] > 0)
-        manage_fire_shield(you.time_taken);
+        manage_fire_shield();
 
     check_monster_detect();
 
@@ -623,7 +583,6 @@ static void _decrement_durations()
     // Vampire bat transformations are permanent (until ended), unless they
     // are uncancellable (polymorph wand on a full vampire).
     if (you.species != SP_VAMPIRE || you.form != transformation::bat
-        || you.duration[DUR_TRANSFORMATION] <= 5 * BASELINE_DELAY
         || you.transform_uncancellable)
     {
         if (form_can_fly()
@@ -674,9 +633,6 @@ static void _decrement_durations()
     dec_slow_player(delay);
     dec_berserk_recovery_player(delay);
     dec_haste_player(delay);
-
-    if (you.duration[DUR_LIQUEFYING] && !you.stand_on_solid_ground())
-        you.duration[DUR_LIQUEFYING] = 1;
 
     for (int i = 0; i < NUM_STATS; ++i)
     {
@@ -799,11 +755,7 @@ static void _decrement_durations()
     }
 
     if (you.duration[DUR_TOXIC_RADIANCE])
-    {
-        const int ticks = (you.duration[DUR_TOXIC_RADIANCE] / 10)
-                          - ((you.duration[DUR_TOXIC_RADIANCE] - delay) / 10);
-        toxic_radiance_effect(&you, ticks);
-    }
+        toxic_radiance_effect(&you, min(delay, you.duration[DUR_TOXIC_RADIANCE]));
 
     if (you.duration[DUR_RECITE] && _check_recite())
     {
@@ -1017,6 +969,7 @@ void player_reacts()
     abyss_maybe_spawn_xp_exit();
 
     actor_apply_cloud(&you);
+    actor_apply_toxic_bog(&you);
 
     if (env.level_state & LSTATE_SLIMY_WALL)
         slime_wall_damage(&you, you.time_taken);

@@ -18,18 +18,14 @@
 #include "directn.h"
 #include "env.h"
 #include "files.h"
-#include "fprop.h"
-#include "god-abil.h"
 #include "god-passive.h" // passive_t::slow_abyss
 #include "hints.h"
 #include "hiscores.h"
 #include "item-name.h"
-#include "item-status-flag-type.h"
 #include "items.h"
 #include "level-state-type.h"
 #include "mapmark.h"
 #include "message.h"
-#include "misc.h"
 #include "mon-death.h"
 #include "movement.h"
 #include "notes.h"
@@ -40,7 +36,6 @@
 #include "spl-clouds.h"
 #include "spl-damage.h"
 #include "spl-other.h"
-#include "spl-transloc.h"
 #include "state.h"
 #include "stringutil.h"
 #include "terrain.h"
@@ -489,7 +484,7 @@ static level_id _travel_destination(const dungeon_feature_type how,
             return dest;
         }
 
-        shaft_dest = you.shaft_dest(known_shaft);
+        shaft_dest = you.shaft_dest();
     }
     // How far down you fall via a shaft or hatch.
     const int shaft_depth = (shaft ? shaft_dest.depth - you.depth : 1);
@@ -852,7 +847,7 @@ void floor_transition(dungeon_feature_type how,
 
     moveto_location_effects(whence);
 
-    trackers_init_new_level(true);
+    trackers_init_new_level();
 
     if (update_travel_cache && !shaft)
         _update_travel_cache(old_level, stair_pos);

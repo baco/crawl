@@ -45,7 +45,6 @@
 #include "macro.h"
 #include "mapdef.h"
 #include "message.h"
-#include "misc.h"
 #include "mon-util.h"
 #include "monster.h"
 #include "newgame.h"
@@ -320,6 +319,7 @@ const vector<GameOption*> game_options::build_options_list()
         new BoolGameOption(SIMPLE_NAME(tile_show_minihealthbar), true),
         new BoolGameOption(SIMPLE_NAME(tile_show_minimagicbar), true),
         new BoolGameOption(SIMPLE_NAME(tile_show_demon_tier), false),
+        new StringGameOption(SIMPLE_NAME(tile_show_threat_levels), ""),
         new StringGameOption(SIMPLE_NAME(tile_show_items), "!?/%=([)x}:|\\"),
         // disabled by default due to performance issues
         new BoolGameOption(SIMPLE_NAME(tile_water_anim), !USING_WEB_TILES),
@@ -925,6 +925,7 @@ void game_options::set_activity_interrupt(const string &activity_name,
 #if defined(DGAMELAUNCH)
 static string _resolve_dir(string path, string suffix)
 {
+    UNUSED(suffix);
     return catpath(path, "");
 }
 #else
@@ -1156,10 +1157,8 @@ void game_options::reset_options()
     dump_order.clear();
     new_dump_fields("header,hiscore,stats,misc,inventory,"
                     "skills,spells,overview,mutations,messages,"
-                    "screenshot,monlist,kills,notes");
-    if (Version::ReleaseType == VER_ALPHA)
-        new_dump_fields("vaults");
-    new_dump_fields("skill_gains,action_counts");
+                    "screenshot,monlist,kills,notes,vaults,"
+                    "skill_gains,action_counts");
     // Currently enabled by default for testing in trunk.
     if (Version::ReleaseType == VER_ALPHA)
         new_dump_fields("xp_by_level");
@@ -1340,7 +1339,7 @@ cglyph_t game_options::parse_mon_glyph(const string &s) const
     return md;
 }
 
-void game_options::remove_mon_glyph_override(const string &text, bool prepend)
+void game_options::remove_mon_glyph_override(const string &text, bool /*prepend*/)
 {
     vector<string> override = split_string(":", text);
 
@@ -1361,7 +1360,7 @@ void game_options::remove_mon_glyph_override(const string &text, bool prepend)
         mon_glyph_overrides.erase(m);;
 }
 
-void game_options::add_mon_glyph_override(const string &text, bool prepend)
+void game_options::add_mon_glyph_override(const string &text, bool /*prepend*/)
 {
     vector<string> override = split_string(":", text);
     if (override.size() != 2u)
@@ -1399,7 +1398,7 @@ void game_options::add_mon_glyph_override(const string &text, bool prepend)
             mon_glyph_overrides[m] = mdisp;
 }
 
-void game_options::remove_item_glyph_override(const string &text, bool prepend)
+void game_options::remove_item_glyph_override(const string &text, bool /*prepend*/)
 {
     string key = text;
     trim_string(key);
@@ -1428,7 +1427,7 @@ void game_options::add_item_glyph_override(const string &text, bool prepend)
     }
 }
 
-void game_options::remove_feature_override(const string &text, bool prepend)
+void game_options::remove_feature_override(const string &text, bool /*prepend*/)
 {
     string fname;
     string::size_type epos = text.rfind("}");
@@ -1447,7 +1446,7 @@ void game_options::remove_feature_override(const string &text, bool prepend)
     }
 }
 
-void game_options::add_feature_override(const string &text, bool prepend)
+void game_options::add_feature_override(const string &text, bool /*prepend*/)
 {
     string::size_type epos = text.rfind("}");
     if (epos == string::npos)
@@ -1699,6 +1698,8 @@ newgame_def read_startup_prefs()
         temp.game.weapon = temp.game.allowed_weapons[0];
     if (!Options.seed_from_rc)
         Options.seed = temp.seed_from_rc;
+    if (!Options.remember_name)
+        temp.game.name = "";
     return temp.game;
 #endif // !DISABLE_STICKY_STARTUP_OPTIONS
 }
@@ -2368,7 +2369,7 @@ void game_options::split_parse(const string &s, const string &separator,
     }
 }
 
-void game_options::set_option_fragment(const string &s, bool prepend)
+void game_options::set_option_fragment(const string &s, bool /*prepend*/)
 {
     if (s.empty())
         return;
@@ -3610,7 +3611,7 @@ static string _supported_language_listing()
     return comma_separated_fn(&lang_data[0], &lang_data[ARRAYSZ(lang_data)],
                               [](language_def ld){return ld.code ? ld.code : "en";},
                               ",", ",",
-                              [](language_def ld){return true;});
+                              [](language_def){return true;});
 }
 
 bool game_options::set_lang(const char *lc)
@@ -4241,7 +4242,7 @@ static void _write_bones(const string &filename, vector<ghost_demon> ghosts)
     write_ghost_version(outw);
     tag_write_ghosts(outw, ghosts);
 
-    lk_close(ghost_file, filename);
+    lk_close(ghost_file);
 }
 
 static void _bones_ls(const string &filename, const string name_match,
@@ -4278,7 +4279,7 @@ static void _bones_ls(const string &filename, const string name_match,
             m.type = MONS_PLAYER_GHOST;
             monster_info mi(&m);
             bool has_stat_desc = false;
-            get_monster_db_desc(mi, inf, has_stat_desc, true);
+            get_monster_db_desc(mi, inf, has_stat_desc);
             cout << "#######################\n"
                  << inf.title << "\n"
                  << inf.body.str() << "\n"

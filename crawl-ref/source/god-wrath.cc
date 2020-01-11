@@ -19,9 +19,7 @@
 #include "coordit.h"
 #include "database.h"
 #include "decks.h"
-#include "english.h"
 #include "env.h"
-#include "evoke.h"
 #include "food.h"
 #include "ghost.h"
 #include "god-abil.h"
@@ -34,11 +32,9 @@
 #include "message.h"
 #include "misc.h"
 #include "mon-behv.h"
-#include "mon-book.h"
 #include "mon-cast.h"
 #include "mon-pick.h"
 #include "mon-place.h"
-#include "mon-poly.h"
 #include "mutation.h"
 #include "notes.h"
 #include "player-stats.h"
@@ -1122,8 +1118,7 @@ static spell_type _vehumet_wrath_type()
             return random_choose(SPELL_MEPHITIC_CLOUD,
                                  SPELL_STONE_ARROW);
         case 4:
-            return random_choose(SPELL_ISKENDERUNS_MYSTIC_BLAST,
-                                 SPELL_STICKY_FLAME,
+            return random_choose(SPELL_STICKY_FLAME,
                                  SPELL_THROW_ICICLE,
                                  SPELL_ENERGY_BOLT);
         case 5:

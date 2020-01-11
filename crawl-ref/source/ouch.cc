@@ -21,13 +21,10 @@
 #endif
 
 #include "artefact.h"
-#include "art-enum.h"
 #include "beam.h"
 #include "chardump.h"
-#include "cloud.h"
 #include "colour.h"
 #include "delay.h"
-#include "describe.h"
 #include "dgn-event.h"
 #include "end.h"
 #include "env.h"
@@ -35,16 +32,12 @@
 #include "files.h"
 #include "fineff.h"
 #include "god-abil.h"
-#include "god-conduct.h"
 #include "god-passive.h"
 #include "hints.h"
 #include "hiscores.h"
 #include "invent.h"
-#include "item-name.h"
 #include "item-prop.h"
-#include "items.h"
 #include "libutil.h"
-#include "macro.h"
 #include "message.h"
 #include "mgen-data.h"
 #include "mon-death.h"
@@ -63,9 +56,7 @@
 #include "religion.h"
 #include "shopping.h"
 #include "shout.h"
-#include "skills.h"
 #include "spl-clouds.h"
-#include "spl-other.h"
 #include "spl-selfench.h"
 #include "state.h"
 #include "stringutil.h"
@@ -1003,7 +994,7 @@ void ouch(int dam, kill_method_type death_type, mid_t source, const char *aux,
             death_type = KILLED_BY_XOM;
     }
     // Xom may still try to save your life.
-    else if (xom_saves_your_life(death_type, aux))
+    else if (xom_saves_your_life(death_type))
         return;
 
 #if defined(WIZARD) || defined(DEBUG)

@@ -35,7 +35,6 @@
 #include "mapmark.h"
 #include "maps.h"
 #include "message.h"
-#include "misc.h"
 #include "mon-cast.h"
 #include "mon-death.h"
 #include "mon-pathfind.h"
@@ -1137,6 +1136,11 @@ static ProceduralSample _abyss_grid(const coord_def &p)
         complex_vec[0] = levelLayout;
         complex_vec[1] = &rivers; // const
         abyssLayout = new WorleyLayout(23571113, complex_vec, 6.1);
+        if (is_existing_level(lid))
+        {
+            auto &vault_list =  you.vault_list[level_id::current()];
+            vault_list.push_back("base: " + lid.describe(false));
+        }
     }
 
     const ProceduralSample sample = (*abyssLayout)(pt, abyssal_state.depth);

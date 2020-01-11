@@ -17,6 +17,8 @@
 
 #include "artefact.h"
 #include "art-enum.h"
+#include "colour.h"
+#include "describe.h"
 #include "dungeon.h"
 #include "food.h"
 #include "god-item.h"
@@ -26,10 +28,13 @@
 #include "item-status-flag-type.h"
 #include "items.h"
 #include "item-use.h"
+#include "invent.h"
 #include "libutil.h"
 #include "macro.h"
 #include "message.h"
 #include "output.h"
+#include "options.h"
+#include "prompt.h"
 #include "randbook.h"
 #include "random.h"
 #include "religion.h"
@@ -75,7 +80,8 @@ static int _skill_rdiv(skill_type skill, int mult = 1)
  * @param divine    Lowers the odds of high-tier body armours being chosen.
  * @return          The armour_type of the armour to be generated.
  */
-static int _acquirement_armour_subtype(bool divine, int & /*quantity*/)
+static int _acquirement_armour_subtype(bool divine, int & /*quantity*/,
+                                       int /*agent*/)
 {
     const equipment_type slot_type = _acquirement_armour_slot(divine);
     return _acquirement_armour_for_slot(slot_type, divine);
@@ -401,7 +407,8 @@ static armour_type _pick_unseen_armour()
     return picked;
 }
 
-static int _acquirement_food_subtype(bool /*divine*/, int& quantity)
+static int _acquirement_food_subtype(bool /*divine*/, int& quantity,
+                                     int /*agent*/)
 {
     int type_wanted;
     // Food is a little less predictable now. - bwr
@@ -427,12 +434,14 @@ static int _acquirement_food_subtype(bool /*divine*/, int& quantity)
  *                  tailored to the player's skills.
  * @return          An appropriate weapon skill; e.g. SK_LONG_BLADES.
  */
-static skill_type _acquirement_weapon_skill(bool divine)
+static skill_type _acquirement_weapon_skill(bool divine, int agent)
 {
     // reservoir sample.
     int count = 0;
     skill_type skill = SK_FIGHTING;
-    for (skill_type sk = SK_FIRST_WEAPON; sk <= SK_LAST_WEAPON; ++sk)
+    for (skill_type sk = SK_FIRST_WEAPON;
+         sk <= (agent == GOD_TROG ? SK_LAST_MELEE_WEAPON : SK_LAST_WEAPON);
+         ++sk)
     {
         // Adding a small constant allows for the occasional
         // weapon in an untrained skill.
@@ -449,13 +458,17 @@ static skill_type _acquirement_weapon_skill(bool divine)
     return skill;
 }
 
-static int _acquirement_weapon_subtype(bool divine, int & /*quantity*/)
+static int _acquirement_weapon_subtype(bool divine, int & /*quantity*/, int agent)
 {
-    const skill_type skill = _acquirement_weapon_skill(divine);
+    const skill_type skill = _acquirement_weapon_skill(divine, agent);
 
     int best_sk = 0;
-    for (int i = SK_FIRST_WEAPON; i <= SK_LAST_WEAPON; i++)
+    for (int i = SK_FIRST_WEAPON;
+         i <= (agent == GOD_TROG ? SK_LAST_MELEE_WEAPON : SK_LAST_WEAPON);
+         i++)
+    {
         best_sk = max(best_sk, _skill_rdiv((skill_type)i));
+    }
     best_sk = max(best_sk, _skill_rdiv(SK_UNARMED_COMBAT));
 
     // Now choose a subtype which uses that skill.
@@ -523,7 +536,8 @@ static int _acquirement_weapon_subtype(bool divine, int & /*quantity*/)
     return result;
 }
 
-static int _acquirement_missile_subtype(bool /*divine*/, int & /*quantity*/)
+static int _acquirement_missile_subtype(bool /*divine*/, int & /*quantity*/,
+                                        int /*agent*/)
 {
     int count = 0;
     int skill = SK_THROWING;
@@ -568,7 +582,8 @@ static int _acquirement_missile_subtype(bool /*divine*/, int & /*quantity*/)
     return result;
 }
 
-static int _acquirement_jewellery_subtype(bool /*divine*/, int & /*quantity*/)
+static int _acquirement_jewellery_subtype(bool /*divine*/, int & /*quantity*/,
+                                          int /*agent*/)
 {
     int result = 0;
 
@@ -592,7 +607,8 @@ static int _acquirement_jewellery_subtype(bool /*divine*/, int & /*quantity*/)
 }
 
 
-static int _acquirement_staff_subtype(bool /*divine*/, int & /*quantity*/)
+static int _acquirement_staff_subtype(bool /*divine*/, int & /*quantity*/,
+                                      int /*agent*/)
 {
     // Try to pick an enhancer staff matching the player's best skill.
     skill_type best_spell_skill = best_skill(SK_FIRST_MAGIC_SCHOOL,
@@ -637,7 +653,8 @@ static int _acquirement_staff_subtype(bool /*divine*/, int & /*quantity*/)
  * Return a miscellaneous evokable item for acquirement.
  * @return   The item type chosen.
  */
-static int _acquirement_misc_subtype(bool /*divine*/, int & /*quantity*/)
+static int _acquirement_misc_subtype(bool /*divine*/, int & /*quantity*/,
+                                     int /*agent*/)
 {
     // Give a crystal ball based on both evocations and either spellcasting or
     // invocations if we haven't seen one.
@@ -685,7 +702,8 @@ static int _acquirement_misc_subtype(bool /*divine*/, int & /*quantity*/)
  *
  * @return          A random wand type.
  */
-static int _acquirement_wand_subtype(bool /*divine*/, int & /*quantity*/)
+static int _acquirement_wand_subtype(bool /*divine*/, int & /*quantity*/,
+                                     int /*agent */)
 {
     // basic total: 120
     vector<pair<wand_type, int>> weights = {
@@ -712,14 +730,15 @@ static int _acquirement_wand_subtype(bool /*divine*/, int & /*quantity*/)
     return *wand;
 }
 
-static int _acquirement_book_subtype(bool /*divine*/, int & /*quantity*/)
+static int _acquirement_book_subtype(bool /*divine*/, int & /*quantity*/,
+                                     int /*agent*/)
 {
     return BOOK_MINOR_MAGIC;
     //this gets overwritten later, but needs to be a sane value
     //or asserts will get set off
 }
 
-typedef int (*acquirement_subtype_finder)(bool divine, int &quantity);
+typedef int (*acquirement_subtype_finder)(bool divine, int &quantity, int agent);
 static const acquirement_subtype_finder _subtype_finders[] =
 {
     _acquirement_weapon_subtype,
@@ -763,7 +782,10 @@ static int _find_acquirement_subtype(object_class_type &class_wanted,
             class_wanted = random_choose(OBJ_WANDS, OBJ_MISCELLANY);
 
         if (_subtype_finders[class_wanted])
-            type_wanted = (*_subtype_finders[class_wanted])(divine, quantity);
+        {
+            type_wanted =
+                (*_subtype_finders[class_wanted])(divine, quantity, agent);
+        }
 
         item_def dummy;
         dummy.base_type = class_wanted;
@@ -979,8 +1001,10 @@ static bool _do_book_acquirement(item_def &book, int agent)
             book.sub_type = choose_random_weighted(weights, end(weights));
             break;
         }
-        // else intentional fall-through
+        acquire_themed_randbook(book, agent);
+        break;
     }
+
     case BOOK_RANDART_THEME:
         acquire_themed_randbook(book, agent);
         break;
@@ -1123,21 +1147,35 @@ static bool _brand_already_seen(const item_def &item)
  * Take a newly-generated acquirement item, and adjust its brand if we don't
  * like it.
  *
- * Specifically, if we think the brand is too weak (for non-divine gifts), or
- * sometimes if we've seen the brand before.
+ * Specifically, when any of:
+ *   - The god doesn't like the brand (for divine gifts)
+ *   - We think the brand is too weak (for non-divine gifts)
+ *   - Sometimes if we've seen the brand before.
  *
  * @param item      The item which may have its brand adjusted. Not necessarily
  *                  a weapon or piece of armour.
  * @param divine    Whether the item is a god gift, rather than from
  *                  acquirement proper.
+ * @param agent     The source of the acquirement. For god gifts, it's equal to
+ *                  the god.
  */
-static void _adjust_brand(item_def &item, bool divine)
+static void _adjust_brand(item_def &item, bool divine, int agent)
 {
     if (item.base_type != OBJ_WEAPONS && item.base_type != OBJ_ARMOUR)
         return; // don't reroll missile brands, I guess
 
     if (is_artefact(item))
         return; // their own kettle of fish
+
+
+    // Trog has a restricted brand table.
+    if (agent == GOD_TROG && item.base_type == OBJ_WEAPONS)
+    {
+        // 75% chance of a brand
+        item.brand = random_choose(SPWPN_NORMAL, SPWPN_VORPAL,
+                                   SPWPN_FLAMING, SPWPN_ANTIMAGIC);
+        return;
+    }
 
     // Not from a god, so we should prefer better brands.
     if (!divine && item.base_type == OBJ_WEAPONS)
@@ -1177,14 +1215,20 @@ static string _why_reject(const item_def &item, int agent)
 
     // Trog does not gift the Wrath of Trog, nor weapons of pain
     // (which work together with Necromantic magic).
-    // nor fancy magic staffs (wucad mu, majin-bo)
-    if (agent == GOD_TROG
-        && (get_weapon_brand(item) == SPWPN_PAIN
-            || is_unrandom_artefact(item, UNRAND_TROG)
-            || is_unrandom_artefact(item, UNRAND_WUCAD_MU)
-            || is_unrandom_artefact(item, UNRAND_MAJIN)))
+    // nor fancy magic staffs (wucad mu, majin-bo, staff of battle, elem
+    // staff, staff of olgreb)
+    if (agent == GOD_TROG)
     {
-        return "Destroying a weapon Trog hates!";
+        if (is_unrandom_artefact(item, UNRAND_TROG)
+            || is_unrandom_artefact(item, UNRAND_WUCAD_MU)
+            || is_unrandom_artefact(item, UNRAND_MAJIN)
+            || is_unrandom_artefact(item, UNRAND_BATTLE)
+            || is_unrandom_artefact(item, UNRAND_ELEMENTAL_STAFF)
+            || is_unrandom_artefact(item, UNRAND_OLGREB)
+            || get_weapon_brand(item) == SPWPN_PAIN)
+        {
+            return "Destroying a weapon Trog hates!";
+        }
     }
 
     // Pain brand is useless if you've sacrificed Necromacy.
@@ -1221,7 +1265,7 @@ static string _why_reject(const item_def &item, int agent)
 
 int acquirement_create_item(object_class_type class_wanted,
                             int agent, bool quiet,
-                            const coord_def &pos, bool debug)
+                            const coord_def &pos)
 {
     ASSERT(class_wanted != OBJ_RANDOM);
 
@@ -1264,7 +1308,7 @@ int acquirement_create_item(object_class_type class_wanted,
         }
 
         item_def &acq_item(mitm[thing_created]);
-        _adjust_brand(acq_item, divine);
+        _adjust_brand(acq_item, divine, agent);
 
         // For plain armour, try to change the subtype to something
         // matching a currently unfilled equipment slot.
@@ -1314,14 +1358,6 @@ int acquirement_create_item(object_class_type class_wanted,
                     continue;
                 }
             }
-        }
-
-        if (agent == GOD_TROG && coinflip()
-            && acq_item.base_type == OBJ_WEAPONS && !is_range_weapon(acq_item)
-            && !is_unrandom_artefact(acq_item))
-        {
-            // ... but Trog loves the antimagic brand specially.
-            set_item_ego_type(acq_item, OBJ_WEAPONS, SPWPN_ANTIMAGIC);
         }
 
         const string rejection_reason = _why_reject(acq_item, agent);
@@ -1413,14 +1449,11 @@ int acquirement_create_item(object_class_type class_wanted,
                 make_item_randart(acq_item, true);
             }
 
-            if (agent == GOD_TROG || agent == GOD_OKAWARU)
-            {
-                if (agent == GOD_TROG)
-                    acq_item.plus += random2(3);
-
-                // On a weapon, an enchantment of less than 0 is never viable.
-                acq_item.plus = max(static_cast<int>(acq_item.plus), random2(2));
-            }
+            if (agent == GOD_TROG)
+                acq_item.plus += random2(3);
+            // God gifts (except Xom's) never have a negative enchantment
+            if (divine && agent != GOD_XOM)
+                acq_item.plus = max(static_cast<int>(acq_item.plus), 0);
         }
 
         // Last check: don't acquire items your god hates.
@@ -1448,8 +1481,19 @@ int acquirement_create_item(object_class_type class_wanted,
 
     item_set_appearance(mitm[thing_created]); // cleanup
 
+    if (thing_created != NON_ITEM)
+    {
+        ASSERT(mitm[thing_created].is_valid());
+        mitm[thing_created].props[ACQUIRE_KEY].get_int() = agent;
+    }
+
     ASSERT(!is_useless_item(mitm[thing_created], false) || agent == GOD_XOM);
     ASSERT(!god_hates_item(mitm[thing_created]));
+
+    // If we have a zero coord_def, don't move the item to the grid. Used for
+    // generating scroll of acquirement items.
+    if (pos.origin())
+        return thing_created;
 
     // Moving this above the move since it might not exist after falling.
     if (thing_created != NON_ITEM && !quiet)
@@ -1461,127 +1505,275 @@ int acquirement_create_item(object_class_type class_wanted,
         && agent > GOD_NO_GOD
         && agent < NUM_GODS)
     {
-        if (agent == GOD_XOM)
+        if (!quiet && agent == GOD_XOM)
             simple_god_message(" snickers.", GOD_XOM);
         else
             return _failed_acquirement(quiet);
     }
 
-    move_item_to_grid(&thing_created, pos);
+    move_item_to_grid(&thing_created, pos, quiet);
 
-    if (thing_created != NON_ITEM)
-    {
-        ASSERT(mitm[thing_created].is_valid());
-        mitm[thing_created].props[ACQUIRE_KEY].get_int() = agent;
-    }
     return thing_created;
 }
 
-bool acquirement(object_class_type class_wanted, int agent,
-                 bool quiet, int* item_index, bool debug, bool known_scroll)
+class AcquireMenu : public InvMenu
+{
+    friend class AcquireEntry;
+
+    CrawlVector &acq_items;
+
+    void init_entries();
+    void update_help();
+    bool acquire_selected();
+
+    virtual bool process_key(int keyin) override;
+
+public:
+    AcquireMenu(CrawlVector &aitems);
+};
+
+class AcquireEntry : public InvEntry
+{
+    string get_text(bool need_cursor = false) const override
+    {
+        need_cursor = need_cursor && show_cursor;
+        const colour_t keycol = LIGHTCYAN;
+        const string keystr = colour_to_str(keycol);
+        const string itemstr =
+            colour_to_str(menu_colour(text, item_prefix(*item), tag));
+        const string gold_text = item->base_type == OBJ_GOLD
+            ? make_stringf(" (you have %d gold)", you.gold) : "";
+        return make_stringf(" <%s>%c%c%c%c</%s><%s>%s%s</%s>",
+                            keystr.c_str(),
+                            hotkeys[0],
+                            need_cursor ? '[' : ' ',
+                            selected() ? '+' : '-',
+                            need_cursor ? ']' : ' ',
+                            keystr.c_str(),
+                            itemstr.c_str(),
+                            text.c_str(),
+                            gold_text.c_str(),
+                            itemstr.c_str());
+    }
+
+public:
+    AcquireEntry(const item_def& i) : InvEntry(i)
+    {
+        show_background = false;
+    }
+};
+
+AcquireMenu::AcquireMenu(CrawlVector &aitems)
+    : InvMenu(MF_SINGLESELECT | MF_NO_SELECT_QTY | MF_QUIET_SELECT
+              | MF_ALWAYS_SHOW_MORE | MF_ALLOW_FORMATTING | MF_UNCANCEL),
+      acq_items(aitems)
+{
+    menu_action = ACT_EXECUTE;
+    set_flags(get_flags() & ~MF_USE_TWO_COLUMNS);
+
+    set_tag("acquirement");
+
+    init_entries();
+
+    update_help();
+
+    set_title("Choose an item to acquire.");
+}
+
+void AcquireMenu::init_entries()
+{
+    menu_letter ckey = 'a';
+    for (item_def& item : acq_items)
+    {
+        auto newentry = make_unique<AcquireEntry>(item);
+        newentry->hotkeys.clear();
+        newentry->add_hotkey(ckey++);
+        add_entry(move(newentry));
+    }
+}
+
+static string _hyphenated_letters(int how_many, char first)
+{
+    string s = "<w>";
+    s += first;
+    s += "</w>";
+    if (how_many > 1)
+    {
+        s += "-<w>";
+        s += first + how_many - 1;
+        s += "</w>";
+    }
+    return s;
+}
+
+void AcquireMenu::update_help()
+{
+    string top_line = string(80, ' ') + '\n';
+
+    set_more(formatted_string::parse_string(top_line + make_stringf(
+        //[!] acquire|examine item  [a-i] select item to acquire
+        //[$] show shopping list    [\] show identification knowledge
+        "%s  [%s] %s\n"
+        "[$] show shopping list" "     " "[\\] show identification knowledge",
+        menu_action == ACT_EXECUTE ? "[<w>!</w>] <w>acquire</w>|examine items" :
+                                     "[<w>!</w>] acquire|<w>examine</w> items",
+        _hyphenated_letters(item_count(), 'a').c_str(),
+        menu_action == ACT_EXECUTE ? "select item for acquirement"
+                                   : "examine item")));
+}
+
+bool AcquireMenu::acquire_selected()
+{
+    vector<MenuEntry*> selected = selected_entries();
+    ASSERT(selected.size() == 1);
+
+    const string col = colour_to_str(channel_to_colour(MSGCH_PROMPT));
+    update_help();
+    const formatted_string old_more = more;
+    more = formatted_string::parse_string(make_stringf(
+               "<%s>Acquire this item? (%s/N)</%s>\n",
+               col.c_str(),
+               Options.easy_confirm == easy_confirm_type::none ? "Y" : "y",
+               col.c_str()));
+    more += old_more;
+    update_more();
+
+    auto entry = selected[0];
+    if (!yesno(nullptr, true, 'n', false, false, true))
+    {
+        entry->select();
+        more = old_more;
+        update_more();
+        return true;
+    }
+
+    item_def &acq_item = *static_cast<item_def*>(entry->data);
+    if (copy_item_to_grid(acq_item, you.pos()))
+        canned_msg(MSG_SOMETHING_APPEARS);
+    else
+        canned_msg(MSG_NOTHING_HAPPENS);
+    acq_items.clear();
+    return false;
+}
+
+bool AcquireMenu::process_key(int keyin)
+{
+    switch (keyin)
+    {
+    case '!':
+    case '?':
+        if (menu_action == ACT_EXECUTE)
+            menu_action = ACT_EXAMINE;
+        else
+            menu_action = ACT_EXECUTE;
+        update_help();
+        update_more();
+        return true;
+    case '$':
+        shopping_list.display(true);
+        return true;
+    case '\\':
+        check_item_knowledge();
+        return true;
+    default:
+        break;
+    }
+
+    if (keyin - 'a' >= 0 && keyin - 'a' < (int)items.size())
+    {
+        if (menu_action == ACT_EXAMINE)
+        {
+            item_def& item(*const_cast<item_def*>(dynamic_cast<AcquireEntry*>(
+                items[letter_to_index(keyin)])->item));
+            // A hack to make the description more useful.
+            // In theory, the user could kill the process at this
+            // point and end up with valid ID for the item.
+            // That's not very useful, though, because it doesn't set
+            // type-ID and once you can access the item (by buying it)
+            // you have its full ID anyway. Worst case, it won't get
+            // noted when you buy it.
+            {
+                unwind_var<iflags_t> old_flags(item.flags);
+                item.flags |= (ISFLAG_IDENT_MASK | ISFLAG_NOTED_ID
+                               | ISFLAG_NOTED_GET);
+                describe_item(item);
+            }
+            return true;
+        }
+        else
+        {
+            const unsigned int i = keyin - 'a';
+            select_item_index(i, 1, false);
+            return acquire_selected();
+        }
+    }
+
+    return true;
+}
+
+static void _make_acquirement_items()
+{
+    vector<object_class_type> rand_acq_classes;
+
+    if (you.species != SP_FELID)
+    {
+        rand_acq_classes.emplace_back(OBJ_WEAPONS);
+        rand_acq_classes.emplace_back(OBJ_ARMOUR);
+        rand_acq_classes.emplace_back(OBJ_STAVES);
+    }
+
+    rand_acq_classes.emplace_back(OBJ_JEWELLERY);
+    rand_acq_classes.emplace_back(OBJ_BOOKS);
+
+    vector<object_class_type> chosen_classes;
+    const int num_wanted = min(3, (int) rand_acq_classes.size());
+    shuffle_array(rand_acq_classes);
+    for (int i = 0 ; i < num_wanted ; i++)
+        chosen_classes.emplace_back(rand_acq_classes[i]);
+
+    // Gold and food (for characters that eat) are guaranteed.
+    chosen_classes.emplace_back(OBJ_GOLD);
+    if (!you_foodless(false))
+        chosen_classes.emplace_back(OBJ_FOOD);
+
+    CrawlVector &acq_items = you.props[ACQUIRE_ITEMS_KEY].get_vector();
+    acq_items.empty();
+    for (auto acq_class : chosen_classes)
+    {
+        const int item_index = acquirement_create_item(acq_class, AQ_SCROLL,
+                true);
+
+        // If we couldn't make an item of this type, just skip it.
+        // TODO: it would be nice to instead try another item class.
+        if (item_index == NON_ITEM)
+            continue;
+        ASSERT(!god_hates_item(mitm[item_index]));
+
+        item_def item = mitm[item_index];
+        set_ident_flags(item, ISFLAG_IDENT_MASK);
+        acq_items.push_back(item);
+        // Copy the item def, but we don't want to keep the real item.
+        destroy_item(item_index, true);
+    }
+}
+
+bool acquirement_menu()
 {
     ASSERT(!crawl_state.game_is_arena());
 
-    FixedBitVector<NUM_OBJECT_CLASSES> bad_class;
-    if (you.species == SP_FELID)
+    if (!you.props.exists(ACQUIRE_ITEMS_KEY))
+        _make_acquirement_items();
+
+    auto &acq_items = you.props[ACQUIRE_ITEMS_KEY].get_vector();
+
+    AcquireMenu acq_menu(acq_items);
+    acq_menu.show();
+
+    if (acq_items.empty())
     {
-        bad_class.set(OBJ_WEAPONS);
-        bad_class.set(OBJ_MISSILES);
-        bad_class.set(OBJ_ARMOUR);
-        bad_class.set(OBJ_STAVES);
+        you.props.erase(ACQUIRE_ITEMS_KEY);
+        return true;
     }
-    if (you.get_mutation_level(MUT_NO_ARTIFICE))
-        bad_class.set(OBJ_MISCELLANY);
-
-    bad_class.set(OBJ_FOOD, you_foodless(false) && !you_worship(GOD_FEDHAS));
-
-    static struct { object_class_type type; const char* name; } acq_classes[] =
-    {
-        { OBJ_WEAPONS,    "Weapon" },
-        { OBJ_ARMOUR,     "Armour" },
-        { OBJ_JEWELLERY,  "Jewellery" },
-        { OBJ_BOOKS,      "Book" },
-        { OBJ_STAVES,     "Staff " },
-        { OBJ_MISCELLANY, "Evocable" },
-        { OBJ_FOOD,       "Food" }, // amended below
-        { OBJ_GOLD,       0 },
-    };
-    ASSERT(acq_classes[6].type == OBJ_FOOD);
-    string gold_text = make_stringf("Gold (you have $%d)", you.gold);
-    ASSERT(acq_classes[7].type == OBJ_GOLD);
-    acq_classes[7].name = gold_text.c_str();
-
-    int thing_created = NON_ITEM;
-
-    if (item_index == nullptr)
-        item_index = &thing_created;
-
-    *item_index = NON_ITEM;
-
-#ifdef USE_TILE_WEB
-    ui::cutoff_point ui_cutoff_point;
-#endif
-
-    while (class_wanted == OBJ_RANDOM)
-    {
-        ASSERT(!quiet);
-        clear_messages();
-
-        string line;
-        for (unsigned int i = 0; i < ARRAYSZ(acq_classes); i++)
-        {
-            int len = max(strlen(acq_classes[i].name),
-                          strlen(acq_classes[(i + ARRAYSZ(acq_classes) / 2)
-                                             % ARRAYSZ(acq_classes)].name));
-            if (bad_class[acq_classes[i].type])
-                line += make_stringf("     %-*s", len, "");
-            else
-                line += make_stringf(" [%c] %-*s", i + 'a', len, acq_classes[i].name);
-
-            if (i == ARRAYSZ(acq_classes) / 2 - 1 || i == ARRAYSZ(acq_classes) - 1)
-            {
-                line.erase(0, 1);
-                mpr(line);
-                line.clear();
-            }
-        }
-        mprf(MSGCH_PROMPT, "What kind of item would you like to acquire?"
-                "<lightgrey> [<w>\\</w>] known items %s</lightgrey>",
-                shopping_list.empty() ? "" : "[<w>$</w>] shopping list");
-
-        const int keyin = toalower(get_ch());
-        if (keyin >= 'a' && keyin < 'a' + (int)ARRAYSZ(acq_classes))
-            class_wanted = acq_classes[keyin - 'a'].type;
-        else if (keyin == '\\')
-            check_item_knowledge(), redraw_screen();
-        else if (keyin == '$' && !shopping_list.empty())
-            shopping_list.display(true), redraw_screen();
-        else
-        {
-            // Lets wizards escape out of accidentally choosing acquirement.
-            if (agent == AQ_WIZMODE || known_scroll)
-            {
-                canned_msg(MSG_OK);
-                return false;
-            }
-
-            // If we've gotten a HUP signal then the player will be unable
-            // to make a selection.
-            if (crawl_state.seen_hups)
-            {
-                dprf("Acquirement interrupted by HUP signal.");
-                you.turn_is_over = false;
-                return false;
-            }
-        }
-
-        if (class_wanted >= NUM_OBJECT_CLASSES || bad_class[class_wanted])
-            class_wanted = OBJ_RANDOM;
-    }
-
-    *item_index = acquirement_create_item(class_wanted, agent, quiet,
-                                          you.pos(), debug);
-    ASSERT(*item_index == NON_ITEM || !god_hates_item(mitm[*item_index]));
-
-    return true;
+    else
+        return false;
 }

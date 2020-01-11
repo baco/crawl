@@ -431,6 +431,8 @@ void set_mouse_enabled(bool enabled)
 #ifdef NCURSES_MOUSE_VERSION
 static int proc_mouse_event(int c, const MEVENT *me)
 {
+    UNUSED(c);
+
     crawl_view.mousep.x = me->x + 1;
     crawl_view.mousep.y = me->y + 1;
 
@@ -587,6 +589,7 @@ int getch_ck()
 #ifdef KEY_RESIZE
     case -KEY_RESIZE: return CK_RESIZE;
 #endif
+    case -KEY_BTAB: return CK_SHIFT_TAB;
     default:         return c;
     }
 }
@@ -891,8 +894,8 @@ static inline unsigned get_brand(int col)
            (col & COLFLAG_MAYSTAB)          ? Options.may_stab_brand :
            (col & COLFLAG_FEATURE_ITEM)     ? Options.feature_item_brand :
            (col & COLFLAG_TRAP_ITEM)        ? Options.trap_item_brand :
-           (col & COLFLAG_REVERSE)          ? CHATTR_REVERSE
-                                            : CHATTR_NORMAL;
+           (col & COLFLAG_REVERSE)          ? unsigned{CHATTR_REVERSE}
+                                            : unsigned{CHATTR_NORMAL};
 }
 
 // see declaration

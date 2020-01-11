@@ -15,7 +15,7 @@
 #include "database.h"
 #include "dgn-overview.h"
 #include "dungeon.h"
-#include "exclude.h"
+#include "fineff.h"
 #include "god-passive.h"
 #include "hints.h"
 #include "item-prop.h"
@@ -34,7 +34,6 @@
 #include "stringutil.h"
 #include "terrain.h"
 #include "traps.h"
-#include "view.h"
 
 static void _guess_invis_foe_pos(monster* mon)
 {
@@ -355,6 +354,7 @@ void handle_behaviour(monster* mon)
         && mon->behaviour != BEH_WITHDRAW
         && mon->type != MONS_BALLISTOMYCETE_SPORE
         && mon->type != MONS_BALL_LIGHTNING
+        && mon->type != MONS_FOXFIRE
         && !mons_is_avatar(mon->type))
     {
         if (you.pet_target != MHITNOT)
@@ -368,7 +368,8 @@ void handle_behaviour(monster* mon)
         && (mon->has_ench(ENCH_INSANE)
             || ((mon->berserk()
                  || mon->type == MONS_BALLISTOMYCETE_SPORE
-                 || mon->type == MONS_BALL_LIGHTNING)
+                 || mon->type == MONS_BALL_LIGHTNING
+                 || mon->type == MONS_FOXFIRE)
                 && (mon->foe == MHITNOT
                     || isFriendly && mon->foe == MHITYOU))))
     {
@@ -489,7 +490,8 @@ void handle_behaviour(monster* mon)
                     || isNeutral && !mon->has_ench(ENCH_INSANE)
                     || patrolling
                     || mon->type == MONS_BALLISTOMYCETE_SPORE
-                    || mon->type == MONS_BALL_LIGHTNING)
+                    || mon->type == MONS_BALL_LIGHTNING
+                    || mon->type == MONS_FOXFIRE)
                 {
                     new_beh = BEH_WANDER;
                 }
@@ -936,15 +938,15 @@ static bool _mons_check_foe(monster* mon, const coord_def& p,
 
     monster* foe = monster_at(p);
     return foe && foe != mon
-           && (mon->has_ench(ENCH_INSANE)
-               || foe->friendly() != friendly
-               || neutral && !foe->neutral())
            && (ignore_sight || mon->can_see(*foe))
+           && (foe->friendly() != friendly
+               || neutral && !foe->neutral()
+               || mon->has_ench(ENCH_INSANE))
            && !mons_is_projectile(*foe)
            && summon_can_attack(mon, p)
            && (friendly || !is_sanctuary(p))
            && !mons_is_firewood(*foe)
-           || mon->has_ench(ENCH_INSANE) && p == you.pos();
+           || p == you.pos() && mon->has_ench(ENCH_INSANE);
 }
 
 // Choose random nearest monster as a foe.
@@ -964,12 +966,13 @@ void set_nearest_monster_foe(monster* mon, bool near_player)
 
     coord_def center = mon->pos();
     bool second_pass = false;
+    vector<coord_def> monster_pos;
 
     while (true)
     {
         for (int k = 1; k <= LOS_RADIUS; ++k)
         {
-            vector<coord_def> monster_pos;
+            monster_pos.clear();
             for (int i = -k; i <= k; ++i)
                 for (int j = -k; j <= k; (abs(i) == k ? j++ : j += 2*k))
                 {
@@ -1128,8 +1131,16 @@ void behaviour_event(monster* mon, mon_event_type event, const actor *src,
 
         if (src == &you && mon->angered_by_attacks())
         {
-            mon->attitude = ATT_HOSTILE;
-            breakCharm    = true;
+            if (mon->attitude == ATT_FRIENDLY && mon->is_summoned())
+            {
+                summon_dismissal_fineff::schedule(mon);
+                return;
+            }
+            else
+            {
+                mon->attitude = ATT_HOSTILE;
+                breakCharm    = true;
+            }
         }
 
         // XXX: Somewhat hacky, this being here.
@@ -1162,7 +1173,8 @@ void behaviour_event(monster* mon, mon_event_type event, const actor *src,
         // Avoid moving friendly explodey things out of BEH_WANDER.
         if (mon->friendly()
             && (mon->type == MONS_BALLISTOMYCETE_SPORE
-                || mon->type == MONS_BALL_LIGHTNING))
+                || mon->type == MONS_BALL_LIGHTNING
+                || mon->type == MONS_FOXFIRE))
         {
             break;
         }

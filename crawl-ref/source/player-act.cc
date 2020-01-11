@@ -92,8 +92,8 @@ bool player::move_to_pos(const coord_def &c, bool clear_net, bool /*force*/)
 }
 
 void player::apply_location_effects(const coord_def &oldpos,
-                                    killer_type killer,
-                                    int killernum)
+                                    killer_type /*killer*/,
+                                    int /*killernum*/)
 {
     moveto_location_effects(env.grid(oldpos));
 }
@@ -634,7 +634,8 @@ bool player::fumbles_attack()
     bool did_fumble = false;
 
     // Fumbling in shallow water.
-    if (floundering() || liquefied_ground())
+    if (floundering()
+        || liquefied_ground() && you.duration[DUR_LIQUEFYING] == 0)
     {
         if (x_chance_in_y(3, 8))
         {
@@ -800,11 +801,6 @@ bool player::can_go_berserk(bool intentional, bool potion, bool quiet,
 bool player::berserk() const
 {
     return duration[DUR_BERSERK];
-}
-
-bool player::can_cling_to_walls() const
-{
-    return false;
 }
 
 bool player::antimagic_susceptible() const

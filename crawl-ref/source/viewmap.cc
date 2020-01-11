@@ -142,7 +142,7 @@ bool is_feature(char32_t feature, const coord_def& where)
     switch (feature)
     {
     case 'E':
-        return travel_point_distance[where.x][where.y] == PD_EXCLUDED;
+        return is_exclude_root(where);
     case 'F':
     case 'W':
         return is_waypoint(where);
@@ -449,6 +449,8 @@ class feature_list
         group grp = get_group(gc);
         if (grp != G_NONE)
             data[grp].push_back(_get_feat_glyph(gc));
+#else
+        UNUSED(gc);
 #endif
     }
 

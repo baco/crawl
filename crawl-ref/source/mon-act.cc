@@ -12,7 +12,6 @@
 #include "arena.h"
 #include "attitude-change.h"
 #include "bloodspatter.h"
-#include "butcher.h"
 #include "cloud.h"
 #include "colour.h"
 #include "coordit.h"
@@ -21,7 +20,6 @@
 #include "directn.h" // feature_description_at
 #include "dungeon.h"
 #include "english.h" // apostrophise
-#include "evoke.h"
 #include "fight.h"
 #include "fineff.h"
 #include "ghost.h"
@@ -240,9 +238,6 @@ static bool _swap_monsters(monster& mover, monster& moved)
     if (!mover.swap_with(&moved))
         return false;
 
-    mover.check_clinging(true);
-    moved.check_clinging(true);
-
     if (you.can_see(mover) && you.can_see(moved))
     {
         mprf("%s and %s swap places.", mover.name(DESC_THE).c_str(),
@@ -253,6 +248,12 @@ static bool _swap_monsters(monster& mover, monster& moved)
 
     _handle_manticore_barbs(mover);
     _handle_manticore_barbs(moved);
+
+    if (moved.type == MONS_FOXFIRE)
+    {
+        mprf(MSGCH_GOD, "By Zin's power the foxfire is contained!");
+        monster_die(moved, KILL_DISMISSED, NON_MONSTER, true);
+    }
 
     return true;
 }
@@ -362,10 +363,6 @@ static bool _allied_monster_at(monster* mon, coord_def a, coord_def b,
 // some monster types.
 static bool _mon_on_interesting_grid(monster* mon)
 {
-    // Patrolling shouldn't happen all the time.
-    if (one_chance_in(4))
-        return false;
-
     const dungeon_feature_type feat = grd(mon->pos());
 
     switch (feat)
@@ -405,10 +402,11 @@ static bool _mon_on_interesting_grid(monster* mon)
 // if it left it for fighting, seeking etc.
 static void _maybe_set_patrol_route(monster* mons)
 {
-    if (mons_is_wandering(*mons)
-        && !mons->friendly()
+    if (_mon_on_interesting_grid(mons) // Patrolling shouldn't always happen
+        && one_chance_in(4)
+        && mons_is_wandering(*mons)
         && !mons->is_patrolling()
-        && _mon_on_interesting_grid(mons))
+        && !mons->friendly())
     {
         mons->patrol_point = mons->pos();
     }
@@ -526,39 +524,45 @@ static void _handle_movement(monster* mons)
 {
     _maybe_set_patrol_route(mons);
 
-    // Monsters will try to flee out of a sanctuary.
-    if (is_sanctuary(mons->pos())
-        && mons_is_influenced_by_sanctuary(*mons)
-        && !mons_is_fleeing_sanctuary(*mons))
+    if (sanctuary_exists())
     {
-        mons_start_fleeing_from_sanctuary(*mons);
-    }
-    else if (mons_is_fleeing_sanctuary(*mons)
-             && !is_sanctuary(mons->pos()))
-    {
-        // Once outside there's a chance they'll regain their courage.
-        // Nonliving and berserking monsters always stop immediately,
-        // since they're only being forced out rather than actually
-        // scared.
-        if (mons->is_nonliving()
-            || mons->berserk()
-            || mons->has_ench(ENCH_INSANE)
-            || x_chance_in_y(2, 5))
+        // Monsters will try to flee out of a sanctuary.
+        if (is_sanctuary(mons->pos())
+            && mons_is_influenced_by_sanctuary(*mons)
+            && !mons_is_fleeing_sanctuary(*mons))
         {
-            mons_stop_fleeing_from_sanctuary(*mons);
+            mons_start_fleeing_from_sanctuary(*mons);
+        }
+        else if (mons_is_fleeing_sanctuary(*mons)
+                 && !is_sanctuary(mons->pos()))
+        {
+            // Once outside there's a chance they'll regain their courage.
+            // Nonliving and berserking monsters always stop immediately,
+            // since they're only being forced out rather than actually
+            // scared.
+            if (mons->is_nonliving()
+                || mons->berserk()
+                || mons->has_ench(ENCH_INSANE)
+                || x_chance_in_y(2, 5))
+            {
+                mons_stop_fleeing_from_sanctuary(*mons);
+            }
         }
     }
 
     coord_def delta;
     _set_mons_move_dir(mons, &mmov, &delta);
 
-    // Don't allow monsters to enter a sanctuary or attack you inside a
-    // sanctuary, even if you're right next to them.
-    if (is_sanctuary(mons->pos() + mmov)
-        && (!is_sanctuary(mons->pos())
-            || mons->pos() + mmov == you.pos()))
+    if (sanctuary_exists())
     {
-        mmov.reset();
+        // Don't allow monsters to enter a sanctuary or attack you inside a
+        // sanctuary, even if you're right next to them.
+        if (is_sanctuary(mons->pos() + mmov)
+            && (!is_sanctuary(mons->pos())
+                || mons->pos() + mmov == you.pos()))
+        {
+            mmov.reset();
+        }
     }
 
     // Bounds check: don't let fleeing monsters try to run off the grid.
@@ -593,8 +597,10 @@ static void _handle_movement(monster* mons)
 
     const coord_def newpos(mons->pos() + mmov);
 
+    // Filling this is relatively costly and not always needed, so be a bit
+    // lazy about it.
     move_array good_move;
-    _fill_good_move(mons, &good_move);
+    bool good_move_filled = false;
 
     // If the monster is moving in your direction, whether to attack or
     // protect you, or towards a monster it intends to attack, check
@@ -611,6 +617,8 @@ static void _handle_movement(monster* mons)
         && !mons_is_confused(*mons) && !mons->caught()
         && !mons->berserk_or_insane())
     {
+        _fill_good_move(mons, &good_move);
+        good_move_filled = true;
         // If the monster is moving parallel to the x or y axis, check
         // whether
         //
@@ -687,6 +695,11 @@ static void _handle_movement(monster* mons)
     if (mmov.origin())
         return;
 
+    // everything below here is irrelevant if the player is not in bounds, for
+    // example if they have stepped from time.
+    if (!in_bounds(you.pos()))
+        return;
+
     // Try to stay in sight of the player if we're moving towards
     // him/her, in order to avoid the monster coming into view,
     // shouting, and then taking a step in a path to the player which
@@ -731,13 +744,20 @@ static void _handle_movement(monster* mons)
             if (i == 0 && j == 0)
                 continue;
 
+            coord_def d(i - 1, j - 1);
+            coord_def tmp = old_pos + d;
+            if (!you.see_cell(tmp))
+                continue;
+
+            if (!good_move_filled)
+            {
+                _fill_good_move(mons, &good_move);
+                good_move_filled = true;
+            }
             if (!good_move[i][j])
                 continue;
 
-            coord_def d(i - 1, j - 1);
-            coord_def tmp = old_pos + d;
-
-            if (grid_distance(you.pos(), tmp) < old_dist && you.see_cell(tmp))
+            if (grid_distance(you.pos(), tmp) < old_dist)
             {
                 if (one_chance_in(++matches))
                     mmov = d;
@@ -1108,6 +1128,7 @@ static bool _handle_wand(monster& mons)
 
     const spell_type mzap =
         spell_in_wand(static_cast<wand_type>(wand->sub_type));
+    const int power = 30 + mons.get_hit_dice();
 
     if (!setup_mons_cast(&mons, beem, mzap, true))
         return false;
@@ -1116,23 +1137,31 @@ static bool _handle_wand(monster& mons)
     beem.aux_source =
         wand->name(DESC_QUALNAME, false, true, false, false);
 
+    bool should_fire = false;
     const wand_type kind = (wand_type)wand->sub_type;
     switch (kind)
     {
+    case WAND_SCATTERSHOT:
+        should_fire = scattershot_tracer(&mons, power, beem.target);
+        break;
+
+    case WAND_CLOUDS:
+        should_fire = mons_should_cloud_cone(&mons, power, beem.target);
+        break;
+
     case WAND_DISINTEGRATION:
         // Dial down damage from wands of disintegration, since
         // disintegration beams can do large amounts of damage.
         beem.damage.size = beem.damage.size * 2 / 3;
-        break;
 
+        // Intentional fallthrough
     default:
+        fire_tracer(&mons, beem);
+        should_fire = mons_should_fire(beem);
         break;
     }
 
-    // Fire tracer, if necessary.
-    fire_tracer(&mons, beem);
-
-    if (mons_should_fire(beem))
+    if (should_fire)
     {
         _mons_fire_wand(mons, *wand, beem, you.see_cell(mons.pos()));
         return true;
@@ -1158,7 +1187,13 @@ bool handle_throw(monster* mons, bolt & beem, bool teleport, bool check_only)
         return false;
     }
 
-    const bool archer = mons_class_flag(mons->type, M_DONT_MELEE);
+    const bool prefer_ranged_attack = mons_class_flag(mons->type,
+                                                            M_PREFER_RANGED);
+    const bool master_archer = prefer_ranged_attack && mons->is_archer();
+    // archers in general get a to-hit bonus and a damage bonus to ranged
+    // attacks (determined elsewhere).
+    // master archers will fire when adjacent, and are more likely to fire
+    // over other actions.
 
     const bool liquefied = mons->liquefied_ground();
 
@@ -1166,21 +1201,27 @@ bool handle_throw(monster* mons, bolt & beem, bool teleport, bool check_only)
     if (mons->foe == MHITYOU && !you.see_cell(mons->pos()))
         return false;
 
-    // Monsters won't shoot in melee range, largely for balance reasons.
-    // Specialist archers are an exception to this rule.
+    // Most monsters won't shoot in melee range, largely for balance reasons.
+    // Specialist archers are an exception to this rule, though most archers
+    // lack the M_PREFER_RANGED flag.
     if (adjacent(beem.target, mons->pos()))
     {
-        if (!archer)
+        if (!prefer_ranged_attack)
             return false;
-        // If adjacent, archers should always shoot (otherwise they would
-        // try to melee). Hence the else if below.
+        // Monsters who only can attack with ranged still should. Keep in mind
+        // that M_PREFER_RANGED only applies if the monster has ammo.
     }
-    else if (!teleport && ((liquefied && !archer && one_chance_in(9))
-                           || (!liquefied && one_chance_in(archer ? 9 : 5))))
+    else if (!teleport &&
+                    (liquefied && !master_archer && one_chance_in(9)
+                     || !liquefied && one_chance_in(master_archer ? 9 : 5)))
     {
-        // Highly-specialised archers are more likely to shoot than talk.
-        // If we're standing on liquefied ground, try to stand and fire!
-        // (Particularly archers.)
+        // Do we fire, or do something else?
+        // Monsters that are about to teleport will always try to fire.
+        // If we're standing on liquified ground, try to stand and fire.
+        //    regular monsters: 8/9 chance to fire. Master archers: always.
+        // Otherwise, a lower chance of firing vs doing something else.
+        //    regular monsters: 4/5 chance to fire. Master archers: 8/9 chance.
+        // TODO: this seems overly complicated, is 4/5 vs 8/9 even noticeable?
         return false;
     }
 
@@ -1378,11 +1419,15 @@ static void _pre_monster_move(monster& mons)
         }
     }
 
-    // Dissipate player ball lightnings that have left the player's sight
+    // Dissipate player ball lightnings and foxfires
+    // that have left the player's sight
     // (monsters are allowed to 'cheat', as with orb of destruction)
-    if (mons.type == MONS_BALL_LIGHTNING && mons.summoner == MID_PLAYER
+    if ((mons.type == MONS_BALL_LIGHTNING || mons.type == MONS_FOXFIRE)
+        && mons.summoner == MID_PLAYER
         && !cell_see_cell(you.pos(), mons.pos(), LOS_SOLID))
     {
+        if (mons.type == MONS_FOXFIRE)
+            check_place_cloud(CLOUD_FLAME, mons.pos(), 2, &mons);
         monster_die(mons, KILL_RESET, NON_MONSTER);
         return;
     }
@@ -1587,9 +1632,21 @@ void handle_monster_move(monster* mons)
         return;
     }
 
+    if (mons->type == MONS_FOXFIRE)
+    {
+        if (mons->steps_remaining == 0)
+        {
+            check_place_cloud(CLOUD_FLAME, mons->pos(), 2, mons);
+            mons->suicide();
+            return;
+        }
+    }
+
     mons->shield_blocks = 0;
 
     _mons_in_cloud(*mons);
+    actor_apply_toxic_bog(mons);
+
     if (!mons->alive())
         return;
 
@@ -1924,7 +1981,8 @@ void handle_monster_move(monster* mons)
         if (targ
             && targ != mons
             && mons->behaviour != BEH_WITHDRAW
-            && (!mons_aligned(mons, targ) || mons->has_ench(ENCH_INSANE))
+            && (!(mons_aligned(mons, targ) || targ->type == MONS_FOXFIRE)
+                || mons->has_ench(ENCH_INSANE))
             && monster_can_hit_monster(mons, targ))
         {
             // Maybe they can swap places?
@@ -1967,10 +2025,7 @@ void handle_monster_move(monster* mons)
         }
 
         if (mons->cannot_move() || !_monster_move(mons))
-        {
             mons->speed_increment -= non_move_energy;
-            mons->check_clinging(false);
-        }
     }
     you.update_beholder(mons);
     you.update_fearmonger(mons);
@@ -2695,6 +2750,10 @@ static bool _mons_can_displace(const monster* mpusher,
         return true;
     }
 
+    // Foxfires can always be pushed
+    if (mpushee->type == MONS_FOXFIRE)
+        return !mons_aligned(mpushee, mpusher); // But allies won't do it
+
     if (!mpushee->has_action_energy()
         && !_same_tentacle_parts(mpusher, mpushee))
     {
@@ -2781,9 +2840,9 @@ bool mon_can_move_to_pos(const monster* mons, const coord_def& delta,
 
     // Non-friendly and non-good neutral monsters won't enter
     // sanctuaries.
-    if (!mons->wont_attack()
-        && is_sanctuary(targ)
-        && !is_sanctuary(mons->pos()))
+    if (is_sanctuary(targ)
+        && !is_sanctuary(mons->pos())
+        && !mons->wont_attack())
     {
         return false;
     }
@@ -2937,7 +2996,8 @@ bool mon_can_move_to_pos(const monster* mons, const coord_def& delta,
         if (mons_is_firewood(*targmonster) && mons->target != targ)
             return false;
 
-        if (mons_aligned(mons, targmonster)
+        if ((mons_aligned(mons, targmonster)
+             || targmonster->type == MONS_FOXFIRE)
             && !mons->has_ench(ENCH_INSANE)
             && !_mons_can_displace(mons, targmonster))
         {
@@ -2954,10 +3014,10 @@ bool mon_can_move_to_pos(const monster* mons, const coord_def& delta,
 
     // Friendlies shouldn't try to move onto the player's
     // location, if they are aiming for some other target.
-    if (!_unfriendly_or_impaired(*mons)
-        && mons->foe != MHITYOU
+    if (mons->foe != MHITYOU
+        && targ == you.pos()
         && (mons->foe != MHITNOT || mons->is_patrolling())
-        && targ == you.pos())
+        && !_unfriendly_or_impaired(*mons))
     {
         return false;
     }
@@ -3130,15 +3190,11 @@ bool monster_swaps_places(monster* mon, const coord_def& delta,
     }
 
     mon->check_redraw(m2->pos(), false);
-    if (mon->is_wall_clinging())
-        mon->check_clinging(true); // XXX: avoids location effects!
-    else if (apply_effects)
+    if (apply_effects)
         mon->apply_location_effects(m2->pos());
 
     m2->check_redraw(mon->pos(), false);
-    if (m2->is_wall_clinging())
-        m2->check_clinging(true); // XXX: avoids location effects!
-    else if (apply_effects)
+    if (apply_effects)
         m2->apply_location_effects(mon->pos());
 
     // The seen context no longer applies if the monster is moving normally.
@@ -3147,6 +3203,13 @@ bool monster_swaps_places(monster* mon, const coord_def& delta,
 
     _handle_manticore_barbs(*mon);
     _handle_manticore_barbs(*m2);
+
+    // Pushing past a foxfire gets you burned regardless of alignment
+    if (m2->type == MONS_FOXFIRE)
+    {
+        foxfire_attack(m2, mon);
+        monster_die(*m2, KILL_DISMISSED, NON_MONSTER, true);
+    }
 
     return false;
 }
@@ -3247,19 +3310,19 @@ static bool _do_move_monster(monster& mons, const coord_def& delta)
     // This appears to be the real one, ie where the movement occurs:
     _swim_or_move_energy(mons);
 
+    if (mons.type == MONS_FOXFIRE)
+        --mons.steps_remaining;
+
     _escape_water_hold(mons);
 
     if (grd(mons.pos()) == DNGN_DEEP_WATER && grd(f) != DNGN_DEEP_WATER
-        && !monster_habitable_grid(&mons, DNGN_DEEP_WATER)
-        && !mons.is_wall_clinging())
+        && !monster_habitable_grid(&mons, DNGN_DEEP_WATER))
     {
         // er, what?  Seems impossible.
         mons.seen_context = SC_NONSWIMMER_SURFACES_FROM_DEEP;
     }
 
     mons.move_to_pos(f, false);
-
-    mons.check_clinging(true);
 
     // Let go of all constrictees; only stop *being* constricted if we are now
     // too far away (done in move_to_pos above).
@@ -3536,7 +3599,7 @@ static bool _monster_move(monster* mons)
         // Check for attacking another monster.
         if (monster* targ = monster_at(mons->pos() + mmov))
         {
-            if (mons_aligned(mons, targ)
+            if ((mons_aligned(mons, targ) || targ->type == MONS_FOXFIRE)
                 && !(mons->has_ench(ENCH_INSANE)
                      || mons->confused()))
             {
@@ -3566,6 +3629,9 @@ static bool _monster_move(monster* mons)
         {
             place_cloud(CLOUD_FIRE, mons->pos(), 2 + random2(4), mons);
         }
+
+        if (mons->type == MONS_FOXFIRE)
+            check_place_cloud(CLOUD_FLAME, mons->pos(), 2, mons);
 
         if (mons->type == MONS_CURSE_TOE)
             place_cloud(CLOUD_MIASMA, mons->pos(), 2 + random2(3), mons);

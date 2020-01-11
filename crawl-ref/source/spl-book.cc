@@ -21,17 +21,11 @@
 #include "database.h"
 #include "delay.h"
 #include "describe.h"
-#include "describe-spells.h"
 #include "end.h"
-#include "english.h"
 #include "god-conduct.h"
-#include "god-item.h"
 #include "invent.h"
 #include "item-prop.h"
-#include "item-status-flag-type.h"
-#include "items.h"
 #include "libutil.h"
-#include "macro.h"
 #include "message.h"
 #include "output.h"
 #include "prompt.h"
@@ -559,7 +553,7 @@ protected:
     virtual formatted_string calc_title() override
     {
         return formatted_string::parse_string(
-                    make_stringf("<w>Spells %s                 Type                          %sLevel ",
+                    make_stringf("<w>Spells %s                 Type                          %sLevel",
                         current_action == action::cast ? "(Cast)" :
                         current_action == action::memorise ? "(Memorise)" :
                         current_action == action::describe ? "(Describe)" :
@@ -699,10 +693,8 @@ private:
             return LIGHTBLUE;
         else
         {
-            bool transient = false;
-            bool memcheck = true;
-            return spell_highlight_by_utility(entry.spell, COL_UNKNOWN,
-                                                    transient, memcheck);
+            return spell_highlight_by_utility(entry.spell, COL_UNKNOWN, false,
+                    you.divine_exegesis ? false : true);
         }
     }
 
@@ -805,7 +797,7 @@ public:
 #ifdef USE_TILE_LOCAL
         FontWrapper *font = tiles.get_crt_font();
         int title_width = font->string_width(calc_title());
-        m_ui.vbox->min_size() = {38 + title_width + 10, 0};
+        m_ui.vbox->min_size().width = 38 + title_width + 10;
 #endif
         m_ui.scroller->expand_v = true; // TODO: doesn't work on webtiles
 

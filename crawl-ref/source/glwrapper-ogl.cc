@@ -424,13 +424,13 @@ void OGLStateManager::load_texture(unsigned char *pixels, unsigned int width,
     }
 }
 
-void OGLStateManager::reset_view_for_redraw(float x, float y)
+void OGLStateManager::reset_view_for_redraw()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    glTranslatef(x, y , 1.0f);
+    glTranslatef(0.0f, 0.0f, 1.0f);
     glDebug("glTranslatef");
 }
 
@@ -536,6 +536,8 @@ void OGLStateManager::glDebug(const char* msg)
     int e = glGetError();
     if (e > 0)
         __android_log_print(ANDROID_LOG_INFO, "Crawl.gl", "ERROR %x: %s",e,msg);
+#else
+    UNUSED(msg);
 #endif
 }
 /////////////////////////////////////////////////////////////////////////////
@@ -717,12 +719,14 @@ void OGLShapeBuffer::glDebug(const char* msg)
 #ifdef __ANDROID__
     int e = glGetError();
     if (e > 0)
-        __android_log_print(ANDROID_LOG_INFO, "Crawl.gl", "ERROR %x: %s",e,msg);
+        __android_log_print(ANDROID_LOG_INFO, "Crawl.gl", "ERROR %x: %s", e, msg);
 #else
 #ifdef DEBUG_DIAGNOSTICS
     int e = glGetError();
     if (e > 0)
-        printf("ERROR %x: %s\n",e,msg);
+        printf("ERROR %x: %s\n", e, msg);
+#else
+    UNUSED(msg);
 #endif
 #endif
 }

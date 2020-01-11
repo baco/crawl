@@ -28,7 +28,6 @@
 #include "ghost.h"
 #include "god-abil.h"
 #include "god-passive.h" // passive_t::slow_abyss, slow_orb_run
-#include "lev-pand.h"
 #include "libutil.h"
 #include "losglobal.h"
 #include "message.h"
@@ -39,7 +38,6 @@
 #include "mon-pick.h"
 #include "mon-poly.h"
 #include "mon-tentacle.h"
-#include "options.h"
 #include "random.h"
 #include "religion.h"
 #include "shopping.h"
@@ -56,7 +54,6 @@
 #include "traps.h"
 #include "travel.h"
 #include "unwind.h"
-#include "viewchar.h"
 #include "view.h"
 
 band_type active_monster_band = BAND_NO_BAND;
@@ -108,6 +105,11 @@ static bool _feat_compatible(dungeon_feature_type wanted_feat,
            || wanted_feat == DNGN_FLOOR && feat_has_solid_floor(actual_feat);
 }
 
+static bool _hab_requires_mon_flight(dungeon_feature_type g)
+{
+    return g == DNGN_LAVA || g == DNGN_DEEP_WATER;
+}
+
 /**
  * Can this monster survive on actual_grid?
  *
@@ -124,7 +126,9 @@ bool monster_habitable_grid(const monster* mon,
     const monster_type mt = fixup_zombie_type(mon->type,
                                               mons_base_type(*mon));
 
-    return monster_habitable_grid(mt, actual_grid, DNGN_UNSEEN, mon->airborne());
+    bool type_safe = monster_habitable_grid(mt, actual_grid, DNGN_UNSEEN);
+    return type_safe ||
+                    _hab_requires_mon_flight(actual_grid) && mon->airborne();
 }
 
 /**
@@ -140,8 +144,7 @@ bool monster_habitable_grid(const monster* mon,
  */
 bool monster_habitable_grid(monster_type mt,
                             dungeon_feature_type actual_grid,
-                            dungeon_feature_type wanted_grid,
-                            bool flies)
+                            dungeon_feature_type wanted_grid)
 {
     // No monster may be placed in walls etc.
     if (!mons_class_can_pass(mt, actual_grid))
@@ -162,13 +165,11 @@ bool monster_habitable_grid(monster_type mt,
     const dungeon_feature_type feat_nonpreferred =
         habitat2grid(mons_class_secondary_habitat(mt));
 
-    const bool monster_is_airborne = mons_class_flag(mt, M_FLIES) || flies;
-
     // If the caller insists on a specific feature type, try to honour
     // the request. This allows the builder to place amphibious
     // creatures only on land, or flying creatures only on lava, etc.
     if (wanted_grid != DNGN_UNSEEN
-        && monster_habitable_grid(mt, wanted_grid, DNGN_UNSEEN, flies))
+        && monster_habitable_grid(mt, wanted_grid, DNGN_UNSEEN))
     {
         return _feat_compatible(wanted_grid, actual_grid);
     }
@@ -193,11 +194,8 @@ bool monster_habitable_grid(monster_type mt,
     // [dshaligram] Flying creatures are all HT_LAND, so we
     // only have to check for the additional valid grids of deep
     // water and lava.
-    if (monster_is_airborne
-        && (actual_grid == DNGN_LAVA || actual_grid == DNGN_DEEP_WATER))
-    {
+    if (_hab_requires_mon_flight(actual_grid) && (mons_class_flag(mt, M_FLIES)))
         return true;
-    }
 
     return false;
 }
@@ -413,7 +411,7 @@ monster_type pick_random_monster(level_id place,
         return pick_monster(place);
 }
 
-bool can_place_on_trap(monster_type mon_type, trap_type trap)
+bool can_place_on_trap(monster_type mon_type)
 {
     if (mons_is_tentacle_segment(mon_type))
         return true;
@@ -558,7 +556,7 @@ monster_type resolve_monster_type(monster_type mon_type,
 
 // For generation purposes, don't treat simulacra of lava enemies as
 // being able to place on lava.
-const monster_type fixup_zombie_type(const monster_type cls,
+monster_type fixup_zombie_type(const monster_type cls,
                                          const monster_type base_type)
 {
     return (mons_class_is_zombified(cls)
@@ -612,7 +610,7 @@ static bool _valid_monster_generation_location(const mgen_data &mg,
     // Don't generate monsters on top of teleport traps.
     // (How did they get there?)
     const trap_def* ptrap = trap_at(mg_pos);
-    if (ptrap && !can_place_on_trap(mg.cls, ptrap->type))
+    if (ptrap && !can_place_on_trap(mg.cls))
         return false;
 
     return true;
@@ -2544,8 +2542,8 @@ void debug_bands()
 
 static monster_type _pick_zot_exit_defender()
 {
-    // 10% Pan lord
-    //  - ~1% named pan lord / seraph
+    // 10% Pan lord or Boris
+    //  - ~1% named pan lord / seraph / Boris
     //  - ~9% random pan lord
     // 15% Orb Guardian
     // 40% Demon
@@ -2557,13 +2555,21 @@ static monster_type _pick_zot_exit_defender()
         for (int i = 0; i < 4; i++)
         {
             // Sometimes pick an unique lord whose rune you've stolen.
-            //
             if (you.runes[RUNE_MNOLEG + i]
                 && !you.unique_creatures[MONS_MNOLEG + i]
                 && one_chance_in(10))
             {
                 return static_cast<monster_type>(MONS_MNOLEG + i);
             }
+        }
+
+        // If Boris has spawned once and is not
+        // currently alive he has a chance of coming for you on
+        // the orb run
+        if (you.props["killed_boris_once"]
+            && !you.unique_creatures[MONS_BORIS] && one_chance_in(10))
+        {
+            return MONS_BORIS;
         }
 
         if (one_chance_in(10))
@@ -2705,7 +2711,7 @@ public:
         return travel_pathfind::pathfind(RMODE_CONNECTIVITY);
     }
 
-    bool path_flood(const coord_def &c, const coord_def &dc) override
+    bool path_flood(const coord_def &/*c*/, const coord_def &dc) override
     {
         if (best_distance && traveled_distance > best_distance)
             return true;

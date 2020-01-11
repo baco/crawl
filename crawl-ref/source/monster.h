@@ -88,6 +88,7 @@ public:
         int prism_charge;      ///< Turns this prism has existed
         int battlecharge;      ///< Charges of battlesphere
         int move_spurt;        ///< Sixfirhy/jiangshi/kraken black magic
+        int steps_remaining;   ///< Foxfire remaining moves
         mid_t tentacle_connect;///< mid of monster this tentacle is
                                //   connected to: for segments, this is the
                                //   tentacle; for tentacles, the head.
@@ -183,7 +184,7 @@ public:
     // Has ENCH_SHAPESHIFTER or ENCH_GLOWING_SHAPESHIFTER.
     bool is_shapeshifter() const;
 
-#ifdef DEBUG_DIAGNOSTICS
+#ifdef DEBUG_ENCH_CACHE_DIAGNOSTICS
     bool has_ench(enchant_type ench) const; // same but validated
 #else
     bool has_ench(enchant_type ench) const { return ench_cache[ench]; }
@@ -402,7 +403,6 @@ public:
     bool cloud_immune(bool calc_unid = true, bool items = true) const override;
 
     bool airborne() const override;
-    bool can_cling_to_walls() const override;
     bool is_banished() const override;
     bool is_web_immune() const override;
     bool invisible() const override;
@@ -545,7 +545,7 @@ public:
     void struggle_against_net();
     bool has_usable_tentacle() const override;
 
-    bool check_clarity(bool silent) const;
+    bool check_clarity() const;
 
     bool is_child_tentacle() const;
     bool is_child_tentacle_of(const monster* mons) const;

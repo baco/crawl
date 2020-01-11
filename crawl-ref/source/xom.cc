@@ -46,7 +46,6 @@
 #include "nearby-danger.h"
 #include "notes.h"
 #include "output.h"
-#include "player-equip.h"
 #include "player-stats.h"
 #include "potion.h"
 #include "prompt.h"
@@ -67,7 +66,6 @@
 #include "transform.h"
 #include "traps.h"
 #include "travel.h"
-#include "unwind.h"
 #include "viewchar.h"
 #include "view.h"
 
@@ -680,9 +678,9 @@ static void _xom_acquirement(int /*sever*/)
     };
     const object_class_type force_class = RANDOM_ELEMENT(types);
 
-    int item_index = NON_ITEM;
-    if (!acquirement(force_class, GOD_XOM, false, &item_index)
-        || item_index == NON_ITEM)
+    const int item_index = acquirement_create_item(force_class, GOD_XOM,
+            false, you.pos());
+    if (item_index == NON_ITEM)
     {
         god_speaks(GOD_XOM, "\"No, never mind.\"");
         return;
@@ -989,7 +987,7 @@ static void _xom_do_potion(int /*sever*/)
 
 static void _confuse_monster(monster* mons, int sever)
 {
-    if (mons->check_clarity(false))
+    if (mons->check_clarity())
         return;
     if (mons->holiness() & (MH_NONLIVING | MH_PLANT))
         return;
@@ -1300,7 +1298,7 @@ static bool _hostile_snake(monster& mon)
 //  * HD influences the enchantment and type of the weapon.
 //  * Weapon is not guaranteed to be useful.
 //  * Weapon will never be branded.
-static void _xom_snakes_to_sticks(int sever)
+static void _xom_snakes_to_sticks(int /*sever*/)
 {
     bool action = false;
     for (monster_near_iterator mi(you.pos(), LOS_NO_TRANS); mi; ++mi)
@@ -3414,8 +3412,7 @@ void xom_death_message(const kill_method_type killed_by)
     // All others just get ignored by Xom.
 }
 
-static int _death_is_worth_saving(const kill_method_type killed_by,
-                                  const char *aux)
+static int _death_is_worth_saving(const kill_method_type killed_by)
 {
     switch (killed_by)
     {
@@ -3462,10 +3459,9 @@ static string _get_death_type_keyword(const kill_method_type killed_by)
  * and an additional chance based on tension that he will refuse to
  * save you.
  * @param death_type  The type of death that occurred.
- * @param aux         Additional string describing this death.
  * @return            True if Xom saves your life, false otherwise.
  */
-bool xom_saves_your_life(const kill_method_type death_type, const char *aux)
+bool xom_saves_your_life(const kill_method_type death_type)
 {
     if (!you_worship(GOD_XOM) || _xom_feels_nasty())
         return false;
@@ -3478,7 +3474,7 @@ bool xom_saves_your_life(const kill_method_type death_type, const char *aux)
     if (!one_chance_in(20))
         return false;
 
-    if (!_death_is_worth_saving(death_type, aux))
+    if (!_death_is_worth_saving(death_type))
         return false;
 
     // In addition, the chance depends on the current tension and Xom's mood.
@@ -3570,7 +3566,7 @@ static void _xom_good_teleport(int /*sever*/)
  * teleportation to a few random areas, stopping if either
  * an area is dangerous to you or randomly.
  */
-static void _xom_bad_teleport(int sever)
+static void _xom_bad_teleport(int /*sever*/)
 {
     god_speaks(GOD_XOM,
                _get_xom_speech("teleportation journey").c_str());

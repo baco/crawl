@@ -45,7 +45,7 @@ public:
     virtual void clear_redraw()  { return; }
 
     // Update the prompt shown at top.
-    virtual void update_top_prompt(string* p_top_prompt) {}
+    virtual void update_top_prompt(string*) {}
 
     // Add relevant descriptions to the target status.
     virtual vector<string> get_monster_desc(const monster_info& mi);
@@ -321,5 +321,6 @@ vector<dungeon_feature_type> features_by_desc(const base_pattern &pattern);
 
 void full_describe_view();
 void do_look_around(const coord_def &whence = coord_def(0, 0));
+bool get_look_position(coord_def *c);
 
 extern const struct coord_def Compass[9];

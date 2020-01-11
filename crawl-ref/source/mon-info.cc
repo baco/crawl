@@ -18,10 +18,7 @@
 #include "coordit.h"
 #include "english.h"
 #include "env.h"
-#include "fight.h"
-#include "god-abil.h"
 #include "ghost.h"
-#include "item-name.h"
 #include "item-prop.h"
 #include "item-status-flag-type.h"
 #include "libutil.h"
@@ -35,7 +32,6 @@
 #include "religion.h"
 #include "skills.h"
 #include "spl-goditem.h" // dispellable_enchantments
-#include "spl-summoning.h"
 #include "state.h"
 #include "stringutil.h"
 #ifdef USE_TILE
@@ -48,7 +44,6 @@
 /// Simple 1:1 mappings between monster enchantments & info flags.
 static map<enchant_type, monster_info_flags> trivial_ench_mb_mappings = {
     { ENCH_BERSERK,         MB_BERSERK },
-    { ENCH_POISON,          MB_POISONED },
     { ENCH_CORONA,          MB_GLOWING },
     { ENCH_SILVER_CORONA,   MB_GLOWING },
     { ENCH_SLOW,            MB_SLOWED },
@@ -160,6 +155,13 @@ static monster_info_flags ench_to_mb(const monster& mons, enchant_type ench)
         if (mons.get_ench(ench).degree < max_mons_charge(mons.type))
             return MB_PARTIALLY_CHARGED;
         return MB_FULLY_CHARGED;
+    case ENCH_POISON:
+        if (mons.get_ench(ench).degree == 1)
+            return MB_POISONED;
+        else if (mons.get_ench(ench).degree < MAX_ENCH_DEGREE_DEFAULT)
+            return MB_MORE_POISONED;
+        else
+            return MB_MAX_POISONED;
     default:
         return NUM_MB_FLAGS;
     }
@@ -428,7 +430,7 @@ monster_info::monster_info(const monster* m, int milev)
     attitude = mons_attitude(*m);
 
     type = m->type;
-    threat = mons_threat_level(*m);
+    threat = milev <= MILEV_NAME ? MTHRT_TRIVIAL : mons_threat_level(*m);
 
     props.clear();
     // CrawlHashTable::begin() const can fail if the hash is empty.
@@ -572,8 +574,6 @@ monster_info::monster_info(const monster* m, int milev)
         mb.set(MB_DISTRACTED);
     if (m->liquefied_ground())
         mb.set(MB_SLOW_MOVEMENT);
-    if (m->is_wall_clinging())
-        mb.set(MB_CLINGING);
 
     dam = mons_get_damage_level(*m);
 
@@ -692,8 +692,6 @@ monster_info::monster_info(const monster* m, int milev)
             ok = true;
         else if (i == MSLOT_ALT_WEAPON)
             ok = wields_two_weapons();
-        else if (i == MSLOT_MISSILE)
-            ok = false;
         else
             ok = true;
         if (ok)
@@ -1399,6 +1397,11 @@ vector<string> monster_info::attributes() const
 
     if (is(MB_POISONED))
         v.emplace_back("poisoned");
+    else if (is(MB_MORE_POISONED))
+        v.emplace_back("very poisoned");
+    else if (is(MB_MAX_POISONED))
+        v.emplace_back("extremely poisoned");
+
     if (is(MB_SICK))
         v.emplace_back("sick");
     if (is(MB_GLOWING))
@@ -1715,7 +1718,7 @@ bool monster_info::airborne() const
 
 bool monster_info::ground_level() const
 {
-    return !airborne() && !is(MB_CLINGING);
+    return !airborne();
 }
 
 // Only checks for spells from preset monster spellbooks.
@@ -1750,8 +1753,9 @@ bool monster_info::has_spells() const
 }
 
 /// What hd does this monster cast spells with? May vary from actual HD.
-int monster_info::spell_hd() const
+int monster_info::spell_hd(spell_type spell) const
 {
+    UNUSED(spell);
     if (!props.exists(SPELL_HD_KEY))
         return hd;
     return props[SPELL_HD_KEY].get_int();
@@ -1846,7 +1850,7 @@ const char *monster_info::pronoun(pronoun_type variant) const
     return mons_pronoun(type, variant, true);
 }
 
-const bool monster_info::pronoun_plurality() const
+bool monster_info::pronoun_plurality() const
 {
     if (props.exists(MON_GENDER_KEY))
         return props[MON_GENDER_KEY].get_int() == GENDER_NEUTRAL;

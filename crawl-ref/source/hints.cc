@@ -182,12 +182,12 @@ void pick_hints(newgame_def& choice)
     auto prompt_ui = make_shared<Text>(formatted_string::parse_string(prompt));
 
     auto vbox = make_shared<Box>(Box::VERT);
-    vbox->align_items = Widget::Align::STRETCH;
+    vbox->set_cross_alignment(Widget::Align::STRETCH);
     vbox->add_child(prompt_ui);
 
     auto main_items = make_shared<OuterMenu>(true, 1, 3);
-    main_items->set_margin_for_sdl({15, 0, 15, 0});
-    main_items->set_margin_for_crt({1, 0, 1, 0});
+    main_items->set_margin_for_sdl(15, 0);
+    main_items->set_margin_for_crt(1, 0);
     vbox->add_child(main_items);
 
     for (int i = 0; i < 3; i++)
@@ -197,20 +197,20 @@ void pick_hints(newgame_def& choice)
 
 #ifdef USE_TILE_LOCAL
         auto hbox = make_shared<Box>(Box::HORZ);
-        hbox->align_items = Widget::Align::CENTER;
+        hbox->set_cross_alignment(Widget::Align::CENTER);
         dolls_data doll;
         newgame_def tng = choice;
         _fill_newgame_choice_for_hints(tng, static_cast<hints_types>(i));
         fill_doll_for_newgame(doll, tng);
         auto tile = make_shared<ui::PlayerDoll>(doll);
-        tile->set_margin_for_sdl({0, 6, 0, 0});
+        tile->set_margin_for_sdl(0, 6, 0, 0);
         hbox->add_child(move(tile));
         hbox->add_child(label);
 #endif
 
         auto btn = make_shared<MenuButton>();
 #ifdef USE_TILE_LOCAL
-        hbox->set_margin_for_sdl({4,8,4,8});
+        hbox->set_margin_for_sdl(4,8);
         btn->set_child(move(hbox));
 #else
         btn->set_child(move(label));
@@ -227,24 +227,20 @@ void pick_hints(newgame_def& choice)
     auto sub_items = make_shared<OuterMenu>(false, 1, 2);
     vbox->add_child(sub_items);
 
-    int keyn;
+    bool cancelled = false;
     bool done = false;
-    auto menu_item_activated = [&](int id) {
+    vbox->on_activate_event([&](const ActivateEvent& event) {
+        const auto button = static_pointer_cast<MenuButton>(event.target());
+        int id = button->id;
         if (id == CK_ESCAPE)
-        {
-            keyn = CK_ESCAPE;
-            done = true;
-            return;
-        }
+            return done = cancelled = true;
         else if (id == '*')
             id = random2(HINT_TYPES_NUM);
         Hints.hints_type = id;
         _fill_newgame_choice_for_hints(choice, static_cast<hints_types>(id));
-        done = true;
-    };
+        return done = true;
+    });
 
-    main_items->on_button_activated = menu_item_activated;
-    sub_items->on_button_activated = menu_item_activated;
     main_items->linked_menus[2] = sub_items;
     sub_items->linked_menus[0] = main_items;
 
@@ -267,32 +263,14 @@ void pick_hints(newgame_def& choice)
 
     auto popup = make_shared<ui::Popup>(vbox);
 
-    popup->on(Widget::slots.event, [&](wm_event ev) {
-        if (ev.type != WME_KEYDOWN)
-            return false;
-        keyn = ev.key.keysym.sym;
-        if (keyn == 'X')
-            return done = true;
-        // Random choice.
-        if (keyn == '+' || keyn == '!' || keyn == '#')
-            ev.key.keysym.sym = '*';
-        return false;
-    });
     ui::run_layout(move(popup), done);
 
-    switch (keyn)
+    if (cancelled)
     {
-    CASE_ESCAPE
 #ifdef USE_TILE_WEB
         tiles.send_exit_reason("cancel");
 #endif
         game_ended(game_exit::abort);
-    case 'X':
-#ifdef USE_TILE_WEB
-        tiles.send_exit_reason("cancel");
-#endif
-        end(0);
-        return;
     }
 }
 
@@ -416,20 +394,18 @@ void hints_starting_screen()
     trim_string(text);
 
     auto prompt_ui = make_shared<Text>(formatted_string::parse_string(text));
-    prompt_ui->wrap_text = true;
+    prompt_ui->set_wrap_text(true);
 #ifdef USE_TILE_LOCAL
-    prompt_ui->max_size()[0] = 800;
+    prompt_ui->max_size().width = 800;
 #else
-    prompt_ui->max_size()[0] = 80;
+    prompt_ui->max_size().width = 80;
 #endif
 
     bool done = false;
-    prompt_ui->on(Widget::slots.event, [&](wm_event ev)  {
-        return done = ev.type == WME_KEYDOWN;
-    });
+    auto popup = make_shared<ui::Popup>(prompt_ui);
+    popup->on_keydown_event([&](const KeyEvent&) { return done = true; });
 
     mouse_control mc(MOUSE_MODE_MORE);
-    auto popup = make_shared<ui::Popup>(prompt_ui);
     ui::run_layout(move(popup), done);
 }
 

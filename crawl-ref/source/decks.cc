@@ -15,9 +15,7 @@
 
 #include "ability.h"
 #include "abyss.h"
-#include "act-iter.h"
 #include "artefact.h"
-#include "attitude-change.h"
 #include "beam.h"
 #include "cloud.h"
 #include "coordit.h"
@@ -26,7 +24,6 @@
 #include "describe.h"
 #include "directn.h"
 #include "dungeon.h"
-#include "english.h"
 #include "evoke.h"
 #include "food.h"
 #include "ghost.h"
@@ -36,37 +33,25 @@
 #include "item-prop.h"
 #include "item-status-flag-type.h"
 #include "items.h"
-#include "item-use.h"
 #include "libutil.h"
 #include "macro.h"
 #include "message.h"
 #include "mon-cast.h"
 #include "mon-clone.h"
-#include "mon-death.h"
 #include "mon-place.h"
 #include "mon-poly.h"
 #include "mon-project.h"
-#include "mon-tentacle.h"
 #include "mon-util.h"
 #include "mutation.h"
-#include "nearby-danger.h"
 #include "notes.h"
 #include "output.h"
-#include "player-equip.h"
-#include "player-stats.h"
-#include "potion.h"
 #include "prompt.h"
 #include "random.h"
 #include "religion.h"
-#include "scroller.h"
 #include "spl-clouds.h"
 #include "spl-goditem.h"
 #include "spl-miscast.h"
 #include "spl-monench.h"
-#include "spl-other.h"
-#include "spl-selfench.h"
-#include "spl-summoning.h"
-#include "spl-transloc.h"
 #include "spl-wpnench.h"
 #include "state.h"
 #include "stringutil.h"
@@ -409,16 +394,15 @@ static void _describe_cards(CrawlVector& cards)
         title_hbox->add_child(move(icon));
 #endif
         auto title = make_shared<Text>(formatted_string(name, WHITE));
-        title->set_margin_for_crt({0, 0, 0, 0});
-        title->set_margin_for_sdl({0, 0, 0, 10});
+        title->set_margin_for_sdl(0, 0, 0, 10);
         title_hbox->add_child(move(title));
-        title_hbox->align_items = Widget::CENTER;
-        title_hbox->set_margin_for_crt({first ? 0 : 1, 0, 1, 0});
-        title_hbox->set_margin_for_sdl({first ? 0 : 20, 0, 20, 0});
+        title_hbox->set_cross_alignment(Widget::CENTER);
+        title_hbox->set_margin_for_crt(first ? 0 : 1, 0);
+        title_hbox->set_margin_for_sdl(first ? 0 : 20, 0);
         vbox->add_child(move(title_hbox));
 
         auto text = make_shared<Text>(desc);
-        text->wrap_text = true;
+        text->set_wrap_text(true);
         vbox->add_child(move(text));
 
 #ifdef USE_TILE_WEB
@@ -431,16 +415,14 @@ static void _describe_cards(CrawlVector& cards)
     }
 
 #ifdef USE_TILE_LOCAL
-    vbox->max_size()[0] = tiles.get_crt_font()->char_width()*80;
+    vbox->max_size().width = tiles.get_crt_font()->char_width()*80;
 #endif
 
     scroller->set_child(move(vbox));
     auto popup = make_shared<ui::Popup>(scroller);
 
     bool done = false;
-    popup->on(Widget::slots.event, [&done, &scroller](wm_event ev) {
-        if (ev.type != WME_KEYDOWN)
-            return false;
+    popup->on_keydown_event([&done, &scroller](const KeyEvent& ev) {
         done = !scroller->on_event(ev);
         return true;
     });
@@ -722,9 +704,22 @@ static void _draw_stack(int to_stack)
     deck_menu.add_toggle_key('?');
     deck_menu.menu_action = Menu::ACT_EXECUTE;
 
-    deck_menu.set_more(formatted_string::parse_string(
+    auto& stack = you.props[NEMELEX_STACK_KEY].get_vector();
+
+    if (!stack.empty())
+    {
+            string status = "Drawn so far: " + stack_contents();
+            deck_menu.set_more(formatted_string::parse_string(
+                       status + "\n" +
                        "Press '<w>!</w>' or '<w>?</w>' to toggle "
                        "between deck selection and description."));
+    }
+    else
+    {
+        deck_menu.set_more(formatted_string::parse_string(
+                           "Press '<w>!</w>' or '<w>?</w>' to toggle "
+                           "between deck selection and description."));
+    }
 
     int numbers[NUM_DECKS];
 
@@ -744,8 +739,6 @@ static void _draw_stack(int to_stack)
 #endif
         deck_menu.add_entry(me);
     }
-
-    auto& stack = you.props[NEMELEX_STACK_KEY].get_vector();
     deck_menu.on_single_selection = [&deck_menu, &stack, to_stack](const MenuEntry& sel)
     {
         ASSERT(sel.hotkeys.size() == 1);
@@ -806,9 +799,13 @@ bool stack_five(int to_stack)
                 " or <w>Enter</w> to accept."));
     menu.show();
 
-    std::reverse(stack.begin(), stack.end());
-
-    return true;
+    if (crawl_state.seen_hups)
+        return false;
+    else
+    {
+        std::reverse(stack.begin(), stack.end());
+        return true;
+    }
 }
 
 // Draw the top four cards of an deck and play them all.
@@ -1119,8 +1116,6 @@ static void _damaging_card(card_type card, int power,
     const zap_type painzaps[2] = { ZAP_AGONY, ZAP_BOLT_OF_DRAINING };
     const zap_type acidzaps[3] = { ZAP_BREATHE_ACID, ZAP_CORROSIVE_BOLT,
                                    ZAP_CORROSIVE_BOLT };
-    const zap_type orbzaps[3]  = { ZAP_ISKENDERUNS_MYSTIC_BLAST, ZAP_IOOD,
-                                   ZAP_IOOD };
 
     switch (card)
     {
@@ -1142,7 +1137,7 @@ static void _damaging_card(card_type card, int power,
         break;
 
     case CARD_ORB:
-        ztype = orbzaps[power_level];
+        ztype = ZAP_IOOD;
         break;
 
     case CARD_PAIN:

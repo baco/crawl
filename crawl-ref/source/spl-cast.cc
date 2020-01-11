@@ -14,9 +14,7 @@
 #include "areas.h"
 #include "art-enum.h"
 #include "beam.h"
-#include "branch.h"
 #include "chardump.h"
-#include "cloud.h"
 #include "colour.h"
 #include "database.h"
 #include "describe.h"
@@ -31,10 +29,8 @@
 #include "god-conduct.h"
 #include "god-item.h"
 #include "god-passive.h" // passive_t::shadow_spells
-#include "god-wrath.h"
 #include "hints.h"
 #include "item-prop.h"
-#include "item-status-flag-type.h"
 #include "item-use.h"
 #include "libutil.h"
 #include "macro.h"
@@ -42,7 +38,6 @@
 #include "message.h"
 #include "misc.h"
 #include "mon-behv.h"
-#include "mon-book.h"
 #include "mon-cast.h"
 #include "mon-place.h"
 #include "mon-project.h"
@@ -183,8 +178,8 @@ int list_spells(bool toggle_with_I, bool viewing, bool allow_preselect,
     {
         ToggleableMenuEntry* me =
             new ToggleableMenuEntry(
-                titlestring + "         Type                          Failure  Level  ",
-                titlestring + "         Power        Range    Hunger  Noise           ",
+                titlestring + "         Type                          Failure  Level",
+                titlestring + "         Power        Range    Hunger  Noise         ",
                 MEL_TITLE);
         spell_menu.set_title(me, true, true);
     }
@@ -579,7 +574,15 @@ void inspect_spells()
     list_spells(true, true);
 }
 
-bool can_cast_spells(bool quiet)
+/**
+ * Can the player cast any spell at all? Checks for things that limit
+ * spellcasting regardless of the specific spell we want to cast.
+ *
+ * @param quiet    If true, don't print a reason why no spell can be cast.
+ * @param exegesis If true, we're considering casting under Divine Exegesis.
+ * @return True if we could cast a spell, false otherwise.
+*/
+bool can_cast_spells(bool quiet, bool exegesis)
 {
     if (!get_form()->can_cast)
     {
@@ -610,7 +613,10 @@ bool can_cast_spells(bool quiet)
         return false;
     }
 
-    if (!you.spell_no)
+    // Check that we have a spell memorized. Divine Exegesis does not need this
+    // condition, but we can't just check you.divine_exegesis in all cases, as
+    // it may not be set yet. Check a passed parameter instead.
+    if (!exegesis && !you.spell_no)
     {
         if (!quiet)
             canned_msg(MSG_NO_SPELLS);
@@ -666,7 +672,7 @@ void do_cast_spell_cmd(bool force)
  **/
 bool cast_a_spell(bool check_range, spell_type spell)
 {
-    if (!can_cast_spells())
+    if (!can_cast_spells(false, you.divine_exegesis))
     {
         crawl_state.zero_turns_taken();
         return false;
@@ -978,7 +984,7 @@ static void _spellcasting_side_effects(spell_type spell, god_type god,
 }
 
 #ifdef WIZARD
-static void _try_monster_cast(spell_type spell, int powc,
+static void _try_monster_cast(spell_type spell, int /*powc*/,
                               dist &spd, bolt &beam)
 {
     if (monster_at(you.pos()))
@@ -1132,8 +1138,6 @@ static unique_ptr<targeter> _spell_targeter(spell_type spell, int pow,
     case SPELL_MEPHITIC_CLOUD:
         return make_unique<targeter_beam>(&you, range, ZAP_MEPHITIC, pow,
                                           pow >= 100 ? 1 : 0, 1);
-    case SPELL_ISKENDERUNS_MYSTIC_BLAST:
-        return make_unique<targeter_imb>(&you, pow, range);
     case SPELL_FIRE_STORM:
         return make_unique<targeter_smite>(&you, range, 2, pow > 76 ? 3 : 2);
     case SPELL_FREEZING_CLOUD:
@@ -1149,8 +1153,6 @@ static unique_ptr<targeter> _spell_targeter(spell_type spell, int pow,
         return make_unique<targeter_fragment>(&you, pow, range);
     case SPELL_FULMINANT_PRISM:
         return make_unique<targeter_smite>(&you, range, 0, 2);
-    case SPELL_DAZZLING_SPRAY:
-        return make_unique<targeter_spray>(&you, range, ZAP_DAZZLING_SPRAY);
     case SPELL_GLACIATE:
         return make_unique<targeter_cone>(&you, range);
     case SPELL_CLOUD_CONE:
@@ -1173,11 +1175,6 @@ static unique_ptr<targeter> _spell_targeter(spell_type spell, int pow,
                                           0, 0);
     case SPELL_INFESTATION:
         return make_unique<targeter_smite>(&you, range, 2, 2, false,
-                                           [](const coord_def& p) -> bool {
-                                              return you.pos() != p; });
-
-    case SPELL_BORGNJORS_VILE_CLUTCH:
-        return make_unique<targeter_smite>(&you, range, 1, 1, false,
                                            [](const coord_def& p) -> bool {
                                               return you.pos() != p; });
     case SPELL_PASSWALL:
@@ -1307,6 +1304,9 @@ spret your_spells(spell_type spell, int powc, bool allow_fail,
     if (!powc)
         powc = calc_spell_power(spell, true);
 
+    const int range = calc_spell_range(spell, powc, allow_fail);
+    beam.range = range;
+
     // XXX: This handles only some of the cases where spells need
     // targeting. There are others that do their own that will be
     // missed by this (and thus will not properly ESC without cost
@@ -1333,8 +1333,6 @@ spret your_spells(spell_type spell, int powc, bool allow_fail,
                                 // shift-direction makes no sense for it, but
                                 // it nevertheless requires line-of-fire.
                                 || spell == SPELL_APPORTATION;
-
-        const int range = calc_spell_range(spell, powc, allow_fail);
 
         unique_ptr<targeter> hitfunc = _spell_targeter(spell, powc, range);
 
@@ -1380,8 +1378,6 @@ spret your_spells(spell_type spell, int powc, bool allow_fail,
         args.get_desc_func = additional_desc;
         if (!spell_direction(spd, beam, &args))
             return spret::abort;
-
-        beam.range = range;
 
         if (testbits(flags, spflag::not_self) && spd.isMe())
         {
@@ -1663,8 +1659,8 @@ static spret _do_cast(spell_type spell, int powc, const dist& spd,
     case SPELL_THUNDERBOLT:
         return cast_thunderbolt(&you, powc, target, fail);
 
-    case SPELL_DAZZLING_SPRAY:
-        return cast_dazzling_spray(powc, target, fail);
+    case SPELL_DAZZLING_FLASH:
+        return cast_dazzling_flash(powc, fail);
 
     case SPELL_CHAIN_OF_CHAOS:
         return cast_chain_spell(SPELL_CHAIN_OF_CHAOS, powc, &you, fail);
@@ -1674,9 +1670,6 @@ static spret _do_cast(spell_type spell, int powc, const dist& spd,
 
     case SPELL_IGNITION:
         return cast_ignition(&you, powc, fail);
-
-    case SPELL_BORGNJORS_VILE_CLUTCH:
-        return cast_borgnjors_vile_clutch(powc, beam, fail);
 
     // Summoning spells, and other spells that create new monsters.
     // If a god is making you cast one of these spells, any monsters
@@ -1768,6 +1761,12 @@ static spret _do_cast(spell_type spell, int powc, const dist& spd,
     case SPELL_INFESTATION:
         return cast_infestation(powc, beam, fail);
 
+    case SPELL_FOXFIRE:
+        return cast_foxfire(powc, god, fail);
+
+    case SPELL_NOXIOUS_BOG:
+        return cast_noxious_bog(powc, fail);
+
     // Enchantments.
     case SPELL_CONFUSING_TOUCH:
         return cast_confusing_touch(powc, fail);
@@ -1816,9 +1815,6 @@ static spret _do_cast(spell_type spell, int powc, const dist& spd,
         return cast_transform(powc, transformation::lich, fail);
 
     // General enhancement.
-    case SPELL_REGENERATION:
-        return cast_regen(powc, fail);
-
     case SPELL_DEFLECT_MISSILES:
         return deflection(powc, fail);
 
@@ -1861,7 +1857,7 @@ static spret _do_cast(spell_type spell, int powc, const dist& spd,
         return cast_controlled_blink(fail);
 
     case SPELL_CONJURE_FLAME:
-        return conjure_flame(&you, powc, beam.target, fail);
+        return conjure_flame(powc, fail);
 
     case SPELL_PASSWALL:
         return cast_passwall(beam.target, powc, fail);
@@ -1907,6 +1903,15 @@ static spret _do_cast(spell_type spell, int powc, const dist& spd,
 
     case SPELL_POISONOUS_VAPOURS:
         return cast_poisonous_vapours(powc, spd, fail);
+
+    case SPELL_STARBURST:
+        return cast_starburst(powc, fail);
+
+    case SPELL_HAILSTORM:
+        return cast_hailstorm(powc, fail);
+
+    case SPELL_ISKENDERUNS_MYSTIC_BLAST:
+        return cast_imb(powc, fail);
 
     // non-player spells that have a zap, but that shouldn't be called (e.g
     // because they will crash as a player zap).
@@ -2193,6 +2198,9 @@ int calc_spell_range(spell_type spell, int power, bool allow_bonus)
  */
 string spell_range_string(spell_type spell)
 {
+    if (spell == SPELL_HAILSTORM)
+        return "@.->"; // Special case: hailstorm is a ring
+
     const int cap      = spell_power_cap(spell);
     const int range    = calc_spell_range(spell, 0);
     const int maxrange = spell_range(spell, cap);
@@ -2280,6 +2288,7 @@ const set<spell_type> removed_spells =
     SPELL_CONTROL_UNDEAD,
     SPELL_CIGOTUVIS_EMBRACE,
     SPELL_DELAYED_FIREBALL,
+    SPELL_REGENERATION,
 #endif
 };
 

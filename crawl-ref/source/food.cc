@@ -13,13 +13,11 @@
 #include <cstring>
 #include <sstream>
 
-#include "butcher.h"
 #include "chardump.h"
 #include "database.h"
 #include "delay.h"
 #include "env.h"
 #include "god-abil.h"
-#include "god-conduct.h"
 #include "hints.h"
 #include "invent.h"
 #include "item-prop.h"
@@ -33,7 +31,6 @@
 #include "nearby-danger.h"
 #include "notes.h"
 #include "options.h"
-#include "output.h"
 #include "religion.h"
 #include "rot.h"
 #include "state.h"
@@ -128,8 +125,7 @@ bool prompt_eat_item(int slot)
     item_def* item = nullptr;
     if (slot == -1)
     {
-        item = use_an_item(OBJ_FOOD, OPER_EAT, "Eat which item?");
-        if (!item)
+        if (!use_an_item(item, OBJ_FOOD, OPER_EAT, "Eat which item (* to show all)?"))
             return false;
     }
     else
@@ -867,6 +863,27 @@ bool apply_starvation_penalties()
     return you.hunger_state <= HS_STARVING && !you_min_hunger();
 }
 
+static item_def* _get_emergency_food()
+{
+    // Look for food on floor
+    for (stack_iterator si(you.pos(), true); si; ++si)
+    {
+        if (can_eat(*si, true))
+            return &*si;
+    }
+
+    // Look in inventory
+    auto it = find_if(begin(you.inv), end(you.inv),
+                      [](const item_def& inv_item) -> bool
+                          {
+                              return can_eat(inv_item, true);
+                          });
+    if (it != end(you.inv))
+        return &*it;
+
+    return nullptr;
+}
+
 void handle_starvation()
 {
     // Don't faint or die while eating.
@@ -889,18 +906,12 @@ void handle_starvation()
 
         if (you.hunger <= 0 && !you.duration[DUR_DEATHS_DOOR])
         {
-            auto it = find_if(begin(you.inv), end(you.inv),
-                [](const item_def& food) -> bool
-                {
-                    return can_eat(food, true);
-                });
-            if (it != end(you.inv))
+            if (item_def* emergency_food = _get_emergency_food())
             {
                 mpr("As you are about to starve, you manage to eat something.");
-                eat_item(*it);
+                eat_item(*emergency_food);
                 return;
             }
-
             mprf(MSGCH_FOOD, "You have starved to death.");
             ouch(INSTANT_DEATH, KILLED_BY_STARVATION);
             if (!you.pending_revival) // if we're still here...

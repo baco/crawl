@@ -30,13 +30,11 @@
 #include "dgn-overview.h"
 #include "english.h"
 #include "env.h"
-#include "fight.h"
 #include "files.h"
 #include "food.h"
 #include "format.h"
 #include "god-abil.h"
 #include "god-passive.h"
-#include "god-prayer.h"
 #include "hints.h"
 #include "item-name.h"
 #include "item-prop.h"
@@ -258,6 +256,10 @@ bool feat_is_traversable_now(dungeon_feature_type grid, bool try_fallback)
 {
     if (!ignore_player_traversability)
     {
+        // Don't auto travel through toxic bogs
+        if (grid == DNGN_TOXIC_BOG)
+            return false;
+
         // If the feature is in travel_avoid_terrain, respect that.
         if (forbidden_terrain[grid])
             return false;
@@ -326,7 +328,8 @@ static inline bool is_stash(const LevelStashes *ls, const coord_def& p)
 static bool _monster_blocks_travel(const monster_info *mons)
 {
     return mons
-           && mons_class_is_stationary(mons->type)
+           && (mons_class_is_stationary(mons->type)
+               || mons->type == MONS_FOXFIRE)
            && !fedhas_passthrough(mons);
 }
 
@@ -1833,8 +1836,7 @@ void find_travel_pos(const coord_def& youpos,
 
 extern map<branch_type, set<level_id> > stair_level;
 
-static void _find_parent_branch(branch_type br, int depth,
-                                branch_type *pb, int *pd)
+static void _find_parent_branch(branch_type br, branch_type *pb, int *pd)
 {
     *pb = parent_branch(br);   // Check depth before using *pb.
 
@@ -1874,7 +1876,7 @@ static void _trackback(vector<level_id> &vec, branch_type branch, int subdepth)
     {
         branch_type pb;
         int pd;
-        _find_parent_branch(branch, subdepth, &pb, &pd);
+        _find_parent_branch(branch, &pb, &pd);
         if (pd)
             _trackback(vec, pb, pd);
     }
@@ -1932,8 +1934,7 @@ int level_distance(level_id first, level_id second)
     {
         distance += first.depth;
 
-        _find_parent_branch(first.branch, first.depth,
-                            &first.branch, &first.depth);
+        _find_parent_branch(first.branch, &first.branch, &first.depth);
         if (!first.depth)
             return -1;
     }
@@ -2004,8 +2005,7 @@ static int _get_nearest_level_depth(uint8_t branch)
     level_id id = level_id::current();
     do
     {
-        _find_parent_branch(id.branch, id.depth,
-                            &id.branch, &id.depth);
+        _find_parent_branch(id.branch, &id.branch, &id.depth);
         if (id.depth && id.branch == branch)
         {
             depth = id.depth;
@@ -2353,8 +2353,7 @@ level_id find_up_level(level_id curr, bool up_branch)
         if (curr.branch != BRANCH_DUNGEON && curr.branch != root_branch)
         {
             level_id parent;
-            _find_parent_branch(curr.branch, curr.depth,
-                                &parent.branch, &parent.depth);
+            _find_parent_branch(curr.branch, &parent.branch, &parent.depth);
             if (parent.depth > 0)
                 return parent;
             else if (curr.branch == BRANCH_VESTIBULE)

@@ -42,7 +42,6 @@
 #include "item-status-flag-type.h"
 #include "items.h"
 #include "item-use.h"
-#include "level-state-type.h"
 #include "libutil.h"
 #include "losglobal.h"
 #include "macro.h"
@@ -51,7 +50,6 @@
 #include "message.h"
 #include "mon-act.h"
 #include "mon-behv.h"
-#include "mon-book.h"
 #include "mon-death.h"
 #include "mon-gear.h" // H: give_weapon()/give_armour()
 #include "mon-place.h"
@@ -69,13 +67,11 @@
 #include "potion.h"
 #include "prompt.h"
 #include "religion.h"
-#include "rot.h"
 #include "shout.h"
 #include "skill-menu.h"
 #include "spl-book.h"
 #include "spl-goditem.h"
 #include "spl-monench.h"
-#include "spl-summoning.h"
 #include "spl-transloc.h"
 #include "spl-util.h"
 #include "spl-wpnench.h"
@@ -703,6 +699,8 @@ recite_eligibility zin_check_recite_to_single_monster(const monster *mon,
             elig += '0' + eligibility[i];
         dprf("Eligibility: %s", elig.c_str());
     }
+#else
+    UNUSED(quiet);
 #endif
 
     bool maybe_eligible = false;
@@ -1059,7 +1057,7 @@ bool zin_recite_to_single_monster(const coord_def& where)
         break;
 
     case zin_eff::confuse:
-        if (!mon->check_clarity(false)
+        if (!mon->check_clarity()
             && mon->add_ench(mon_enchant(ENCH_CONFUSION, degree, &you,
                              (degree + random2(spellpower)) * BASELINE_DELAY)))
         {
@@ -1473,8 +1471,7 @@ void trog_do_trogs_hand(int pow)
 
 void trog_remove_trogs_hand()
 {
-    if (you.duration[DUR_REGENERATION] == 0)
-        mprf(MSGCH_DURATION, "Your skin stops crawling.");
+    mprf(MSGCH_DURATION, "Your skin stops crawling.");
     mprf(MSGCH_DURATION, "You feel less resistant to hostile enchantments.");
     you.duration[DUR_TROGS_HAND] = 0;
 }
@@ -2161,7 +2158,7 @@ bool cheibriados_slouch()
             return false;
         }
 
-    targeter_los hitfunc(&you, LOS_DEFAULT);
+    targeter_radius hitfunc(&you, LOS_DEFAULT);
     if (stop_attack_prompt(hitfunc, "harm", _act_slouchable))
         return false;
 
@@ -4629,7 +4626,7 @@ void ru_reset_sacrifice_timer(bool clear_timer, bool faith_penalty)
         }
     }
 
-    delay = div_rand_round((delay + added_delay) * (3 + you.faith()), 3);
+    delay = div_rand_round((delay + added_delay) * (3 - you.faith()), 3);
     if (crawl_state.game_is_sprint())
         delay /= SPRINT_MULTIPLIER;
 
@@ -5804,7 +5801,7 @@ bool wu_jian_do_wall_jump(coord_def targ, bool ability)
     move_player_to_grid(wall_jump_landing_spot, false);
     if (!ability)
         count_action(CACT_INVOKE, ABIL_WU_JIAN_WALLJUMP);
-    wu_jian_wall_jump_effects(initial_position);
+    wu_jian_wall_jump_effects();
 
     if (ability)
     {

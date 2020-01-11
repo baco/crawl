@@ -27,18 +27,13 @@
 #include "exercise.h"
 #include "fight.h"
 #include "food.h"
-#include "ghost.h"
 #include "god-abil.h"
 #include "god-conduct.h"
-#include "god-wrath.h"
 #include "invent.h"
 #include "item-prop.h"
 #include "items.h"
-#include "item-use.h"
 #include "libutil.h"
 #include "losglobal.h"
-#include "mapmark.h"
-#include "melee-attack.h"
 #include "message.h"
 #include "mgen-data.h"
 #include "misc.h"
@@ -47,11 +42,9 @@
 #include "mon-pick.h"
 #include "mon-place.h"
 #include "mutant-beast.h"
-#include "nearby-danger.h"
 #include "place.h"
 #include "player.h"
 #include "player-stats.h"
-#include "prompt.h"
 #include "religion.h"
 #include "shout.h"
 #include "skills.h"
@@ -59,7 +52,6 @@
 #include "spl-cast.h"
 #include "spl-clouds.h"
 #include "spl-util.h"
-#include "spl-zap.h"
 #include "state.h"
 #include "stringutil.h"
 #include "target.h"
@@ -71,9 +63,7 @@
 #include "transform.h"
 #include "traps.h"
 #include "unicode.h"
-#include "viewchar.h"
 #include "view.h"
-#include "xom.h"
 
 static bool _reaching_weapon_attack(const item_def& wpn)
 {
@@ -1500,7 +1490,7 @@ bool evoke_check(int slot, bool quiet)
     return true;
 }
 
-bool evoke_item(int slot, bool check_range)
+bool evoke_item(int slot)
 {
     if (!evoke_check(slot))
         return false;

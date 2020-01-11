@@ -258,6 +258,7 @@ fulminant_prism1 MONS_FULMINANT_PRISM
 fulminant_prism2
 fulminant_prism3
 fulminant_prism4
+foxfire MONS_FOXFIRE
 %rim 1
 ball_lightning MONS_BALL_LIGHTNING /*'*'*/
 %sdir mon/undead
@@ -505,6 +506,7 @@ joseph MONS_JOSEPH
 josephine MONS_JOSEPHINE
 kirke MONS_KIRKE
 louise MONS_LOUISE
+maggie MONS_MAGGIE
 margery MONS_MARGERY
 maurice MONS_MAURICE
 %rim 0

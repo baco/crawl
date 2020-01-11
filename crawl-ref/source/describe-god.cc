@@ -24,15 +24,12 @@
 #include "god-companions.h"
 #include "god-conduct.h"
 #include "god-passive.h"
-#include "god-prayer.h"
 #include "god-type.h"
 #include "item-name.h"
 #include "libutil.h"
-#include "macro.h"
 #include "menu.h"
 #include "message.h"
 #include "religion.h"
-#include "scroller.h"
 #include "skills.h"
 #include "spl-util.h"
 #include "stringutil.h"
@@ -580,7 +577,7 @@ static formatted_string _beogh_extra_description()
         if (!mons->is_named()) continue;
         has_named_followers = true;
 
-        desc += formatted_string(mons->full_name(DESC_PLAIN).c_str());
+        desc += mons->full_name(DESC_PLAIN);
         if (companion_is_elsewhere(mons->mid))
         {
             desc += formatted_string::parse_string(
@@ -1048,7 +1045,7 @@ static formatted_string _god_overview_description(god_type which_god)
 
     // Print god's description.
     const string god_desc = getLongDescription(god_name(which_god));
-    desc += formatted_string(trimmed_string(god_desc) + "\n");
+    desc += trimmed_string(god_desc) + "\n";
 
     // Title only shown for our own god.
     if (you_worship(which_god))
@@ -1090,6 +1087,7 @@ static void build_partial_god_ui(god_type which_god, shared_ptr<ui::Popup>& popu
     topline += formatted_string(uppercase_first(god_name(which_god, true)));
 
     auto vbox = make_shared<Box>(Widget::VERT);
+    vbox->set_cross_alignment(Widget::STRETCH);
     auto title_hbox = make_shared<Box>(Widget::HORZ);
 
 #ifdef USE_TILE
@@ -1100,12 +1098,11 @@ static void build_partial_god_ui(god_type which_god, shared_ptr<ui::Popup>& popu
 #endif
 
     auto title = make_shared<Text>(topline.trim());
-    title->set_margin_for_crt({0, 0, 0, 0});
-    title->set_margin_for_sdl({0, 0, 0, 16});
+    title->set_margin_for_sdl(0, 0, 0, 16);
     title_hbox->add_child(move(title));
 
-    title_hbox->align_items = Widget::CENTER;
-    title_hbox->align_self = Widget::CENTER;
+    title_hbox->set_main_alignment(Widget::CENTER);
+    title_hbox->set_cross_alignment(Widget::CENTER);
     vbox->add_child(move(title_hbox));
 
     desc_sw = make_shared<Switcher>();
@@ -1151,7 +1148,7 @@ static void build_partial_god_ui(god_type which_god, shared_ptr<ui::Popup>& popu
 
         auto scroller = make_shared<Scroller>();
         auto text = make_shared<Text>(desc.trim());
-        text->wrap_text = true;
+        text->set_wrap_text(true);
         scroller->set_child(text);
         desc_sw->add_child(move(scroller));
 
@@ -1159,17 +1156,35 @@ static void build_partial_god_ui(god_type which_god, shared_ptr<ui::Popup>& popu
                 formatted_string::parse_string(mores[mores_index][i])));
     }
 
-    desc_sw->set_margin_for_sdl({20, 0, 20, 0});
-    desc_sw->set_margin_for_crt({1, 0, 1, 0});
+    desc_sw->set_margin_for_sdl(20, 0);
+    desc_sw->set_margin_for_crt(1, 0);
     desc_sw->expand_h = false;
 #ifdef USE_TILE_LOCAL
-    desc_sw->max_size()[0] = tiles.get_crt_font()->char_width()*80;
+    desc_sw->max_size().width = tiles.get_crt_font()->char_width()*80;
 #endif
     vbox->add_child(desc_sw);
 
     vbox->add_child(more_sw);
 
     popup = make_shared<ui::Popup>(vbox);
+}
+
+static const string _god_service_fee_description(god_type which_god)
+{
+    const int fee = (which_god == GOD_GOZAG) ? gozag_service_fee() : 0;
+
+    if (which_god == GOD_GOZAG)
+    {
+        if (fee == 0)
+        {
+            return string(" (no fee if you ")
+                          + random_choose("act now", "join today") + ")";
+        }
+        else
+            return make_stringf(" (%d gold; you have %d)", fee, you.gold);
+    }
+
+    return "";
 }
 
 #ifdef USE_TILE_WEB
@@ -1206,6 +1221,8 @@ static void _send_god_ui(god_type god, bool is_altar)
             _god_wrath_description(god).to_colour_string());
     tiles.json_write_string("extra",
             _god_extra_description(god).to_colour_string());
+    tiles.json_write_string("service_fee",
+            _god_service_fee_description(god));
     tiles.push_ui_layout("describe-god", 1);
 }
 #endif
@@ -1224,10 +1241,8 @@ void describe_god(god_type which_god)
     build_partial_god_ui(which_god, popup, desc_sw, more_sw);
 
     bool done = false;
-    popup->on(Widget::slots.event, [&](wm_event ev) {
-        if (ev.type != WME_KEYDOWN)
-            return false;
-        int key = ev.key.keysym.sym;
+    popup->on_keydown_event([&](const KeyEvent& ev) {
+        const auto key = ev.key();
         if (key == '!' || key == CK_MOUSE_CMD || key == '^')
         {
             int n = (desc_sw->current() + 1) % desc_sw->num_children();
@@ -1239,7 +1254,7 @@ void describe_god(god_type which_god)
 #endif
             return true;
         }
-        return done = !popup->get_child()->on_event(ev);
+        return done = !desc_sw->current_widget()->on_event(ev);
     });
 
 #ifdef USE_TILE_WEB
@@ -1255,23 +1270,7 @@ void describe_god(god_type which_god)
 
 bool describe_god_with_join(god_type which_god)
 {
-    const int fee = (which_god == GOD_GOZAG) ? gozag_service_fee() : 0;
-    string service_fee = "";
-    if (which_god == GOD_GOZAG)
-    {
-        if (fee == 0)
-        {
-            service_fee = string("Gozag will waive the service fee if you ")
-                          + random_choose("act now", "join today") + "!\n";
-        }
-        else
-        {
-            service_fee = make_stringf(
-                    "The service fee for joining is currently %d gold; you"
-                    " have %d.\n",
-                    fee, you.gold);
-        }
-    }
+    const string service_fee = _god_service_fee_description(which_god);
 
     shared_ptr<ui::Popup> popup;
     shared_ptr<Switcher> desc_sw;
@@ -1282,50 +1281,46 @@ bool describe_god_with_join(god_type which_god)
     {
         Text* label = static_cast<Text*>(child.get());
         formatted_string text = label->get_text();
-        text += formatted_string::parse_string("  [<w>Enter</w>]: join religion");
+        text += formatted_string::parse_string("  [<w>J</w>/<w>Enter</w>]: "
+                                               "join");
+
+        // We assume that a player who has enough gold such that
+        // the join fee plus accumulated gold overflows knows what this menu
+        // does.
+        if (text.width() + service_fee.length() + 9 <= MIN_COLS)
+            text += " religion";
+        if (!service_fee.empty())
+            text += service_fee;
         label->set_text(text);
     }
 
     // States for the state machine
     enum join_step_type {
         SHOW = -1, // Show the usual god UI
-        JOIN, // Ask whether to join
         ABANDON, // Ask whether to abandon god, if applicable
     };
 
-    // Add separate text widgets for each of the four possible join-god prompts;
+    // Add separate text widgets the possible abandon-god prompts;
     // then when a different prompt needs to be shown, we switch to that prompt.
     // This is somewhat brittle, but ensures that the UI doesn't resize when
     // switching between prompts.
-    const string prompts[] = {
-        make_stringf("%sDo you wish to %sjoin this religion?",
-                service_fee.c_str(),
-                (you.worshipped[which_god]) ? "re" : ""),
+    const string abandon_prompt =
         make_stringf("Are you sure you want to abandon %s?",
-                god_name(you.religion).c_str())
-    };
-    formatted_string prompt_fs;
-    for (int i = JOIN; i <= ABANDON; i++)
-    {
-        prompt_fs.clear();
-        prompt_fs.textcolour(channel_to_colour(MSGCH_PROMPT));
+                god_name(you.religion).c_str());
+    formatted_string prompt_fs(abandon_prompt, channel_to_colour(MSGCH_PROMPT));
 
-        prompt_fs.cprintf("%s", prompts[i].c_str());
-        more_sw->add_child(make_shared<Text>(prompt_fs));
+    more_sw->add_child(make_shared<Text>(prompt_fs));
 
-        prompt_fs.cprintf(" [Y]es or [n]o only, please.");
-        more_sw->add_child(make_shared<Text>(prompt_fs));
-    }
+    prompt_fs.cprintf(" [Y]es or [n]o only, please.");
+    more_sw->add_child(make_shared<Text>(prompt_fs));
 
     join_step_type step = SHOW;
     bool yesno_only = false;
     bool done = false, join = false;
 
     // The join-god UI state machine transition function
-    popup->on(Widget::slots.event, [&](wm_event ev) {
-        if (ev.type != WME_KEYDOWN)
-            return false;
-        int keyin = ev.key.keysym.sym;
+    popup->on_keydown_event([&](const KeyEvent& ev) {
+        const auto keyin = ev.key();
 
         // Always handle escape and pane-switching keys the same way
         if (keyin == CK_ESCAPE)
@@ -1340,52 +1335,55 @@ bool describe_god_with_join(god_type which_god)
             tiles.ui_state_change("describe-god", 0);
 #endif
             if (step == SHOW)
-                more_sw->current() = n;
-            else
             {
-                yesno_only = false;
-                goto update_ui;
+                more_sw->current() = n;
+                return true;
             }
-            return true;
+            else
+                yesno_only = false;
         }
 
         // Next, allow child widgets to handle scrolling keys
-        if (keyin != ' ' && keyin != CK_ENTER)
-        if (popup->get_child()->on_event(ev))
+        // NOTE: these key exceptions are also specified in ui-layouts.js
+        if (keyin != 'J' && keyin != CK_ENTER)
+        if (desc_sw->current_widget()->on_event(ev))
             return true;
 
-        if (step == SHOW)
+        if (step == ABANDON)
         {
-            step = JOIN;
-            goto update_ui;
-        }
+            if (keyin != 'Y' && toupper_safe(keyin) != 'N')
+                yesno_only = true;
+            else
+                yesno_only = false;
 
-        if (keyin != 'Y' && toupper_safe(keyin) != 'N')
-        {
-            yesno_only = true;
-            goto update_ui;
-        }
-        yesno_only = false;
+            if (toupper_safe(keyin) == 'N')
+            {
+                canned_msg(MSG_OK);
+                return done = true;
+            }
 
-        if (toupper_safe(keyin) == 'N')
+            if (keyin == 'Y')
+                return done = join = true;
+        }
+        else if ((keyin == 'J' || keyin == CK_ENTER) && step == SHOW)
         {
-            canned_msg(MSG_OK);
+            if (you_worship(GOD_NO_GOD))
+                return done = join = true;
+
+            step = ABANDON;
+        }
+        else
             return done = true;
-        }
 
-        if (step == ABANDON || (step == JOIN && you_worship(GOD_NO_GOD)))
-            return done = join = true;
-        step = static_cast<join_step_type>(step + 1);
-
-update_ui:
 #ifdef USE_TILE_WEB
         tiles.json_open_object();
-        string prompt = prompts[step] + (yesno_only ? " [Y]es or [n]o only, please." : "");
+        string prompt = abandon_prompt + (yesno_only ? " [Y]es or [n]o only, please." : "");
         tiles.json_write_string("prompt", prompt);
         tiles.json_write_int("pane", desc_sw->current());
         tiles.ui_state_change("describe-god", 0);
 #endif
-        more_sw->current() = desc_sw->num_children() + step*2 + yesno_only;
+        if (step == ABANDON)
+            more_sw->current() = desc_sw->num_children() + step*2 + yesno_only;
         return true;
     });
 

@@ -17,7 +17,6 @@
 #include "areas.h"
 #include "coordit.h"
 #include "directn.h"
-#include "english.h"
 #include "env.h"
 #include "god-passive.h"
 #include "god-abil.h"
@@ -1169,13 +1168,6 @@ string spell_uselessness_reason(spell_type spell, bool temp, bool prevent,
             return "your current blood level is not sufficient.";
         break;
 
-    case SPELL_REGENERATION:
-        if (you.species == SP_DEEP_DWARF)
-            return "you can't regenerate without divine aid.";
-        if (you.undead_state(temp) == US_UNDEAD)
-            return "you're too dead to regenerate.";
-        break;
-
     case SPELL_EXCRUCIATING_WOUNDS:
         if (temp
             && (!you.weapon()
@@ -1192,12 +1184,8 @@ string spell_uselessness_reason(spell_type spell, bool temp, bool prevent,
         break;
 
     case SPELL_LEDAS_LIQUEFACTION:
-        if (temp && (!you.stand_on_solid_ground()
-                     || you.duration[DUR_LIQUEFYING]
-                     || liquefied(you.pos())))
-        {
-            return "you must stand on solid ground to cast this.";
-        }
+        if (temp && you.duration[DUR_LIQUEFYING])
+            return "you need to wait for the ground to become solid again.";
         break;
 
     case SPELL_BORGNJORS_REVIVIFICATION:
@@ -1405,6 +1393,16 @@ bool spell_no_hostile_in_range(spell_type spell)
 
     case SPELL_IGNITE_POISON:
         return cast_ignite_poison(&you, -1, false, true) == spret::abort;
+
+    case SPELL_STARBURST:
+        return cast_starburst(-1, false, true) == spret::abort;
+
+    case SPELL_HAILSTORM:
+        return cast_hailstorm(-1, false, true) == spret::abort;
+
+    case SPELL_DAZZLING_FLASH:
+        return cast_dazzling_flash(calc_spell_power(spell, true, false, true),
+                                   false, true) == spret::abort;
 
     default:
         break;

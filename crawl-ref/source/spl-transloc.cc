@@ -19,7 +19,6 @@
 #include "delay.h"
 #include "directn.h"
 #include "dungeon.h"
-#include "english.h"
 #include "item-prop.h"
 #include "items.h"
 #include "level-state-type.h"
@@ -28,16 +27,14 @@
 #include "losglobal.h"
 #include "losparam.h"
 #include "message.h"
-#include "mgen-data.h"
 #include "mon-behv.h"
-#include "mon-death.h"
-#include "mon-place.h"
 #include "mon-tentacle.h"
 #include "mon-util.h"
 #include "nearby-danger.h"
 #include "orb.h"
 #include "output.h"
 #include "prompt.h"
+#include "religion.h"
 #include "shout.h"
 #include "spl-util.h"
 #include "stash.h"
@@ -550,6 +547,8 @@ static void _handle_teleport_update(bool large_change, const coord_def old_pos)
             init_player_doll();
         }
     }
+#else
+    UNUSED(old_pos);
 #endif
 }
 
@@ -1032,6 +1031,9 @@ static void _attract_actor(const actor* agent, actor* victim,
                            const coord_def pos, int pow, int strength)
 {
     ASSERT(victim); // XXX: change to actor &victim
+    const bool fedhas_prot = agent->deity() == GOD_FEDHAS
+                             && victim->is_monster()
+                             && fedhas_protects(victim->as_monster());
 
     ray_def ray;
     if (!find_ray(victim->pos(), pos, ray, opc_solid))
@@ -1043,8 +1045,17 @@ static void _attract_actor(const actor* agent, actor* victim,
                  victim->name(DESC_THE).c_str(),
                  victim->conj_verb("stop").c_str());
         }
-        victim->hurt(agent, roll_dice(strength / 2, pow / 20),
-                     BEAM_MMISSILE, KILLED_BY_BEAM, "", GRAVITY);
+        if (fedhas_prot)
+        {
+            simple_god_message(
+                make_stringf(" protects %s from harm.",
+                    agent->is_player() ? "your" : "a").c_str(), GOD_FEDHAS);
+        }
+        else
+        {
+            victim->hurt(agent, roll_dice(strength / 2, pow / 20),
+                         BEAM_MMISSILE, KILLED_BY_BEAM, "", GRAVITY);
+        }
         return;
     }
 
@@ -1070,10 +1081,11 @@ static void _attract_actor(const actor* agent, actor* victim,
         else
             victim->move_to_pos(newpos);
 
-        if (auto mons = victim->as_monster())
+        if (victim->is_monster() && !fedhas_prot)
         {
-            behaviour_event(mons, ME_ANNOY, agent, agent ? agent->pos()
-                                                         : coord_def(0, 0));
+            behaviour_event(victim->as_monster(),
+                            ME_ANNOY, agent, agent ? agent->pos()
+                                                   : coord_def(0, 0));
         }
 
         if (victim->pos() == pos)

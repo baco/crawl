@@ -24,6 +24,8 @@ enum monster_info_flags
     MB_CONFUSED,
     MB_INVISIBLE,
     MB_POISONED,
+    MB_MORE_POISONED,
+    MB_MAX_POISONED,
 #if TAG_MAJOR_VERSION == 34
     MB_ROTTING,
 #endif
@@ -85,7 +87,9 @@ enum monster_info_flags
     MB_BLIND,
     MB_DUMB,
     MB_MAD,
+#if TAG_MAJOR_VERSION == 34
     MB_CLINGING,
+#endif
     MB_NAME_ZOMBIE,
     MB_PERM_SUMMON,
     MB_INNER_FLAME,
@@ -305,7 +309,7 @@ struct monster_info : public monster_info_base
     vector<string> attributes() const;
 
     const char *pronoun(pronoun_type variant) const;
-    const bool pronoun_plurality() const;
+    bool pronoun_plurality() const;
 
     string wounds_description_sentence() const;
     string wounds_description(bool colour = false) const;
@@ -368,7 +372,7 @@ struct monster_info : public monster_info_base
     }
 
     bool has_spells() const;
-    int spell_hd() const;
+    int spell_hd(spell_type spell = SPELL_NO_SPELL) const;
     unsigned colour(bool base_colour = false) const;
     void set_colour(int colour);
 

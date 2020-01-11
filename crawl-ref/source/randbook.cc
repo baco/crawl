@@ -12,7 +12,6 @@
 #include "artefact.h"
 #include "database.h"
 #include "english.h"
-#include "god-item.h"
 #include "item-name.h"
 #include "item-status-flag-type.h"
 #include "items.h"
@@ -976,10 +975,8 @@ void make_book_kiku_gift(item_def &book, bool first)
     if (first)
     {
         bool can_bleed = you.species != SP_GARGOYLE
-            && you.species != SP_GHOUL
-            && you.species != SP_MUMMY;
-        bool can_regen = you.species != SP_DEEP_DWARF
-            && you.species != SP_MUMMY;
+                         && you.species != SP_GHOUL
+                         && you.species != SP_MUMMY;
 
         chosen_spells[0] = SPELL_PAIN;
         chosen_spells[1] = SPELL_CORPSE_ROT;
@@ -987,16 +984,14 @@ void make_book_kiku_gift(item_def &book, bool first)
         if (can_bleed) // Replace one of the corpse-using spells
             chosen_spells[random_range(1, 2)] = SPELL_SUBLIMATION_OF_BLOOD;
 
-        chosen_spells[3] = (!can_regen || coinflip())
-            ? SPELL_VAMPIRIC_DRAINING : SPELL_REGENERATION;
+        chosen_spells[3] = SPELL_VAMPIRIC_DRAINING;
     }
     else
     {
         chosen_spells[0] = coinflip() ? SPELL_ANIMATE_DEAD : SPELL_SIMULACRUM;
         chosen_spells[1] = (you.species == SP_FELID || coinflip())
             ? SPELL_BORGNJORS_VILE_CLUTCH : SPELL_EXCRUCIATING_WOUNDS;
-        chosen_spells[2] = random_choose(SPELL_BOLT_OF_DRAINING,
-                                         SPELL_AGONY,
+        chosen_spells[2] = random_choose(SPELL_AGONY,
                                          SPELL_DEATH_CHANNEL);
 
         spell_type extra_spell;
@@ -1006,7 +1001,6 @@ void make_book_kiku_gift(item_def &book, bool first)
                                         SPELL_AGONY,
                                         SPELL_BORGNJORS_VILE_CLUTCH,
                                         SPELL_EXCRUCIATING_WOUNDS,
-                                        SPELL_BOLT_OF_DRAINING,
                                         SPELL_SIMULACRUM,
                                         SPELL_DEATH_CHANNEL);
             if (you.species == SP_FELID
@@ -1187,10 +1181,13 @@ static void _choose_themed_randbook_spells(weighted_spells &possible_spells,
     for (int i = 0; i < size; ++i)
     {
         const spell_type *spell = random_choose_weighted(possible_spells);
-        ASSERT(spell);
+        if (!spell)
+            break;
         spells.push_back(*spell);
         possible_spells[*spell] = 0; // don't choose the same one twice!
     }
+    // `size` is guaranteed to be >0 by an ASSERT in the calling function
+    ASSERT(spells.size() > 0);
 }
 
 /**

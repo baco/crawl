@@ -11,7 +11,6 @@
 #include "god-item.h"
 #include "god-passive.h"
 #include "item-prop.h"
-#include "makeitem.h"
 #include "message.h"
 #include "player-equip.h"
 #include "prompt.h"
@@ -134,6 +133,7 @@ spret cast_confusing_touch(int power, bool fail)
                      max(10 + random2(power) / 5,
                          you.duration[DUR_CONFUSING_TOUCH]),
                      20, nullptr);
+    you.props["confusing touch power"] = power;
 
     return spret::success;
 }
