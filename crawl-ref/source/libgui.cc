@@ -24,11 +24,6 @@
 #include "viewgeom.h"
 #include "windowmanager.h"
 
-int m_getch()
-{
-    return getchk();
-}
-
 void set_mouse_enabled(bool enabled)
 {
     crawl_state.mouse_enabled = enabled;
@@ -141,11 +136,6 @@ int num_to_lines(int num)
 int getch_ck()
 {
     return tiles.getch_ck();
-}
-
-int getchk()
-{
-    return getch_ck();
 }
 
 void clrscr()

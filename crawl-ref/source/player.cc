@@ -3551,6 +3551,21 @@ int slaying_bonus(bool ranged)
     return ret;
 }
 
+int player::scan_artefact(artefact_prop_type which_property,
+                          bool calc_unid,
+                          item_def item) const
+{
+
+    if (!is_artefact(item))
+        return 0;
+
+    // TODO: id check not needed, probably, due to full wear-id?
+    if (calc_unid || fully_identified(item))
+        return artefact_property(item, which_property);
+    // else
+        return 0;
+}
+
 // Checks each equip slot for a randart, and adds up all of those with
 // a given property. Slow if any randarts are worn, so avoid where
 // possible. If `matches' is non-nullptr, items with nonzero property are
@@ -3568,21 +3583,18 @@ int player::scan_artefacts(artefact_prop_type which_property,
 
         const int eq = equip[i];
 
+        const item_def item = inv[eq];
+
         // Only weapons give their effects when in our hands.
-        if (i == EQ_WEAPON && inv[ eq ].base_type != OBJ_WEAPONS)
+        if (i == EQ_WEAPON && item.base_type != OBJ_WEAPONS)
             continue;
 
-        if (!is_artefact(inv[ eq ]))
-            continue;
+        int val = scan_artefact(which_property, calc_unid, item);
 
-        // TODO: id check not needed, probably, due to full wear-id?
-        if (calc_unid || fully_identified(inv[eq]))
-        {
-            int val = artefact_property(inv[eq], which_property);
-            retval += val;
-            if (matches && val)
-                matches->push_back(inv[eq]);
-        }
+        retval += val;
+
+        if (matches && val)
+            matches->push_back(item);
     }
 
     return retval;
@@ -5836,6 +5848,209 @@ int player::racial_ac(bool temp) const
     return 0;
 }
 
+// Each instance of this class stores a mutation which might change a
+// player's AC and how much their AC should change if the player has
+// said mutation.
+class mutation_ac_changes{
+    public:
+        /**
+         * The AC a player gains from a given mutation. If the player
+         * lacks said mutation, return 0.
+         *
+         * @return How much AC to give the player for the handled
+         *         mutation.
+         */
+        int get_ac_change_for_mutation(){
+            int ac_change = 0;
+
+            int mutation_level = you.get_mutation_level(mut, mutation_activation_threshold);
+
+            switch (mutation_level){
+                case 0:
+                    ac_change = 0;
+                    break;
+                case 1:
+                case 2:
+                case 3:
+                    ac_change = ac_changes[mutation_level - 1];
+                    break;
+            }
+
+            // The output for this function is scaled differently than the UI.
+            return ac_change * 100;
+        }
+
+        mutation_ac_changes(mutation_type mut_aug,
+                            mutation_activity_type mutation_activation_threshold_aug,
+                            vector<int> ac_changes_aug)
+        : mut (mut_aug),
+          mutation_activation_threshold (mutation_activation_threshold_aug),
+          ac_changes (ac_changes_aug)
+        {
+        }
+
+    private:
+        mutation_type mut;
+        mutation_activity_type mutation_activation_threshold;
+        vector<int> ac_changes;
+};
+
+// Constant vectors for the most common mutation ac results used in
+// all_mutation_ac_changes
+const vector<int> ONE_TWO_THREE  = {1,2,3};
+const vector<int> TWO_THREE_FOUR = {2,3,4};
+
+vector<mutation_ac_changes> all_mutation_ac_changes = {
+     mutation_ac_changes(MUT_GELATINOUS_BODY,        mutation_activity_type::PARTIAL, ONE_TWO_THREE)
+    ,mutation_ac_changes(MUT_TOUGH_SKIN,             mutation_activity_type::PARTIAL, ONE_TWO_THREE)
+    ,mutation_ac_changes(MUT_SHAGGY_FUR,             mutation_activity_type::PARTIAL, ONE_TWO_THREE)
+    ,mutation_ac_changes(MUT_PHYSICAL_VULNERABILITY, mutation_activity_type::PARTIAL, {-5,-10,-15})
+    // Scale mutations are more easily disabled (forms etc.). This appears to be for flavour reasons.
+    // Preserved behavior from before mutation ac was turned to data.
+    ,mutation_ac_changes(MUT_IRIDESCENT_SCALES,      mutation_activity_type::FULL,    {2, 4, 6})
+    ,mutation_ac_changes(MUT_RUGGED_BROWN_SCALES,    mutation_activity_type::FULL,    ONE_TWO_THREE)
+    ,mutation_ac_changes(MUT_ICY_BLUE_SCALES,        mutation_activity_type::FULL,    TWO_THREE_FOUR)
+    ,mutation_ac_changes(MUT_MOLTEN_SCALES,          mutation_activity_type::FULL,    TWO_THREE_FOUR)
+    ,mutation_ac_changes(MUT_SLIMY_GREEN_SCALES,     mutation_activity_type::FULL,    TWO_THREE_FOUR)
+    ,mutation_ac_changes(MUT_THIN_METALLIC_SCALES,   mutation_activity_type::FULL,    TWO_THREE_FOUR)
+    ,mutation_ac_changes(MUT_YELLOW_SCALES,          mutation_activity_type::FULL,    TWO_THREE_FOUR)
+};
+
+/**
+ * The AC changes the player has from mutations.
+ *
+ * Mostly additions from things like scales, but the physical vulnerability
+ * mutation is also accounted for.
+ *
+ * @return  The player's AC gain from mutation, with 100 scaling (i.e,
+ *          the returned result 100 times the UI shows as of Jan 2020)
+*/
+int player::ac_changes_from_mutations() const
+{
+
+    int AC = 0;
+
+    for (vector<mutation_ac_changes>::iterator it =
+            all_mutation_ac_changes.begin();
+            it != all_mutation_ac_changes.end(); ++it)
+    {
+        AC += it->get_ac_change_for_mutation();
+    }
+
+    return AC;
+}
+
+/**
+ * Get a vector with the items of armour the player is wearing.
+ *
+ * @return  A vector<item_def> of each armour the player has equipped.
+ */
+vector<item_def> player::get_armour_items() const
+{
+    vector<item_def> armour_items;
+
+    for (int eq = EQ_MIN_ARMOUR; eq <= EQ_MAX_ARMOUR; ++eq)
+    {
+        if (!slot_item(static_cast<equipment_type>(eq)))
+            continue;
+
+        const item_def& item = inv[equip[eq]];
+
+        armour_items.push_back(item);
+
+    }
+
+    return armour_items;
+}
+
+/**
+ * Get a vector with the items of armour the player would be wearing
+ * if they put on a specific piece of armour
+ *
+ * @param   The item which the player would be wearing in this theoretical
+ *          situation.
+ * @return  A vector<item_def> of each armour the player would have equipped.
+ */
+vector<item_def> player::get_armour_items_one_sub(item_def sub) const
+{
+    vector<item_def> armour_items = get_armour_items_one_removal(sub);
+
+    armour_items.push_back(sub);
+
+    return armour_items;
+}
+
+/**
+ * Get a vector with the items of armour the player would be wearing
+ * if they removed a specific piece of armour
+ *
+ * @param   The item which the player would be remove in this theoretical
+ *          situation.
+ * @return  A vector<item_def> of each armour the player would have
+ *          equipped after removing the item passed in.
+ */
+vector<item_def> player::get_armour_items_one_removal(item_def remove) const
+{
+    vector<item_def> armour_items;
+
+    for (int eq = EQ_MIN_ARMOUR; eq <= EQ_MAX_ARMOUR; ++eq)
+    {
+        if (get_armour_slot(remove) == eq){
+            continue;
+        }
+
+        if (!slot_item(static_cast<equipment_type>(eq)))
+            continue;
+
+        const item_def& item = inv[equip[eq]];
+
+        armour_items.push_back(item);
+
+    }
+
+    return armour_items;
+}
+
+/**
+ * Get the players "base" ac, assuming they are wearing a particular set of
+ * armour items (which isn't necessarily the set of armour items they are
+ * currently wearing.)
+ *
+ * @param   A scale by which the player's base AC is multiplied.
+ * @param   A list of items to assume the player is wearing.
+ * @return  The player's AC, multiplied by the given scale.
+ */
+int player::base_ac_with_specific_items(int scale,
+                            vector<item_def> armour_items) const
+{
+    int AC = 0;
+
+    for (unsigned int i = 0; i < armour_items.size(); i++)
+    {
+        const item_def& item = armour_items[i];
+
+        // Shields give SH instead of AC
+        if (get_armour_slot(item) != EQ_SHIELD){
+            AC += base_ac_from(item, 100);
+            AC += item.plus * 100;
+        }
+
+        if (get_armour_ego_type(item) == SPARM_PROTECTION)
+            AC += 300;
+    }
+
+    AC += wearing(EQ_RINGS_PLUS, RING_PROTECTION) * 100;
+
+    AC += scan_artefacts(ARTP_AC) * 100;
+
+    AC += get_form()->get_ac_bonus();
+
+    AC += racial_ac(true);
+
+    AC += ac_changes_from_mutations();
+
+    return AC * scale / 100;
+}
 /**
  * The player's "base" armour class, before transitory buffs are applied.
  *
@@ -5847,78 +6062,32 @@ int player::racial_ac(bool temp) const
  */
 int player::base_ac(int scale) const
 {
-    int AC = 0;
+    vector<item_def> armour_items = get_armour_items();
 
-    for (int eq = EQ_MIN_ARMOUR; eq <= EQ_MAX_ARMOUR; ++eq)
-    {
-        if (eq == EQ_SHIELD)
-            continue;
-
-        if (!slot_item(static_cast<equipment_type>(eq)))
-            continue;
-
-        const item_def& item = inv[equip[eq]];
-        AC += base_ac_from(item, 100);
-        AC += item.plus * 100;
-    }
-
-    AC += wearing(EQ_RINGS_PLUS, RING_PROTECTION) * 100;
-
-    if (wearing_ego(EQ_SHIELD, SPARM_PROTECTION))
-        AC += 300;
-
-    AC += scan_artefacts(ARTP_AC) * 100;
-
-    AC += get_form()->get_ac_bonus();
-
-    AC += racial_ac(true);
-
-    // Scale mutations, etc. Statues don't get an AC benefit from scales,
-    // since the scales are made of the same stone as everything else.
-    AC += get_mutation_level(MUT_TOUGH_SKIN)
-          ? get_mutation_level(MUT_TOUGH_SKIN) * 100 : 0;
-              // +1, +2, +3
-    AC += get_mutation_level(MUT_SHAGGY_FUR)
-          ? get_mutation_level(MUT_SHAGGY_FUR) * 100 : 0;
-              // +1, +2, +3
-    AC += get_mutation_level(MUT_GELATINOUS_BODY)
-          ? get_mutation_level(MUT_GELATINOUS_BODY) * 100 : 0;
-              // +1, +2, +3
-    AC += get_mutation_level(MUT_IRIDESCENT_SCALES, mutation_activity_type::FULL) * 200;
-              // +2, +4, +6
-#if TAG_MAJOR_VERSION == 34
-    AC += get_mutation_level(MUT_ROUGH_BLACK_SCALES, mutation_activity_type::FULL)
-          ? -100 + get_mutation_level(MUT_ROUGH_BLACK_SCALES, mutation_activity_type::FULL) * 300 : 0;
-              // +2, +5, +8
-#endif
-    AC += get_mutation_level(MUT_RUGGED_BROWN_SCALES, mutation_activity_type::FULL) * 100;
-              // +1, +2, +3
-    AC += get_mutation_level(MUT_ICY_BLUE_SCALES, mutation_activity_type::FULL)
-          ? 100 + get_mutation_level(MUT_ICY_BLUE_SCALES, mutation_activity_type::FULL) * 100 : 0;
-              // +2, +3, +4
-    AC += get_mutation_level(MUT_MOLTEN_SCALES, mutation_activity_type::FULL)
-          ? 100 + get_mutation_level(MUT_MOLTEN_SCALES, mutation_activity_type::FULL) * 100 : 0;
-              // +2, +3, +4
-    AC += get_mutation_level(MUT_SLIMY_GREEN_SCALES, mutation_activity_type::FULL)
-          ? 100 + get_mutation_level(MUT_SLIMY_GREEN_SCALES, mutation_activity_type::FULL) * 100 : 0;
-              // +2, +3, +4
-    AC += get_mutation_level(MUT_THIN_METALLIC_SCALES, mutation_activity_type::FULL)
-          ? 100 + get_mutation_level(MUT_THIN_METALLIC_SCALES, mutation_activity_type::FULL) * 100 : 0;
-              // +2, +3, +4
-    AC += get_mutation_level(MUT_YELLOW_SCALES, mutation_activity_type::FULL)
-          ? 100 + get_mutation_level(MUT_YELLOW_SCALES, mutation_activity_type::FULL) * 100 : 0;
-              // +2, +3, +4
-    AC -= get_mutation_level(MUT_PHYSICAL_VULNERABILITY)
-          ? get_mutation_level(MUT_PHYSICAL_VULNERABILITY) * 500 : 0;
-              // +3, +6, +9
-
-    return AC * scale / 100;
+    return base_ac_with_specific_items(scale, armour_items);
 }
 
 int player::armour_class(bool /*calc_unid*/) const
 {
+    return armour_class_with_specific_items(get_armour_items());
+}
+
+int player::armour_class_with_one_sub(item_def sub) const
+{
+    return armour_class_with_specific_items(
+                            get_armour_items_one_sub(sub));
+}
+
+int player::armour_class_with_one_removal(item_def removed) const
+{
+    return armour_class_with_specific_items(
+                            get_armour_items_one_removal(removed));
+}
+
+int player::armour_class_with_specific_items(vector<item_def> items) const
+{
     const int scale = 100;
-    int AC = base_ac(scale);
+    int AC = base_ac_with_specific_items(scale, items);
 
     if (duration[DUR_ICY_ARMOUR])
         AC += 500 + you.props[ICY_ARMOUR_KEY].get_int() * 8;
@@ -5939,6 +6108,7 @@ int player::armour_class(bool /*calc_unid*/) const
 
     return AC / scale;
 }
+
  /**
   * Guaranteed damage reduction.
   *
