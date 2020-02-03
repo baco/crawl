@@ -651,7 +651,7 @@ public:
         override;
     int scan_artefacts(artefact_prop_type which_property,
                        bool calc_unid = true,
-                       vector<item_def> *matches = nullptr) const override;
+                       vector<const item_def *> *matches = nullptr) const override;
 
     item_def *weapon(int which_attack = -1) const override;
     item_def *shield() const override;
@@ -757,7 +757,7 @@ public:
     int res_cold() const override;
     int res_elec() const override;
     int res_poison(bool temp = true) const override;
-    int res_rotting(bool temp = true) const override;
+    rot_resistance res_rotting(bool temp = true) const override;
     int res_water_drowning() const override;
     bool res_sticky_flame() const override;
     int res_holy_energy() const override;
@@ -913,16 +913,13 @@ protected:
 
 private:
     int ac_changes_from_mutations() const;
-    vector<item_def> get_armour_items() const;
-    int scan_artefact(artefact_prop_type which_property,
-                      bool calc_unid,
-                      item_def item) const;
-    vector<item_def> get_armour_items_one_sub(item_def sub) const;
-    vector<item_def> get_armour_items_one_removal(item_def sub) const;
+    vector<const item_def *> get_armour_items() const;
+    vector<const item_def *> get_armour_items_one_sub(const item_def& sub) const;
+    vector<const item_def *> get_armour_items_one_removal(const item_def& sub) const;
     int base_ac_with_specific_items(int scale,
-                                    vector<item_def> armour_items) const;
+                                    vector<const item_def *> armour_items) const;
     int armour_class_with_specific_items(
-                                vector<item_def> items) const;
+                                vector<const item_def *> items) const;
 
 };
 COMPILE_CHECK((int) SP_UNKNOWN_BRAND < 8*sizeof(you.seen_weapon[0]));
