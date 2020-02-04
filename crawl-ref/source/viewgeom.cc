@@ -18,7 +18,7 @@
 // define VIEW_MAX_HEIGHT use Options.view_max_height
 // define VIEW_MIN_WIDTH defined elsewhere
 // define VIEW_MAX_WIDTH use Options.view_max_width
-#define HUD_WIDTH  32
+#define HUD_WIDTH  34
 #define HUD_HEIGHT 13
 #define MSG_MAX_HEIGHT Options.msg_max_height
 #define MLIST_MIN_HEIGHT Options.mlist_min_height
