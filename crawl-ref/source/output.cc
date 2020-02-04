@@ -455,7 +455,7 @@ public:
         }
         const int width = (horiz_bar_width != -1) ?
                                   horiz_bar_width :
-                                  crawl_view.hudsz.x - (ox - 1);
+                                  crawl_view.hudsz.x - (ox - 1) - 4;
         const int sub_disp = (width * val / max_val);
         int disp  = width * max(0, val - sub_val) / max_val;
         const int old_disp = (m_old_disp < 0) ? sub_disp : m_old_disp;
