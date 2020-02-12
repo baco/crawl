@@ -47,6 +47,7 @@
 #include "items.h"
 #include "item-use.h"
 #include "kills.h"
+#include "level-state-type.h"
 #include "libutil.h"
 #include "macro.h"
 #include "melee-attack.h"
@@ -782,8 +783,8 @@ maybe_bool you_can_wear(equipment_type eq, bool temp)
         break;
 
     case EQ_SHIELD:
-        // No races right now that can wear ARM_LARGE_SHIELD but not ARM_SHIELD
-        dummy.sub_type = ARM_LARGE_SHIELD;
+        // No races right now that can wear ARM_TOWER_SHIELD but not ARM_KITE_SHIELD
+        dummy.sub_type = ARM_TOWER_SHIELD;
         if (you.body_size(PSIZE_TORSO, !temp) < SIZE_MEDIUM)
             alternate.sub_type = ARM_BUCKLER;
         break;
@@ -2266,7 +2267,7 @@ int player_shield_class()
     {
         const item_def& item = you.inv[you.equip[EQ_SHIELD]];
         int size_factor = (you.body_size(PSIZE_TORSO) - SIZE_MEDIUM)
-                        * (item.sub_type - ARM_LARGE_SHIELD);
+                        * (item.sub_type - ARM_TOWER_SHIELD);
         int base_shield = property(item, PARM_AC) * 2 + size_factor;
 
         // bonus applied only to base, see above for effect:
@@ -2281,7 +2282,7 @@ int player_shield_class()
         int stat = 0;
         if (item.sub_type == ARM_BUCKLER)
             stat = you.dex() * 38;
-        else if (item.sub_type == ARM_LARGE_SHIELD)
+        else if (item.sub_type == ARM_TOWER_SHIELD)
             stat = you.dex() * 12 + you.strength() * 26;
         else
             stat = you.dex() * 19 + you.strength() * 19;
@@ -4737,6 +4738,35 @@ void dec_channel_player(int delay)
         mpr("You feel less invigorated.");
 }
 
+void dec_frozen_ramparts(int delay)
+{
+    if (!you.duration[DUR_FROZEN_RAMPARTS])
+        return;
+
+    you.duration[DUR_FROZEN_RAMPARTS] =
+        max(0, you.duration[DUR_FROZEN_RAMPARTS] - delay);
+
+    if (!you.duration[DUR_FROZEN_RAMPARTS])
+    {
+        ASSERT(you.props.exists(FROZEN_RAMPARTS_KEY));
+        const auto &pos = you.props[FROZEN_RAMPARTS_KEY].get_coord();
+        ASSERT(in_bounds(pos));
+
+        for (distance_iterator di(pos, false, false, FROZEN_RAMPARTS_RADIUS);
+                di; di++)
+        {
+            env.pgrid(*di) &= ~FPROP_ICY;
+            env.map_knowledge(*di).flags &= ~MAP_ICY;
+        }
+
+        you.props.erase(FROZEN_RAMPARTS_KEY);
+
+        env.level_state &= ~LSTATE_ICY_WALL;
+
+        mpr("The frozen ramparts melt away.");
+    }
+}
+
 bool invis_allowed(bool quiet, string *fail_reason)
 {
     string msg;
@@ -6303,11 +6333,15 @@ rot_resistance player::res_rotting(bool temp) const
         return ROT_RESIST_FULL;
     }
 
+    const item_def *armour = slot_item(EQ_BODY_ARMOUR);
+    const bool embraced = armour && is_unrandom_artefact(*armour, UNRAND_EMBRACE);
+    const rot_resistance base_res = embraced ? ROT_RESIST_MUNDANE : ROT_RESIST_NONE;
+
     switch (undead_state(temp))
     {
     default:
     case US_ALIVE:
-        return ROT_RESIST_NONE;
+        return base_res;
 
     case US_HUNGRY_DEAD:
         return ROT_RESIST_MUNDANE; // rottable by Zin, not by necromancy
@@ -6315,7 +6349,7 @@ rot_resistance player::res_rotting(bool temp) const
     case US_SEMI_UNDEAD:
         if (temp && !you.vampire_alive)
             return ROT_RESIST_MUNDANE;
-        return ROT_RESIST_NONE; // no permanent resistance
+        return base_res;
 
     case US_UNDEAD:
         return ROT_RESIST_FULL;

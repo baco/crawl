@@ -780,8 +780,8 @@ static special_armour_type _generate_armour_type_ego(armour_type type)
     // TODO: move this into data
     switch (type)
     {
-    case ARM_SHIELD:
-    case ARM_LARGE_SHIELD:
+    case ARM_KITE_SHIELD:
+    case ARM_TOWER_SHIELD:
     case ARM_BUCKLER:
         return random_choose_weighted(1, SPARM_RESISTANCE,
                                       3, SPARM_FIRE_RESISTANCE,
@@ -1030,9 +1030,9 @@ static armour_type _get_random_armour_type(int item_level)
                                          10, ARM_HELMET,
                                          2, ARM_HAT,
                                          // Shield slot
-                                         4, ARM_SHIELD,
+                                         4, ARM_KITE_SHIELD,
                                          6, ARM_BUCKLER,
-                                         2, ARM_LARGE_SHIELD);
+                                         2, ARM_TOWER_SHIELD);
     }
     else if (x_chance_in_y(11 + item_level, 10000))
     {
@@ -1728,7 +1728,8 @@ static void _generate_misc_item(item_def& item, int force_type)
                                       MISC_BOX_OF_BEASTS,
                                       MISC_SACK_OF_SPIDERS,
                                       MISC_CRYSTAL_BALL_OF_ENERGY,
-                                      MISC_PHANTOM_MIRROR);
+                                      MISC_PHANTOM_MIRROR,
+                                      MISC_TREMORSTONE);
     }
 }
 
