@@ -14,7 +14,6 @@
 #include "colour.h"
 #include "coord.h"
 #include "env.h"
-#include "food.h"
 #include "invent.h"
 #include "item-prop.h"
 #include "item-status-flag-type.h"
@@ -36,10 +35,16 @@
 struct item_wrapper
 {
     item_def *item;
-    bool temp; // Does item need to be freed when the wrapper is GCed?
+    bool temp; // whether `item` is being memory managed by this object or
+               // elsewhere; if true, will be deleted on gc.
     int turn;
 
-    bool valid() const { return turn == you.num_turns; }
+    bool valid(lua_State *ls) const
+    {
+        // TODO: under what circumstances will dlua actually need to deal with
+        // wrapped items that were created on a different turn?
+        return item && (!CLua::get_vm(ls).managed_vm || turn == you.num_turns);
+    }
 };
 
 void clua_push_item(lua_State *ls, item_def *item)
@@ -64,7 +69,7 @@ item_def *clua_get_item(lua_State *ls, int ndx)
 {
     item_wrapper *iwrap =
         clua_get_userdata<item_wrapper>(ls, ITEM_METATABLE, ndx);
-    if (CLua::get_vm(ls).managed_vm && !iwrap->valid())
+    if (!iwrap->valid(ls))
         luaL_error(ls, "Invalid item");
     return iwrap->item;
 }
@@ -536,7 +541,7 @@ IDEF(equip_type)
     else if (item->base_type == OBJ_ARMOUR)
         eq = get_armour_slot(*item);
     else if (item->base_type == OBJ_JEWELLERY)
-        eq = item->sub_type >= AMU_RAGE ? EQ_AMULET : EQ_RINGS;
+        eq = item->sub_type >= AMU_FIRST_AMULET ? EQ_AMULET : EQ_RINGS;
 
     if (eq != EQ_NONE)
     {
@@ -684,33 +689,6 @@ IDEF(can_zombify)
 
     lua_pushboolean(ls, item->is_type(OBJ_CORPSES, CORPSE_BODY)
                         && mons_zombifiable(item->mon_type));
-
-    return 1;
-}
-
-/*** Do we prefer eating this?
- * @field is_preferred_food boolean
- */
-IDEF(is_preferred_food)
-{
-    if (!item || !item->defined())
-        return 0;
-
-    lua_pushboolean(ls, is_preferred_food(*item));
-
-    return 1;
-}
-
-/*** Is this bad food?
- * @field is_bad_food boolean
- */
-// XXX: does this matter anymore?
-IDEF(is_bad_food)
-{
-    if (!item || !item->defined())
-        return 0;
-
-    lua_pushboolean(ls, is_bad_food(*item));
 
     return 1;
 }
@@ -1527,6 +1505,30 @@ static int l_item_shopping_list(lua_State *ls)
     return 1;
 }
 
+/*** See the items offered by acquirement.
+ * Only works when the acquirement menu is active.
+ * @treturn array|nil An array of @{Item} objects or nil if not acquiring.
+ * @function shop_inventory
+ */
+static int l_item_acquirement_items(lua_State *ls)
+{
+    if (!you.props.exists(ACQUIRE_ITEMS_KEY))
+        return 0;
+
+    auto &acq_items = you.props[ACQUIRE_ITEMS_KEY].get_vector();
+
+    lua_newtable(ls);
+
+    int index = 0;
+    for (const item_def &item : acq_items)
+    {
+        _clua_push_item_temp(ls, item);
+        lua_rawseti(ls, -2, ++index);
+    }
+
+    return 1;
+}
+
 struct ItemAccessor
 {
     const char *attribute;
@@ -1569,8 +1571,6 @@ static ItemAccessor item_attrs[] =
     { "is_corpse",         l_item_is_corpse },
     { "has_skeleton",      l_item_has_skeleton },
     { "can_zombify",       l_item_can_zombify },
-    { "is_preferred_food", l_item_is_preferred_food },
-    { "is_bad_food",       l_item_is_bad_food },
     { "is_useless",        l_item_is_useless },
     { "spells",            l_item_spells },
     { "artprops",          l_item_artprops },
@@ -1627,14 +1627,18 @@ static const struct luaL_reg item_lib[] =
     { "get_items_at",      l_item_get_items_at },
     { "shop_inventory",    l_item_shop_inventory },
     { "shopping_list",     l_item_shopping_list },
+    { "acquirement_items", l_item_acquirement_items },
     { nullptr, nullptr },
 };
 
 static int _delete_wrapped_item(lua_State *ls)
 {
     item_wrapper *iw = static_cast<item_wrapper*>(lua_touserdata(ls, 1));
-    if (iw && iw->temp)
+    if (iw && iw->temp && iw->item)
+    {
         delete iw->item;
+        iw->item = nullptr;
+    }
     return 0;
 }
 

@@ -540,7 +540,7 @@ static int _mi_create_monster(mons_spec spec)
     {
         monster->behaviour = BEH_SEEK;
         monster->foe = MHITYOU;
-        no_messages mx;
+        msg::suppress mx;
         monster->del_ench(ENCH_SUBMERGED);
         return monster->mindex();
     }
@@ -971,9 +971,6 @@ int main(int argc, char* argv[])
                 case AF_STICKY_FLAME:
                     monsterattacks += colour(LIGHTRED, "(napalm)");
                     break;
-                case AF_HUNGER:
-                    monsterattacks += colour(BLUE, "(hunger)");
-                    break;
                 case AF_MUTATE:
                     monsterattacks += colour(LIGHTGREEN, "(mutation)");
                     break;
@@ -1145,17 +1142,11 @@ int main(int argc, char* argv[])
         mons_check_flag(bool(me->bitfields & M_FLIES), monsterflags, "fly");
         mons_check_flag(bool(me->bitfields & M_FAST_REGEN), monsterflags,
                         "regen");
-        mons_check_flag(bool(me->bitfields & M_WEB_SENSE), monsterflags,
-                        "web sense");
         mons_check_flag(mon.is_unbreathing(), monsterflags, "unbreathing");
 
         string spell_string = construct_spells(spell_lists, damages);
-        if (shapeshifter || mon.type == MONS_PANDEMONIUM_LORD
-            || mon.type == MONS_CHIMERA
-                   && (mon.base_monster == MONS_PANDEMONIUM_LORD))
-        {
+        if (shapeshifter || mon.type == MONS_PANDEMONIUM_LORD)
             spell_string = "(random)";
-        }
 
         mons_check_flag(vault_monster, monsterflags, colour(BROWN, "vault"));
 
@@ -1229,22 +1220,8 @@ int main(int argc, char* argv[])
         printf("%s", monsterresistances.c_str());
         printf("%s", monstervulnerabilities.c_str());
 
-        if (me->corpse_thingy != CE_NOCORPSE && me->corpse_thingy != CE_CLEAN)
-        {
-            printf(" | Chunks: ");
-            switch (me->corpse_thingy)
-            {
-            case CE_NOXIOUS:
-                printf("%s", colour(DARKGREY, "noxious").c_str());
-                break;
-            // We should't get here; including these values so we can get
-            // compiler
-            // warnings for unhandled enum values.
-            case CE_NOCORPSE:
-            case CE_CLEAN:
-                printf("???");
-            }
-        }
+        if (me->leaves_corpse)
+            printf(" | Corpse");
 
         printf(" | XP: %ld", exper);
 

@@ -254,7 +254,6 @@ KFEAT:  b = book shop
 KFEAT:  c = antique weapon shop
 KFEAT:  d = antique armour shop
 KFEAT:  e = distillery shop
-KFEAT:  f = food shop
 KFEAT:  g = gadget shop
 KFEAT:  h = jewellery shop
 KFEAT:  i = scroll shop
@@ -618,7 +617,7 @@ ENDMAP
 
 NAME:   sprint2_smallroom_9
 TAGS:   sprint2_smallroom no_item_gen no_trap_gen no_monster_gen no_pool_fixup
-MONS:   spiny frog
+MONS:   cane toad
 KITEM:  $ = gold q:81
 MAP
 %1

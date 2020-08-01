@@ -19,7 +19,7 @@ function castle_lemuel_subvault_setup(e)
          e.colour("? = brown")
          e.ftile("? = floor_mud")
          e.kfeat("? = floor")
-         e.kfeat("~ = known alarm trap w:1 / floor")
+         e.kfeat("~ = alarm trap w:1 / floor")
          e.subst("X = c +:1")
          e.subst("8 = 89")
          e.tile("c = wall_stone_smooth")
@@ -145,7 +145,7 @@ NAME:   lemuel_castle_interior_carwin_2
 TAGS:   lemuel_castle_interior
 : castle_lemuel_subvault_setup(_G)
 SUBST:  $ = $:5 .
-ITEM:   ration w:20 / potion of ambrosia ident:type
+ITEM:   nothing w:20 / potion of ambrosia ident:type
 MAP
 +c....+.......1.............$*c+
 ...1..cccccccccccccccccccccccXc.

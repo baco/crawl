@@ -29,7 +29,6 @@
 #include "errors.h"
 #include "fight.h"
 #include "files.h"
-#include "food.h"
 #include "fprop.h"
 #include "ghost.h"
 #include "god-item.h"
@@ -60,7 +59,7 @@
 #include "state.h"
 #include "stringutil.h"
 #include "terrain.h"
-#include "tiledef-player.h"
+#include "rltiles/tiledef-player.h"
 #include "tilepick.h"
 #include "tileview.h"
 #include "timed-effects.h"
@@ -477,14 +476,13 @@ int monster::wearing(equipment_type slot, int sub_type, bool calc_unid) const
         break;
 
     case EQ_AMULET:
-    case EQ_AMULET_PLUS:
     case EQ_RINGS:
     case EQ_RINGS_PLUS:
         item = mslot_item(MSLOT_JEWELLERY);
         if (item && item->is_type(OBJ_JEWELLERY, sub_type)
             && (calc_unid || item_type_known(*item)))
         {
-            if (slot == EQ_RINGS_PLUS || slot == EQ_AMULET_PLUS)
+            if (slot == EQ_RINGS_PLUS)
                 ret += item->plus;
             else
                 ret++;
@@ -1236,12 +1234,6 @@ int max_corpse_chunks(monster_type mc)
     }
 }
 
-corpse_effect_type mons_corpse_effect(monster_type mc)
-{
-    ASSERT_smc();
-    return smc->corpse_thingy;
-}
-
 int derived_undead_avg_hp(monster_type mtype, int hd, int scale)
 {
     static const map<monster_type, int> hp_per_hd_by_type = {
@@ -1418,11 +1410,7 @@ bool mons_can_shout(monster_type mc)
 
 bool mons_is_ghost_demon(monster_type mc)
 {
-    return mons_class_flag(mc, M_GHOST_DEMON)
-#if TAG_MAJOR_VERSION == 34
-           || mc == MONS_CHIMERA;
-#endif
-           ;
+    return mons_class_flag(mc, M_GHOST_DEMON);
 }
 
 bool mons_is_pghost(monster_type mc)
@@ -1683,7 +1671,8 @@ monster_type mons_base_type(const monster& mon)
 
 bool mons_class_can_leave_corpse(monster_type mc)
 {
-    return mons_corpse_effect(mc) != CE_NOCORPSE;
+    ASSERT_smc();
+    return smc->leaves_corpse;
 }
 
 bool mons_class_can_be_zombified(monster_type mc)
@@ -1989,6 +1978,10 @@ mon_attack_def mons_attack_spec(const monster& m, int attk_number,
             attk.damage = max(1, you.skill_rdiv(SK_UNARMED_COMBAT, 10, 20));
     }
 
+    // summoning miscast monster; hd scaled with miscast severity
+    if (mon.type == MONS_NAMELESS && attk_number == 0)
+        attk.damage = mon.get_hit_dice() * 2;
+
     if (!base_flavour)
     {
         // TODO: randomization here is not the greatest way of doing any of
@@ -2069,7 +2062,6 @@ string mon_attack_name(attack_type attack, bool with_object)
     COMPILE_CHECK(ARRAYSZ(attack_types) == NUM_ATTACK_TYPES - AT_FIRST_ATTACK);
 
     const int verb_index = attack - AT_FIRST_ATTACK;
-    dprf("verb index: %d", verb_index);
     ASSERT(verb_index < (int)ARRAYSZ(attack_types));
 
     if (with_object)
@@ -2078,6 +2070,27 @@ string mon_attack_name(attack_type attack, bool with_object)
     {
         return replace_all(replace_all(attack_types[verb_index], " at", ""),
                                                                  " on", "");
+    }
+}
+
+/**
+ * Is this attack flavour 'plain'? A plain attack flavour doesn't imply the
+ * target will be affected in any particular way beyond damage.
+ * Certain attack flavours like AT_TRAMPLE, AT_SPORE, and AT_ENGULF do imply
+ * additional effects, and are not considered 'plain'.
+ */
+bool is_plain_attack_type(attack_type attack)
+{
+    switch (attack) {
+        case AT_CONSTRICT:  // constriction
+        case AT_ENGULF:     // water hold
+        case AT_POUNCE:     // webbing
+        case AT_SPORE:      // confusing spores
+        case AT_STING:      // poison
+        case AT_TRAMPLE:    // trampling
+            return false;
+        default:
+            return true;
     }
 }
 
@@ -2096,8 +2109,7 @@ bool flavour_triggers_damageless(attack_flavour flavour)
         || flavour == AF_PURE_FIRE
         || flavour == AF_SHADOWSTAB
         || flavour == AF_DROWN
-        || flavour == AF_CORRODE
-        || flavour == AF_HUNGER;
+        || flavour == AF_CORRODE;
 }
 
 /**
@@ -2532,7 +2544,7 @@ monster_type random_demonspawn_job()
                                 MONS_LAST_NONBASE_DEMONSPAWN);
 }
 
-// Note: For consistent behavior in player_will_anger_monster(), all
+// Note: For consistent behaviour in god_hates_monster(), all
 // spellbooks a given monster can get here should produce the same
 // return values in the following:
 //
@@ -3328,11 +3340,16 @@ static habitat_type _mons_class_habitat(monster_type mc,
     return ht;
 }
 
+habitat_type mons_habitat_type(monster_type t, monster_type base_t,
+                               bool real_amphibious) {
+    return _mons_class_habitat(fixup_zombie_type(t, base_t),
+                               real_amphibious);
+}
+
 habitat_type mons_habitat(const monster& mon, bool real_amphibious)
 {
-    return _mons_class_habitat(fixup_zombie_type(mon.type,
-                                                 mons_base_type(mon)),
-                               real_amphibious);
+    return mons_habitat_type(mon.type, mons_base_type(mon),
+                              real_amphibious);
 }
 
 habitat_type mons_class_primary_habitat(monster_type mc)
@@ -3515,7 +3532,7 @@ bool mons_is_removed(monster_type mc)
 bool mons_looks_stabbable(const monster& m)
 {
     const stab_type st = find_stab_type(&you, m, false);
-    return !m.friendly() && stab_bonus_denom(st) == 1; // top-tier stab
+    return stab_bonus_denom(st) == 1; // top-tier stab
 }
 
 bool mons_looks_distracted(const monster& m)
@@ -3544,9 +3561,7 @@ void mons_stop_fleeing_from_sanctuary(monster& mons)
 void mons_pacify(monster& mon, mon_attitude_type att, bool no_xp)
 {
     // If the _real_ (non-charmed) attitude is already that or better,
-    // don't degrade it. This can happen, for example, with a high-power
-    // Crusade card on Pikel's slaves who would then go down from friendly
-    // to good_neutral when you kill Pikel.
+    // don't degrade it.
     if (mon.attitude >= att)
         return;
 
@@ -3730,7 +3745,6 @@ static bool _ms_ranged_spell(spell_type monspell, bool attack_only = false,
 
     // buffs & escape spells aren't considered 'ranged'.
     if (testbits(flags, spflag::selfench)
-        || spell_typematch(monspell, spschool::charms)
         || testbits(flags, spflag::escape)
         || monspell == SPELL_BLINK_OTHER_CLOSE)
     {
@@ -4954,11 +4968,8 @@ void debug_mondata()
 
         if (md->speed < 0)
             fails += make_stringf("%s has 0 speed\n", name);
-        else if (md->speed == 0 && !mons_class_is_firewood(mc)
-            && mc != MONS_HYPERACTIVE_BALLISTOMYCETE)
-        {
+        else if (md->speed == 0 && !mons_class_is_firewood(mc))
             fails += make_stringf("%s has 0 speed\n", name);
-        }
 
         const bool male = mons_class_flag(mc, M_MALE);
         const bool female = mons_class_flag(mc, M_FEMALE);
@@ -4980,7 +4991,7 @@ void debug_mondata()
                                  name);
             }
         }
-        else if (md->corpse_thingy == CE_NOCORPSE)
+        else if (!md->leaves_corpse)
         {
             if (has_corpse_tile)
             {
@@ -5235,8 +5246,7 @@ bool mons_is_avatar(monster_type mc)
 
 bool mons_is_player_shadow(const monster& mon)
 {
-    return mon.type == MONS_PLAYER_SHADOW
-           && mon.mname.empty();
+    return mon.type == MONS_PLAYER_SHADOW;
 }
 
 bool mons_has_attacks(const monster& mon)
@@ -5325,10 +5335,13 @@ void update_monster_symbol(monster_type mtype, cglyph_t md)
         monster_symbols[mtype].colour = md.col;
 }
 
-void normalize_spell_freq(monster_spells &spells, int hd)
+int spell_freq_for_hd(int hd)
 {
-    const unsigned int total_freq = (hd + 50);
+    return hd + 50;
+}
 
+void normalize_spell_freq(monster_spells &spells, int total_freq)
+{
     // Not using std::accumulate because slot.freq is only a uint8_t.
     unsigned int total_given_freq = 0;
     for (const auto &slot : spells)

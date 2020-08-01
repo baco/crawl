@@ -38,6 +38,7 @@
 #include "tiles-build-specific.h"
 #include "unicode.h"
 #include "view.h"
+#include "ui.h"
 
 static struct termios def_term;
 static struct termios game_term;
@@ -732,6 +733,9 @@ void console_startup()
 
     set_mouse_enabled(false);
 
+    // TODO: how does this relate to what tiles.resize does?
+    ui::resize(crawl_view.termsz.x, crawl_view.termsz.y);
+
 #ifdef USE_TILE_WEB
     tiles.resize();
 #endif
@@ -803,7 +807,6 @@ void puttext(int x1, int y1, const crawl_view_buffer &vbuf)
             cell++;
         }
     }
-    update_screen();
 }
 
 // These next four are front functions so that we can reduce
@@ -852,7 +855,7 @@ int num_to_lines(int num)
     return num;
 }
 
-void clrscr()
+void clrscr_sys()
 {
     textcolour(LIGHTGREY);
     textbackground(BLACK);
@@ -862,9 +865,6 @@ void clrscr()
     fflush(stdout);
 #endif
 
-#ifdef USE_TILE_WEB
-    tiles.clrscr();
-#endif
 }
 
 void set_cursor_enabled(bool enabled)
@@ -901,20 +901,20 @@ static curses_style curs_attr(COLOURS fg, COLOURS bg, bool adjust_background)
     style.color_pair = 0;
     bool monochrome_output_requested = curs_palette_size() == 0;
 
-    // Convert over to curses colors.
+    // Convert over to curses colours.
     short fg_curses = translate_colour(fg);
     short bg_curses = translate_colour(bg);
 
-    // Resolve fg/bg color conflicts.
+    // Resolve fg/bg colour conflicts.
     curs_adjust_color_pair_to_non_identical(fg_curses, bg_curses,
         adjust_background);
 
     if (!monochrome_output_requested)
     {
-        // Grab the color pair.
+        // Grab the colour pair.
         style.color_pair = curs_calc_pair_safe(fg_curses, bg_curses);
 
-        // Request decolorize if the pair doesn't actually exist.
+        // Request decolourise if the pair doesn't actually exist.
         if (style.color_pair == 0
             && !curs_color_combo_has_pair(fg_curses, bg_curses))
         {
@@ -945,7 +945,7 @@ static curses_style curs_attr(COLOURS fg, COLOURS bg, bool adjust_background)
 
     if (monochrome_output_requested)
     {
-        // Decolorize the output if necessary.
+        // Decolourise the output if necessary.
         if (curs_palette_size() != 0)
             style.color_pair = curs_calc_pair_safe(COLOR_WHITE, COLOR_BLACK);
 
@@ -1512,6 +1512,10 @@ void fakecursorxy(int x, int y)
     cchar_t c = character_at(y_curses, x_curses);
     flip_colour(c);
     write_char_at(y_curses, x_curses, c);
+    // the above still results in changes to the return values for wherex and
+    // wherey, so set the cursor region to ensure that the cursor position is
+    // valid after this call. (This also matches the behavior of real cursorxy.)
+    set_cursor_region(GOTO_CRT);
 }
 
 int wherex()

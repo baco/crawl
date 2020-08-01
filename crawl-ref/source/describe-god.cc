@@ -19,7 +19,6 @@
 #include "english.h"
 #include "env.h"
 #include "eq-type-flags.h"
-#include "food.h"
 #include "god-abil.h"
 #include "god-companions.h"
 #include "god-conduct.h"
@@ -29,6 +28,7 @@
 #include "libutil.h"
 #include "menu.h"
 #include "message.h"
+#include "potion.h" // you_drinkless for pakellas compat
 #include "religion.h"
 #include "skills.h"
 #include "spl-util.h"
@@ -634,8 +634,11 @@ static formatted_string _god_extra_description(god_type which_god)
     switch (which_god)
     {
         case GOD_ASHENZARI:
+            desc = formatted_string::parse_string(
+                       getLongDescription(god_name(which_god) + " extra"));
             if (have_passive(passive_t::bondage_skill_boost))
             {
+                desc.cprintf("\n");
                 _add_par(desc, "Ashenzari supports the following skills because of your curses:");
                 _add_par(desc,  _describe_ash_skill_boost());
             }
@@ -888,10 +891,12 @@ static formatted_string _describe_god_powers(god_type which_god)
             desc.textcolour(god_colour(which_god));
         else
             desc.textcolour(DARKGREY);
-        desc.cprintf("You gain nutrition%s when your fellow slimes consume items.\n",
-                have_passive(passive_t::slime_hp) ? ", magic and health" :
-                have_passive(passive_t::slime_mp) ? " and magic" :
-                                                    "");
+
+        if (have_passive(passive_t::slime_hp))
+            desc.cprintf("You gain magic and health when your fellow slimes consume items.\n");
+        else if (have_passive(passive_t::slime_mp))
+            desc.cprintf("You gain magic when your fellow slimes consume items.\n");
+
         break;
 
     case GOD_FEDHAS:
@@ -973,7 +978,7 @@ static formatted_string _describe_god_powers(god_type which_god)
                 uppercase_first(god_name(which_god)).c_str());
         desc.cprintf("%s identifies device charges for you.\n",
                 uppercase_first(god_name(which_god)).c_str());
-        if (!you_foodless(false))
+        if (!you_drinkless(false))
         {
             if (have_passive(passive_t::bottle_mp))
                 desc.textcolour(god_colour(which_god));
@@ -1093,7 +1098,7 @@ static void build_partial_god_ui(god_type which_god, shared_ptr<ui::Popup>& popu
 #ifdef USE_TILE
     auto icon = make_shared<Image>();
     const tileidx_t idx = tileidx_feature_base(altar_for_god(which_god));
-    icon->set_tile(tile_def(idx, get_dngn_tex(idx)));
+    icon->set_tile(tile_def(idx));
     title_hbox->add_child(move(icon));
 #endif
 
@@ -1195,7 +1200,7 @@ static void _send_god_ui(god_type god, bool is_altar)
     const tileidx_t idx = tileidx_feature_base(altar_for_god(god));
     tiles.json_open_object("tile");
     tiles.json_write_int("t", idx);
-    tiles.json_write_int("tex", get_dngn_tex(idx));
+    tiles.json_write_int("tex", get_tile_texture(idx));
     tiles.json_close_object();
 
     tiles.json_write_int("colour", god_colour(god));

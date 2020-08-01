@@ -119,7 +119,7 @@ struct bolt
     vector<coord_def> path_taken = {}; // Path beam took.
 
     // INTERNAL use - should not usually be set outside of beam.cc
-    int  extra_range_used = false;
+    int  extra_range_used = 0;
     bool is_tracer = false;       // is this a tracer?
     bool is_targeting = false;    // . . . in particular, a targeting tracer?
     bool aimed_at_feet = false;   // this was aimed at self!
@@ -190,7 +190,7 @@ public:
     bool nice_to(const monster_info& mi) const;
     bool has_saving_throw() const;
 
-    void draw(const coord_def& p);
+    void draw(const coord_def& p, bool force_refresh=true);
     void drop_object();
 
     // Various explosion-related stuff.
@@ -326,7 +326,7 @@ spret zapping(zap_type ztype, int power, bolt &pbolt,
                    bool fail = false);
 bool player_tracer(zap_type ztype, int power, bolt &pbolt, int range = 0);
 
-void create_feat_splash(coord_def center, int radius, int nattempts);
+vector<coord_def> create_feat_splash(coord_def center, int radius, int num, int dur);
 
 void init_zap_index();
 void clear_zap_info_on_exit();
@@ -341,5 +341,8 @@ int explosion_noise(int rad);
 bool shoot_through_monster(const bolt& beam, const monster* victim);
 
 int omnireflect_chance_denom(int SH);
+
+void glaciate_freeze(monster* mon, killer_type englaciator,
+                             int kindex);
 
 bolt setup_targetting_beam(const monster &mons);

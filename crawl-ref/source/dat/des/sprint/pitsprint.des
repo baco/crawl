@@ -18,8 +18,7 @@ function base_monster_setup(e)
            centaur / jelly / water moccasin / ice beast / crimson imp /\
            necrophage / quasit / zombie / sky beast / deep elf mage /\
            bullfrog / mummy / orc warrior band / wight band /\
-           hungry ghost / big kobold band /\
-           warg / wolf / porcupine / black bear /\
+           big kobold band / warg / wolf / porcupine / black bear /\
            river rat / flying skull / iron imp /\
            white imp / ufetubus / fire bat")
   e.kmons("B = steam dragon / crocodile / hippogriff /\
@@ -33,7 +32,7 @@ function base_monster_setup(e)
            deep elf mage /\
            orc high priest band w:5 / orc sorcerer band w:5 / orc knight band /\
            flayed ghost / freezing wraith / shadow wraith / shadow /\
-           redback w:20 / phantasmal warrior / spiny frog / hell rat /\
+           redback w:20 / phantasmal warrior / cane toad / hell rat /\
            black mamba / rime drake / hydra w:5 / polar bear / lindwurm /\
            elephant / death yak / wolf band / dream sheep band /\
            swamp drake / bog body / tyrant leech / swamp dragon w:3 /\
@@ -163,11 +162,11 @@ end
 
 
 function general_item_setup(e)
-  e.kitem("^ = superb_item ident:all w:590 / ration w:2 /\
+  e.kitem("^ = superb_item ident:all w:590 /\
           potion of heal wounds ident:all q:4 w:3 /\
           potion of haste ident:all q:4 w:3 /\
           scroll of fog w:1 ident:all / scroll of holy word w:1 ident:all /\
-          potion of might ident:all w:2 / potion of agility w:2 ident:all /\
+          potion of might ident:all w:2 / potion of stabbing w:2 ident:all /\
           scroll of acquirement q:1 w:1 ident:all /\
           scroll of enchant weapon ident:all q:4 w:2 /\
           scroll of enchant armour ident:all q:4 w:2 /\
@@ -177,7 +176,7 @@ function general_item_setup(e)
   e.kitem("% = any ident:all")
   e.kitem("! = potion of heal wounds ident:all q:2 w:30 /\
           potion of curing ident:all w:20 / potion of might ident:all /\
-          potion of agility ident:all / potion of haste ident:all /\
+          potion of stabbing ident:all / potion of haste ident:all /\
           potion of resistance ident:all w:5 /\
           potion of brilliance ident:all / potion of berserk rage ident:all /\
           potion of mutation ident:all")
@@ -248,8 +247,7 @@ function general_item_setup(e)
     hat plus:2 good_item not_cursed ident:all /\
     tower shield plus:5 not_cursed ident:all /\
     tower shield plus:3 good_item not_cursed ident:all /\
-    naga barding plus:6 not_cursed ident:all w:5 /\
-    centaur barding plus:6 not_cursed ident:all w:5")
+    barding plus:6 not_cursed ident:all w:5")
   e.kitem("( = battleaxe plus:6 ego:none not_cursed ident:all /\
     battleaxe plus:3 good_item not_cursed ident:all /\
     executioner's axe plus:3 ego:none not_cursed ident:all /\
@@ -308,8 +306,7 @@ function general_item_setup(e)
     hat plus:0 good_item not_cursed ident:all /\
     tower shield plus:3 not_cursed ident:all /\
     tower shield plus:0 good_item not_cursed ident:all /\
-    naga barding plus:2 not_cursed ident:all w:5 /\
-    centaur barding plus:2 not_cursed ident:all w:5")
+    barding plus:2 not_cursed ident:all w:5")
 end
 
 function general_setup(e)
@@ -482,9 +479,7 @@ function coven_setup(e)
   e.kitem("b = amulet of faith randart not_cursed ident:all /\
           amulet of guardian spirit randart not_cursed ident:all /\
           amulet of magic regeneration randart not_cursed ident:all /\
-          amulet of rage randart not_cursed ident:all /\
           amulet of reflection randart not_cursed ident:all /\
-          amulet of the gourmand randart not_cursed ident:all /\
           amulet of regeneration randart ident:all not_cursed /\
           ring of slaying plus:5 randart ident:all not_cursed /\
           any jewellery randart level:27 not_cursed ident:all w:40")
@@ -507,8 +502,8 @@ function coven_setup(e)
   e.kitem("e = potion of haste q:5 ident:all")
   e.kitem("f = any wand good_item ident:all")
   e.kitem("g = staff of energy ident:all")
-  e.kitem("h = staff of power ident:all")
-  e.kitem("i = crystal ball of energy")
+  e.kitem("h = staff of wizardry ident:all")
+  e.kitem("i = potion of magic q:5 ident:all")
   e.kitem("j = potion of mutation ident:all")
   e.lua_marker('~', props_marker {
            door_description_suffix=" to the Coven (Very Hard)",
@@ -627,7 +622,6 @@ SUBVAULT: Y : storerooms_room_b
 SUBVAULT: T : the_temple
 SUBVAULT: U : equipment_1
 # Initial consumables
-KITEM: a = ration q:8
 KITEM: b = scroll of summoning ident:all q:1, \
        scroll of amnesia q:5 ident:all, \
        scroll of remove curse q:3 ident:all, \
@@ -1887,7 +1881,7 @@ TILE:   v = wall_cobalt_stone
 : general_item_setup(_G)
 : base_monster_setup(_G)
 KITEM:  34CBDEJK = superb_item ident:all w:66 /\
-                   ration q:2 w:30
+                   nothing w:30
 : lua_marker('_', props_marker {
 :           door_description_suffix=" to a Minivault (Hard)",
 :           })

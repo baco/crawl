@@ -16,17 +16,17 @@ vulnerable to attacks from afar.
 %%%%
 Artificer
 
-Artificers start with a few magical devices and are competent at using such
-tools.
-%%%%
-Assassin
-
-Assassins carry poisoned darts and a small number of nasty curare darts.
+Artificers are opportunists who start with three powerful wands and a club.
+They aim to scrounge their other equipment from the dungeon.
 %%%%
 Berserker
 
 Berserkers believe in Trog, the magic-hating god of frenzy. Not much can stop a
 raging berserker early on, apart from hubris.
+%%%%
+Brigand
+
+Brigands carry poisoned darts and a small number of nasty curare darts.
 %%%%
 Chaos Knight
 
@@ -36,6 +36,11 @@ god's constantly changing moods.
 Conjurer
 
 Conjurers confront problems with damaging spells.
+%%%%
+Delver
+
+Delvers start their quest five levels below the surface. A set of powerful magic
+items helps them survive the dangerous journey upward.
 %%%%
 Earth Elementalist
 
@@ -62,6 +67,11 @@ Gladiator
 Gladiators are ready for the arena with light armour, nets, and a weapon of
 their choice.
 %%%%
+Hedge Wizard
+
+Hedge Wizards learn many minor magics, letting them backstab or escape their
+bewildered foes.
+%%%%
 Hunter
 
 Hunters carry a ranged weapon of their choice, and are also equipped with light
@@ -82,11 +92,6 @@ Necromancer
 Necromancers are wizards specializing in the practice of death magic. They
 start out with the Pain spell.
 %%%%
-Skald
-
-Skalds are melee fighters who can boost themselves in battle with spells from
-the Charms school.
-%%%%
 Summoner
 
 Summoners are able to cast Summon Small Mammal from the start, and begin with
@@ -94,8 +99,7 @@ other Summonings spells in their library.
 %%%%
 Transmuter
 
-Transmuters learn spells to shift their form, as well as to turn sticks into
-snakes.
+Transmuters learn spells to shift their form.
 %%%%
 Venom Mage
 
@@ -110,9 +114,4 @@ Warper
 
 Warpers start with a weapon of their choice and a scroll of blinking. They
 begin with a number of Translocations spells in their library.
-%%%%
-Wizard
-
-Wizards start with the wide range of spells present in a book of Minor Magic in
-their spell library.
 %%%%

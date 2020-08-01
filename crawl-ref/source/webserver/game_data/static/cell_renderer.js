@@ -185,7 +185,7 @@ function ($, view_data, main, tileinfo_player, icons, dngn, enums,
             var is_in_water = in_water(cell);
 
             // draw clouds
-            if (cell.cloud.value && cell.cloud.value < dngn.FEAT_MAX)
+            if (cell.cloud.value)
             {
                 this.ctx.save();
                 // If there will be a front/back cloud pair, draw
@@ -320,8 +320,7 @@ function ($, view_data, main, tileinfo_player, icons, dngn, enums,
             this.draw_foreground(x, y, map_cell);
 
             // draw clouds over stuff
-            if (fg_idx && cell.cloud.value
-                && cell.cloud.value < dngn.FEAT_MAX)
+            if (fg_idx && cell.cloud.value)
             {
                 this.ctx.save();
                 try
@@ -346,6 +345,18 @@ function ($, view_data, main, tileinfo_player, icons, dngn, enums,
                 {
                     this.ctx.restore();
                 }
+            }
+
+            // Draw main-tile overlays (i.e. zaps), on top of clouds.
+            if (cell.ov)
+            {
+                $.each(cell.ov, function (i, overlay)
+                        {
+                            if (dngn.FEAT_MAX <= overlay && overlay < main.MAIN_MAX)
+                            {
+                                renderer.draw_main(overlay, x, y);
+                            }
+                        });
             }
 
             this.render_flash(x, y);
@@ -641,7 +652,9 @@ function ($, view_data, main, tileinfo_player, icons, dngn, enums,
                 {
                     $.each(cell.ov, function (i, overlay)
                            {
-                               if (overlay &&
+                               if (overlay > dngn.DNGN_MAX)
+                                   return;
+                               else if (overlay &&
                                    (bg_idx < dngn.DNGN_FIRST_TRANSPARENT ||
                                     overlay > dngn.FLOOR_MAX))
                                {
@@ -946,11 +959,6 @@ function ($, view_data, main, tileinfo_player, icons, dngn, enums,
             if (fg.INFESTED)
             {
                 this.draw_icon(icons.INFESTED, x, y, -status_shift, 0);
-                status_shift += 6;
-            }
-            if (fg.PINNED)
-            {
-                this.draw_icon(icons.PINNED, x, y, -status_shift, 0);
                 status_shift += 6;
             }
             if (fg.RECALL)

@@ -4,10 +4,14 @@
 
 struct screen_cell_t
 {
+    // Console output part.
+#ifndef USE_TILE_LOCAL
     char32_t glyph;
     unsigned short colour; // TODO: check if this is real colour (8 bit)
-    unsigned short flash_colour;
+#endif
+    // Tiles output part.
 #ifdef USE_TILE
+    unsigned short flash_colour;
     packed_cell tile;
 #endif
 };
@@ -55,8 +59,6 @@ public:
     coord_def msgsz;               // Size of the message pane.
     coord_def mlistp;              // Left-top pos of the monster list.
     coord_def mlistsz;             // Size of the monster list.
-
-    crawl_view_buffer vbuf;        // Buffer for drawing the main game map.
 
     coord_def vgrdc;               // What grid pos is at the centre of the view
                                    // usually you.pos().

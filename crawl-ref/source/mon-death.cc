@@ -14,11 +14,11 @@
 #include "art-enum.h"
 #include "attitude-change.h"
 #include "bloodspatter.h"
-#include "butcher.h"
 #include "cloud.h"
 #include "cluautil.h"
 #include "colour.h"
 #include "coordit.h"
+#include "corpse.h"
 #include "dactions.h"
 #include "database.h"
 #include "delay.h"
@@ -27,7 +27,6 @@
 #include "english.h"
 #include "env.h"
 #include "fineff.h"
-#include "food.h"
 #include "god-abil.h"
 #include "god-blessing.h"
 #include "god-companions.h"
@@ -54,11 +53,11 @@
 #include "mutation.h"
 #include "nearby-danger.h"
 #include "notes.h"
+#include "potion.h" // you_drinkless for pakellas compat
 #include "religion.h"
-#include "rot.h"
+#include "shout.h"
 #include "spl-damage.h"
 #include "spl-goditem.h"
-#include "spl-miscast.h"
 #include "spl-summoning.h"
 #include "sprint.h" // SPRINT_MULTIPLIER
 #include "state.h"
@@ -188,27 +187,16 @@ static bool _explode_corpse(item_def& corpse, const coord_def& where)
 
     const int max_chunks = max_corpse_chunks(corpse.mon_type);
     const int nchunks = stepdown_value(1 + random2(max_chunks), 4, 4, 12, 12);
-    if (corpse.base_type != OBJ_GOLD)
-        blood_spray(where, corpse.mon_type, nchunks * 3); // spray some blood
 
-    // Don't let the player evade food conducts by using OOD (!) or /disint
-    // Spray blood, but no chunks. (The mighty hand of your God squashes them
-    // in mid-flight...!)
-    if (is_forbidden_food(corpse))
-        return true;
-
-    // turn the corpse into chunks
     if (corpse.base_type != OBJ_GOLD)
     {
-        corpse.base_type = OBJ_FOOD;
-        corpse.sub_type  = FOOD_CHUNK;
-        if (is_bad_food(corpse))
-            corpse.flags |= ISFLAG_DROPPED;
+        blood_spray(where, corpse.mon_type, nchunks * 3); // spray some blood
+        return true;
     }
 
     const int total_gold = corpse.quantity;
 
-    // spray chunks everywhere!
+    // spray gold everywhere!
     for (int ntries = 0, chunks_made = 0;
          chunks_made < nchunks && ntries < 10000; ++ntries)
     {
@@ -216,7 +204,7 @@ static bool _explode_corpse(item_def& corpse, const coord_def& where)
         cp.x += random_range(-LOS_DEFAULT_RANGE, LOS_DEFAULT_RANGE);
         cp.y += random_range(-LOS_DEFAULT_RANGE, LOS_DEFAULT_RANGE);
 
-        dprf("Trying to scatter chunk to %d, %d...", cp.x, cp.y);
+        dprf("Trying to scatter gold to %d, %d...", cp.x, cp.y);
 
         if (!in_bounds(cp))
             continue;
@@ -524,7 +512,7 @@ static void _maybe_drop_monster_hide(const item_def &corpse, bool silent)
  *          corpse or if the 50% chance is rolled; it may be gold, if the player
  *          worships Gozag, or it may be the corpse.
  */
-item_def* place_monster_corpse(const monster& mons, bool silent, bool force)
+item_def* place_monster_corpse(const monster& mons, bool force)
 {
     if (mons.is_summoned()
         || mons.flags & (MF_BANISHED | MF_HARD_RESET)
@@ -598,9 +586,6 @@ item_def* place_monster_corpse(const monster& mons, bool silent, bool force)
 
     if (o == NON_ITEM)
         return nullptr;
-
-    if (you.see_cell(mons.pos()) && !silent && !goldify)
-        hints_dissection_reminder();
 
     return &mitm[o];
 }
@@ -983,13 +968,10 @@ int mummy_curse_power(monster_type type)
     switch (type)
     {
         case MONS_GUARDIAN_MUMMY:
-            return 3;
         case MONS_MUMMY_PRIEST:
-            return 8;
         case MONS_GREATER_MUMMY:
-            return 11;
         case MONS_KHUFU:
-            return 15;
+            return mons_class_hit_dice(type);
         default:
             return 0;
     }
@@ -1231,6 +1213,7 @@ static bool _explode_monster(monster* mons, killer_type killer,
     {
         saw = true;
         viewwindow();
+        update_screen();
         if (is_sanctuary(mons->pos()))
             mprf(MSGCH_GOD, "%s", sanct_msg);
         else if (type == MONS_BENNU)
@@ -1269,7 +1252,10 @@ static bool _explode_monster(monster* mons, killer_type killer,
     // Exploding kills the monster a bit earlier than normal.
     mons->hit_points = -16;
     if (saw)
+    {
         viewwindow();
+        update_screen();
+    }
 
     // FIXME: show_more == you.see_cell(mons->pos())
     if (type == MONS_LURKING_HORROR)
@@ -1508,8 +1494,8 @@ static bool _mons_reaped(actor &killer, monster& victim)
     }
 
     monster *zombie = 0;
-    if (animate_remains(victim.pos(), CORPSE_BODY, beh, hitting, &killer, "",
-                        GOD_NO_GOD, true, true, true, &zombie) <= 0)
+    if (animate_remains(victim.pos(), CORPSE_BODY, beh, 0, hitting, &killer, "",
+                        GOD_NO_GOD, true, true, false, &zombie) <= 0)
     {
         return false;
     }
@@ -1519,7 +1505,7 @@ static bool _mons_reaped(actor &killer, monster& victim)
     else if (you.can_see(*zombie))
         mprf("%s appears out of thin air!", zombie->name(DESC_THE).c_str());
 
-    player_angers_monster(zombie);
+    check_lovelessness(*zombie);
 
     return true;
 }
@@ -1564,7 +1550,8 @@ static void _fire_kill_conducts(monster &mons, killer_type killer,
 {
     const bool your_kill = killer == KILL_YOU ||
                            killer == KILL_YOU_CONF ||
-                           killer == KILL_YOU_MISSILE;
+                           killer == KILL_YOU_MISSILE ||
+                           killer_index == YOU_FAULTLESS;
     const bool pet_kill = _is_pet_kill(killer, killer_index);
 
     // Pretend the monster is already dead, so that make_god_gifts_disappear
@@ -1578,6 +1565,7 @@ static void _fire_kill_conducts(monster &mons, killer_type killer,
     // player gets credit for reflection kills, but not blame
     const bool blameworthy = god_hates_killing(you.religion, mons)
                              && killer_index != YOU_FAULTLESS;
+
     // if you can't get piety for it & your god won't give penance/-piety for
     // it, no one cares
     // XXX: this will break holy death curses if they're added back...
@@ -1729,7 +1717,7 @@ item_def* monster_die(monster& mons, killer_type killer,
 
         // revived by a lost soul?
         if (!spectralised && testbits(mons.flags, MF_SPECTRALISED))
-            return place_monster_corpse(mons, silent);
+            return place_monster_corpse(mons);
         return nullptr;
     }
 
@@ -2045,13 +2033,13 @@ item_def* monster_die(monster& mons, killer_type killer,
 
     // Adjust song of slaying bonus. Kills by relevant avatars are adjusted by
     // now to KILL_YOU and are counted.
-    if (you.duration[DUR_SONG_OF_SLAYING]
+    if (you.duration[DUR_WEREBLOOD]
         && killer == KILL_YOU
         && gives_player_xp)
     {
-        const int sos_bonus = you.props[SONG_OF_SLAYING_KEY].get_int();
-        if (sos_bonus <= 8) // cap at +9 slay
-            you.props[SONG_OF_SLAYING_KEY] = sos_bonus + 1;
+        const int wereblood_bonus = you.props[WEREBLOOD_KEY].get_int();
+        if (wereblood_bonus <= 8) // cap at +9 slay
+            you.props[WEREBLOOD_KEY] = wereblood_bonus + 1;
     }
 
     switch (killer)
@@ -2097,16 +2085,17 @@ item_def* monster_die(monster& mons, killer_type killer,
 
             _fire_kill_conducts(mons, killer, killer_index, gives_player_xp);
 
-            // Divine health and mana restoration doesn't happen when
+            // Divine and innate health and mana restoration doesn't happen when
             // killing born-friendly monsters.
             if (gives_player_xp
-                && (have_passive(passive_t::restore_hp)
-                    || have_passive(passive_t::mp_on_kill)
-                    || have_passive(passive_t::restore_hp_mp_vs_evil)
-                       && mons.evil())
                 && !mons_is_object(mons.type)
-                && !player_under_penance()
-                && (random2(you.piety) >= piety_breakpoint(0)
+                && (you.species == SP_GHOUL
+                    || (have_passive(passive_t::restore_hp)
+                        || have_passive(passive_t::mp_on_kill)
+                        || have_passive(passive_t::restore_hp_mp_vs_evil)
+                           && mons.evil())
+                       && !player_under_penance()
+                       && (random2(you.piety) >= piety_breakpoint(0))
 #if TAG_MAJOR_VERSION == 34
                     || you_worship(GOD_PAKELLAS)
 #endif
@@ -2119,6 +2108,12 @@ item_def* monster_die(monster& mons, killer_type killer,
                 {
                     hp_heal = mons.get_experience_level()
                         + random2(mons.get_experience_level());
+                }
+                if (you.species == SP_GHOUL
+                    && mons.holiness() & MH_NATURAL
+                    && coinflip())
+                {
+                    hp_heal += 1 + random2avg(1 + you.experience_level, 3);
                 }
                 if (have_passive(passive_t::restore_hp_mp_vs_evil))
                 {
@@ -2155,7 +2150,7 @@ item_def* monster_die(monster& mons, killer_type killer,
                 // perhaps this should go to its own function
                 if (mp_heal
                     && have_passive(passive_t::bottle_mp)
-                    && !you_foodless(false))
+                    && !you_drinkless(false))
                 {
                     simple_god_message(" collects the excess magic power.");
                     you.attribute[ATTR_PAKELLAS_EXTRA_MP] -= mp_heal;
@@ -2516,7 +2511,7 @@ item_def* monster_die(monster& mons, killer_type killer,
             daddy_corpse = mounted_kill(&mons, MONS_HORNET, killer, killer_index);
             mons.type = MONS_SPRIGGAN;
         }
-        corpse = place_monster_corpse(mons, silent);
+        corpse = place_monster_corpse(mons);
         if (!corpse)
             corpse = daddy_corpse;
     }
@@ -3002,37 +2997,36 @@ bool mons_is_mons_class(const monster* mons, monster_type type)
  **/
 void pikel_band_neutralise()
 {
-    int visible_slaves = 0;
+    int visible_minions = 0;
     for (monster_iterator mi; mi; ++mi)
     {
-        if (mi->type == MONS_SLAVE
+        if (mi->type == MONS_LEMURE
             && testbits(mi->flags, MF_BAND_MEMBER)
             && mi->props.exists("pikel_band")
-            && mi->mname != "freed slave"
             && mi->observable())
         {
-            visible_slaves++;
+            visible_minions++;
         }
     }
     string final_msg;
-    if (visible_slaves > 0)
+    if (visible_minions > 0)
     {
         if (you.get_mutation_level(MUT_NO_LOVE))
         {
-            const char *substr = visible_slaves > 1 ? "slaves" : "slave";
-            final_msg = make_stringf("Pikel's spell is broken, but the former "
+            const char *substr = visible_minions > 1 ? "minions" : "minion";
+            final_msg = make_stringf("Pikel's spell is broken, but his former "
                                      "%s can only feel hate for you!", substr);
         }
         else
         {
-            const char *substr = visible_slaves > 1
-                ? "slaves thank you for their"
-                : "slave thanks you for its";
-            final_msg = make_stringf("With Pikel's spell broken, the former %s "
+            const char *substr = visible_minions > 1
+                ? "minions thank you for their"
+                : "minion thanks you for its";
+            final_msg = make_stringf("With Pikel's spell broken, his former %s "
                                      "freedom.", substr);
         }
     }
-    delayed_action_fineff::schedule(DACT_PIKEL_SLAVES, final_msg);
+    delayed_action_fineff::schedule(DACT_PIKEL_MINIONS, final_msg);
 }
 
 /**

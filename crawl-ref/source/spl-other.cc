@@ -78,13 +78,6 @@ spret cast_death_channel(int pow, god_type god, bool fail)
     return spret::success;
 }
 
-spret cast_recall(bool fail)
-{
-    fail_check();
-    start_recall(recall_t::spell);
-    return spret::success;
-}
-
 void start_recall(recall_t type)
 {
     // Assemble the recall list.
@@ -112,7 +105,7 @@ void start_recall(recall_t type)
         rlist.push_back(m);
     }
 
-    if (type != recall_t::spell && branch_allows_followers(you.where_are_you))
+    if (branch_allows_followers(you.where_are_you))
         populate_offlevel_recall_list(rlist);
 
     if (!rlist.empty())
@@ -418,56 +411,58 @@ spret cast_passwall(const coord_def& c, int pow, bool fail)
     return spret::success;
 }
 
-static int _intoxicate_monsters(coord_def where, int pow)
+static int _intoxicate_monsters(coord_def where, int pow, bool tracer)
 {
     monster* mons = monster_at(where);
     if (mons == nullptr
         || mons_intel(*mons) < I_HUMAN
         || !(mons->holiness() & MH_NATURAL)
         || mons->check_clarity()
-        || monster_resists_this_poison(*mons))
+        || mons->res_poison() >= 3)
     {
         return 0;
     }
 
-    if (x_chance_in_y(40 + pow/3, 100))
+    if (tracer && !you.can_see(*mons))
+        return 0;
+
+    if (!tracer && monster_resists_this_poison(*mons))
+        return 0;
+
+    if (!tracer && x_chance_in_y(40 + pow/3, 100))
     {
         mons->add_ench(mon_enchant(ENCH_CONFUSION, 0, &you));
         simple_monster_message(*mons, " looks rather confused.");
         return 1;
     }
-    return 0;
+    // Just count affectable monsters for the tracer
+    return tracer ? 1 : 0;
 }
 
-spret cast_intoxicate(int pow, bool fail)
+spret cast_intoxicate(int pow, bool fail, bool tracer)
 {
-    fail_check();
-    mpr("You attempt to intoxicate your foes!");
-    int count = apply_area_visible([pow] (coord_def where) {
-        return _intoxicate_monsters(where, pow);
-    }, you.pos());
-    if (count > 0)
+    if (tracer)
     {
-        if (x_chance_in_y(60 - pow/3, 100))
-        {
-            mprf(MSGCH_WARN, "The world spins around you!");
-            you.increase_duration(DUR_VERTIGO, 4 + random2(20 + (100 - pow) / 10));
-            you.redraw_evasion = true;
-        }
+        const int work = apply_area_visible([] (coord_def where) {
+            return _intoxicate_monsters(where, 0, true);
+        }, you.pos());
+
+        return work > 0 ? spret::success : spret::abort;
     }
 
-    return spret::success;
-}
-
-spret cast_darkness(int pow, bool fail)
-{
     fail_check();
-    if (you.duration[DUR_DARKNESS])
-        mprf(MSGCH_DURATION, "It gets a bit darker.");
-    else
-        mprf(MSGCH_DURATION, "It gets dark.");
-    you.increase_duration(DUR_DARKNESS, 15 + random2(1 + pow/3), 100);
-    update_vision_range();
+    mpr("You attempt to intoxicate your foes!");
+
+    const int count = apply_area_visible([pow] (coord_def where) {
+        return _intoxicate_monsters(where, pow, false);
+    }, you.pos());
+
+    if (count > 0)
+    {
+        mprf(MSGCH_WARN, "The world spins around you!");
+        you.increase_duration(DUR_VERTIGO, 4 + count + random2(count + 1));
+        you.redraw_evasion = true;
+    }
 
     return spret::success;
 }

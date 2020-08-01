@@ -34,9 +34,7 @@
 #include "spl-util.h"
 #include "state.h"
 #include "stringutil.h"
-#ifdef USE_TILE
- #include "tilepick.h"
-#endif
+#include "tilepick.h"
 #include "transform.h"
 #include "unicode.h"
 
@@ -97,7 +95,6 @@ static const map<wand_type, spell_type> _wand_spells =
     { WAND_ACID, SPELL_CORROSIVE_BOLT },
     { WAND_DISINTEGRATION, SPELL_DISINTEGRATE },
     { WAND_CLOUDS, SPELL_CLOUD_CONE },
-    { WAND_SCATTERSHOT, SPELL_SCATTERSHOT },
     { WAND_RANDOM_EFFECTS, SPELL_RANDOM_EFFECTS },
 };
 
@@ -111,6 +108,14 @@ spell_type spell_in_wand(wand_type wand)
         return *spl;
 
     die("Unknown wand: %d", wand);
+}
+
+bool is_wand_spell(spell_type spell)
+{
+    for (auto p : _wand_spells)
+        if (spell == p.second)
+            return true;
+    return false;
 }
 
 vector<spell_type> spells_in_book(const item_def &book)
@@ -170,7 +175,6 @@ int book_rarity(book_type which_book)
         return 4;
 
     case BOOK_YOUNG_POISONERS:
-    case BOOK_BATTLE:
     case BOOK_DEBILITATION:
         return 5;
 
@@ -178,12 +182,11 @@ int book_rarity(book_type which_book)
     case BOOK_POWER:
         return 6;
 
-    case BOOK_ENCHANTMENTS:
+    case BOOK_HEXES:
     case BOOK_PARTY_TRICKS:
         return 7;
 
     case BOOK_TRANSFIGURATIONS:
-    case BOOK_BEASTS:
         return 8;
 
     case BOOK_FIRE:
@@ -288,13 +291,37 @@ void init_spell_rarities()
     }
 }
 
-bool is_player_spell(spell_type which_spell)
+bool is_player_book_spell(spell_type which_spell)
 {
     for (int i = 0; i < NUM_FIXED_BOOKS; ++i)
         for (spell_type spell : spellbook_template(static_cast<book_type>(i)))
             if (spell == which_spell)
                 return true;
     return false;
+}
+
+// Needs to be castable by the player somehow, but via idiosyncratic means.
+// Religion reusing a spell enum, or something weirder like sonic wave.
+// A spell doesn't need to be here if it just the beam type that is used.
+static unordered_set<int> _player_nonbook_spells =
+{
+    // items
+    SPELL_THUNDERBOLT,
+    SPELL_PHANTOM_MIRROR, // this isn't cast directly, but the player code at
+                          // least uses the enum value
+    SPELL_SONIC_WAVE,
+    // religion
+    SPELL_SMITING,
+    // Ds powers
+    SPELL_HURL_DAMNATION,
+};
+
+bool is_player_spell(spell_type which_spell)
+{
+    return !spell_removed(which_spell)
+        && (is_player_book_spell(which_spell)
+            || is_wand_spell(which_spell)
+            || _player_nonbook_spells.count(which_spell) > 0);
 }
 
 int spell_rarity(spell_type which_spell)
@@ -305,11 +332,6 @@ int spell_rarity(spell_type which_spell)
         return -1;
 
     return rarity;
-}
-
-void read_book(item_def &book)
-{
-    describe_item(book);
 }
 
 /**
@@ -345,7 +367,7 @@ bool player_can_memorise(const item_def &book)
 }
 
 /**
- * Populate the given list with all spells the player can currently memorize,
+ * Populate the given list with all spells the player can currently memorise,
  * from library or Vehumet. Does not filter by currently known spells, spell
  * levels, etc.
  *
@@ -471,6 +493,34 @@ static spell_list _get_spell_list(bool just_check = false,
     if (!just_check && *unavail_reason)
         mprf(MSGCH_PROMPT, "%s", unavail_reason);
     return mem_spells;
+}
+
+bool library_add_spells(vector<spell_type> spells)
+{
+    vector<spell_type> new_spells;
+    for (spell_type st : spells)
+    {
+        if (!you.spell_library[st])
+        {
+            you.spell_library.set(st, true);
+            bool memorise = you_can_memorise(st);
+            if (memorise)
+                new_spells.push_back(st);
+            if (!memorise || Options.auto_hide_spells)
+                you.hidden_spells.set(st, true);
+        }
+    }
+    if (!new_spells.empty())
+    {
+        vector<string> spellnames(new_spells.size());
+        transform(new_spells.begin(), new_spells.end(), spellnames.begin(), spell_title);
+        mprf("You add the spell%s %s to your library.",
+             spellnames.size() > 1 ? "s" : "",
+             comma_separated_line(spellnames.begin(),
+                                  spellnames.end()).c_str());
+        return true;
+    }
+    return false;
 }
 
 bool has_spells_to_memorise(bool silent)
@@ -758,9 +808,7 @@ private:
             ++hotkey;
 
             me->colour = colour;
-#ifdef USE_TILE
-            me->add_tile(tile_def(tileidx_spell(spell.spell), TEX_GUI));
-#endif
+            me->add_tile(tile_def(tileidx_spell(spell.spell)));
 
             me->data = &(spell.spell);
             add_entry(me);
@@ -838,7 +886,10 @@ static spell_type _choose_mem_spell(spell_list &spells)
 
     const vector<MenuEntry*> sel = spell_menu.show();
     if (!crawl_state.doing_prev_cmd_again)
+    {
         redraw_screen();
+        update_screen();
+    }
     if (sel.empty())
         return SPELL_NO_SPELL;
     const spell_type spell = *static_cast<spell_type*>(sel[0]->data);
@@ -979,13 +1030,6 @@ bool learn_spell(spell_type specspell, bool wizard)
 
     if (!wizard)
     {
-        if (specspell == SPELL_OZOCUBUS_ARMOUR
-            && !player_effectively_in_light_armour())
-        {
-            mprf(MSGCH_WARN,
-                 "Your armour is too heavy for you to cast this spell!");
-        }
-
         const int severity = fail_severity(specspell);
 
         if (raw_spell_fail(specspell) >= 100 && !vehumet_is_offering(specspell))
@@ -1053,7 +1097,10 @@ spret divine_exegesis(bool fail)
 
     const vector<MenuEntry*> sel = spell_menu.show();
     if (!crawl_state.doing_prev_cmd_again)
+    {
         redraw_screen();
+        update_screen();
+    }
 
     if (sel.empty())
         return spret::abort;

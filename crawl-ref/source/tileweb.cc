@@ -6,11 +6,14 @@
 
 #include <cerrno>
 #include <cstdarg>
+
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/un.h>
+#if defined(UNIX) || defined(TARGET_COMPILER_MINGW)
 #include <unistd.h>
+#endif
 
 #include "artefact.h"
 #include "branch.h"
@@ -42,11 +45,11 @@
 #include "throw.h"
 #include "tile-flags.h"
 #include "tile-player-flag-cut.h"
-#include "tiledef-dngn.h"
-#include "tiledef-gui.h"
-#include "tiledef-icons.h"
-#include "tiledef-main.h"
-#include "tiledef-player.h"
+#include "rltiles/tiledef-dngn.h"
+#include "rltiles/tiledef-gui.h"
+#include "rltiles/tiledef-icons.h"
+#include "rltiles/tiledef-main.h"
+#include "rltiles/tiledef-player.h"
 #include "tilepick.h"
 #include "tilepick-p.h"
 #include "tileview.h"
@@ -408,6 +411,19 @@ wint_t TilesFramework::_handle_control_message(sockaddr_un addr, string data)
 
         if (Options.note_chat_messages)
             take_note(Note(NOTE_MESSAGE, MSGCH_PLAIN, 0, content->string_));
+    }
+    else if (msgtype == "server_announcement")
+    {
+        JsonWrapper content = json_find_member(obj.node, "content");
+        content.check(JSON_STRING);
+        string m = "<red>Serverwide announcement:</red> ";
+        m += content->string_;
+
+        mprf(MSGCH_DGL_MESSAGE, "%s", m.c_str());
+        // The following two lines are a magic incantation to get this mprf
+        // to actually render without waiting on player inout
+        flush_prev_message();
+        c = CK_REDRAW;
     }
     else if (msgtype == "click_travel" &&
              mouse_control::current_mode() == MOUSE_MODE_COMMAND)
@@ -868,6 +884,7 @@ static bool _update_statuses(player_info& c)
 
 player_info::player_info()
 {
+    _state_ever_synced = false;
     for (auto &eq : equip)
         eq = -1;
     position = coord_def(-1, -1);
@@ -884,6 +901,16 @@ player_info::player_info()
 void TilesFramework::_send_player(bool force_full)
 {
     player_info& c = m_current_player_info;
+    if (!c._state_ever_synced)
+    {
+        // force the initial sync to be full: otherwise the _update_blah
+        // functions will incorrectly detect initial values to be ones that
+        // have previously been sent to the client, when they will not have
+        // been. (This is made ever worse by the fact that player_info does
+        // not initialize most of its values...)
+        c._state_ever_synced = true;
+        force_full = true;
+    }
 
     json_open_object();
     json_write_string("msg", "player");
@@ -1328,7 +1355,7 @@ void TilesFramework::_send_cell(const coord_def &gc,
 
             json_write_name("fg");
             write_tileidx(next_pc.fg);
-            if (fg_idx && fg_idx <= TILE_MAIN_MAX)
+            if (get_tile_texture(fg_idx) == TEX_DEFAULT)
                 json_write_int("base", (int) tileidx_known_base_item(fg_idx));
         }
 
@@ -1458,7 +1485,7 @@ void TilesFramework::_send_cell(const coord_def &gc,
                     json_write_null("mcache");
             }
         }
-        else if (fg_idx >= TILE_MAIN_MAX)
+        else if (get_tile_texture(fg_idx) == TEX_PLAYER)
         {
             if (fg_changed)
             {
@@ -1600,7 +1627,6 @@ void TilesFramework::_send_map(bool force_full)
                 screen_cell_t *cell = &m_next_view(gc);
 
                 draw_cell(cell, gc, false, m_current_flash_colour);
-                cell->tile.flv = env.tile_flv(gc);
                 pack_cell_overlays(gc, m_next_view);
             }
 
@@ -1775,7 +1801,6 @@ void TilesFramework::load_dungeon(const crawl_view_buffer &vbuf,
             screen_cell_t *cell = &m_next_view(grid);
 
             *cell = ((const screen_cell_t *) vbuf)[x + vbuf.size().x * y];
-            cell->tile.flv = env.tile_flv(grid);
             pack_cell_overlays(grid, m_next_view);
 
             mark_clean(grid); // Remove redraw flag
@@ -1796,6 +1821,7 @@ void TilesFramework::load_dungeon(const coord_def &cen)
 
     crawl_view.calc_vlos();
     viewwindow(false, true);
+    update_screen();
     place_cursor(CURSOR_MAP, cen);
 }
 
@@ -2040,25 +2066,6 @@ const coord_def &TilesFramework::get_cursor() const
     return m_cursor[CURSOR_MOUSE];
 }
 
-void TilesFramework::add_overlay(const coord_def &gc, tileidx_t idx)
-{
-    if (idx >= TILE_MAIN_MAX)
-        return;
-
-    m_has_overlays = true;
-
-    send_message("{\"msg\":\"overlay\",\"idx\":%u,\"x\":%d,\"y\":%d}",
-                 (unsigned int) idx, gc.x - m_origin.x, gc.y - m_origin.y);
-}
-
-void TilesFramework::clear_overlays()
-{
-    if (m_has_overlays)
-        send_message("{\"msg\":\"clear_overlays\"}");
-
-    m_has_overlays = false;
-}
-
 void TilesFramework::set_need_redraw(unsigned int min_tick_delay)
 {
     unsigned int ticks = (get_milliseconds() - m_last_tick_redraw);
@@ -2159,8 +2166,6 @@ bool TilesFramework::cell_needs_redraw(const coord_def& gc)
 
 void TilesFramework::write_message_escaped(const string& s)
 {
-    m_msg_buf.reserve(m_msg_buf.size() + s.size());
-
     for (unsigned char c : s)
     {
         if (c == '"')
@@ -2174,7 +2179,7 @@ void TilesFramework::write_message_escaped(const string& s)
             m_msg_buf.append(buf);
         }
         else
-            m_msg_buf.append(1, c);
+            m_msg_buf.push_back(c);
     }
 }
 

@@ -52,6 +52,9 @@ void describe_feature_type(dungeon_feature_type feat);
 string get_cloud_desc(cloud_type cloud, bool include_title = true);
 void get_feature_desc(const coord_def &gc, describe_info &inf, bool include_extra = true);
 
+command_type describe_item_popup(const item_def &item,
+                                 function<void (string&)> fixup_desc = nullptr,
+                                 bool do_actions = false);
 bool describe_item(item_def &item, function<void (string&)> fixup_desc = nullptr);
 void get_item_desc(const item_def &item, describe_info &inf);
 void inscribe_item(item_def &item);
@@ -102,3 +105,6 @@ int str_to_trap(const string &s);
 int count_desc_lines(const string& _desc, const int width);
 
 string extra_cloud_info(cloud_type cloud_type);
+
+/* Public for testing purposes only: do not use elsewhere. */
+string _monster_habitat_description(const monster_info& mi);

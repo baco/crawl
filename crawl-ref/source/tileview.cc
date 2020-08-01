@@ -15,6 +15,7 @@
 #include "fprop.h"
 #include "items.h"
 #include "kills.h"
+#include "level-state-type.h"
 #include "mon-util.h"
 #include "options.h"
 #include "pcg.h"
@@ -22,8 +23,8 @@
 #include "state.h"
 #include "terrain.h"
 #include "tile-flags.h"
-#include "tiledef-dngn.h"
-#include "tiledef-player.h"
+#include "rltiles/tiledef-dngn.h"
+#include "rltiles/tiledef-player.h"
 #include "tilemcache.h"
 #include "tilepick.h"
 #include "tiles-build-specific.h"
@@ -834,6 +835,27 @@ void tile_floor_halo(dungeon_feature_type target, tileidx_t tile)
 }
 
 #ifdef USE_TILE
+
+void tile_draw_map_cells()
+{
+    if (crawl_state.game_is_arena())
+        for (rectangle_iterator ri(crawl_view.vgrdc, LOS_MAX_RANGE); ri; ++ri)
+        {
+            tile_draw_map_cell(*ri, true);
+#ifdef USE_TILE_WEB
+            tiles.mark_for_redraw(*ri);
+#endif
+        }
+    else
+        for (radius_iterator ri(you.pos(), LOS_NONE); ri; ++ri)
+        {
+            tile_draw_map_cell(*ri, true);
+#ifdef USE_TILE_WEB
+            tiles.mark_for_redraw(*ri);
+#endif
+        }
+}
+
 static tileidx_t _get_floor_bg(const coord_def& gc)
 {
     tileidx_t bg = TILE_DNGN_UNSEEN | tileidx_unseen_flag(gc);
@@ -1048,49 +1070,6 @@ static void _tile_place_cloud(const coord_def &gc, const cloud_info &cl)
         env.tile_bk_cloud(gc) = tileidx_cloud(cl);
 }
 
-unsigned int num_tile_rays = 0;
-struct tile_ray
-{
-    coord_def ep;
-    aff_type in_range;
-};
-// Allow the rays to fill the whole visible area if necessary. The size is
-// about 4/pi times larger than it needs to be, but this way supports squarelos
-// as well.
-FixedVector<tile_ray, ENV_SHOW_DIAMETER * ENV_SHOW_DIAMETER> tile_ray_vec;
-
-void tile_place_ray(const coord_def &gc, aff_type in_range)
-{
-    // Record rays for later. The curses version just applies
-    // rays directly to the screen. The tiles version doesn't have
-    // (nor want) such direct access. So, it batches up all of the
-    // rays and applies them in viewwindow(...).
-    ASSERT(num_tile_rays < tile_ray_vec.size() - 1);
-    tile_ray_vec[num_tile_rays].in_range = in_range;
-    tile_ray_vec[num_tile_rays++].ep = grid2show(gc);
-}
-
-void tile_draw_rays(bool reset_count)
-{
-    tileidx_t flag = 0;
-
-    for (unsigned int i = 0; i < num_tile_rays; i++)
-    {
-        if (tile_ray_vec[i].in_range < AFF_YES)
-            flag = TILE_FLAG_RAY_OOR;
-        else if (tile_ray_vec[i].in_range == AFF_YES)
-            flag = TILE_FLAG_RAY;
-        else if (tile_ray_vec[i].in_range == AFF_LANDING)
-            flag = TILE_FLAG_LANDING;
-        else if (tile_ray_vec[i].in_range == AFF_MULTIPLE)
-            flag = TILE_FLAG_RAY_MULTI;
-        env.tile_bg(tile_ray_vec[i].ep) |= flag;
-    }
-
-    if (reset_count)
-        num_tile_rays = 0;
-}
-
 void tile_draw_map_cell(const coord_def& gc, bool foreground_only)
 {
     if (!foreground_only)
@@ -1261,6 +1240,7 @@ static int _get_door_offset(tileidx_t base_tile, bool opened, bool runed,
 void apply_variations(const tile_flavour &flv, tileidx_t *bg,
                       const coord_def &gc)
 {
+    // TODO: there's an awful lot of hardcoding going on here...
     tileidx_t orig = (*bg) & TILE_FLAG_MASK;
     tileidx_t flag = (*bg) & (~TILE_FLAG_MASK);
 
@@ -1346,8 +1326,11 @@ void apply_variations(const tile_flavour &flv, tileidx_t *bg,
     else if (orig == TILE_DNGN_STONE_WALL
              || orig == TILE_DNGN_CRYSTAL_WALL
              || orig == TILE_WALL_PERMAROCK
-             || orig == TILE_WALL_PERMAROCK_CLEAR)
+             || orig == TILE_WALL_PERMAROCK_CLEAR
+             || orig == TILE_DNGN_METAL_WALL
+             || orig == TILE_DNGN_TREE)
     {
+        // TODO: recoloring vaults stone walls from corruption?
         *bg = pick_dngn_tile(tile_dngn_coloured(orig, env.grid_colours(gc)),
                              flv.special);
     }
@@ -1424,9 +1407,6 @@ void tile_apply_properties(const coord_def &gc, packed_cell &cell)
     else
         cell.halo = HALO_NONE;
 
-    if (mc.monsterinfo() && mc.monsterinfo()->is(MB_HIGHLIGHTED_SUMMONER))
-        cell.is_highlighted_summoner = true;
-
     if (mc.flags & MAP_LIQUEFIED)
         cell.is_liquefied = true;
     else if (print_blood && (_suppress_blood(mc)
@@ -1493,5 +1473,27 @@ void tile_apply_properties(const coord_def &gc, packed_cell &cell)
     }
 
     cell.flv = env.tile_flv(gc);
+
+    if (env.level_state & LSTATE_SLIMY_WALL)
+    {
+        for (adjacent_iterator ai(gc); ai; ++ai)
+            if (env.map_knowledge(*ai).feat() == DNGN_SLIMY_WALL)
+            {
+                cell.flv.floor = TILE_FLOOR_SLIME_ACIDIC;
+                break;
+            }
+    }
+    else if (env.level_state & LSTATE_ICY_WALL)
+    {
+        for (adjacent_iterator ai(gc); ai; ++ai)
+        {
+            if (feat_is_wall(env.map_knowledge(*ai).feat())
+                && env.map_knowledge(*ai).flags & MAP_ICY)
+            {
+                cell.flv.floor = TILE_FLOOR_ICY;
+                break;
+            }
+        }
+    }
 }
 #endif

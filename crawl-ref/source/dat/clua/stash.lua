@@ -10,7 +10,7 @@
 -- {ego} for identified branded items.
 -- { <skill> } - the relevant weapon skill for weapons.
 -- { <num>-handed } - the handedness of the weapon for weapons.
--- { <class> } - item class: gold, weapon, missile, wand, carrion, food,
+-- { <class> } - item class: gold, weapon, missile, wand, carrion,
 --               scroll, jewellery, potion, book, magical staff, orb, misc,
 --               <armourtype> armour
 -- { <ego> } - short item ego description: rC+, rPois, SInv, freeze etc.
@@ -121,10 +121,6 @@ function ch_stash_search_annotate_item(it)
     if props[t] then
       annot = annot .. "{" .. props[t] .. "} "
     end
-  end
-
-  if it.class(true) == "potion" and it.is_preferred_food then
-    annot = annot .. "{food} "
   end
 
   if it.class(true) == "armour" then

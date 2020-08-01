@@ -131,14 +131,14 @@ static void _dump_player(FILE *file)
         && !in_bounds(you.pos()) && you.hp > 0 && you.hp_max > 0
         && you.strength() > 0 && you.intel() > 0 && you.dex() > 0)
     {
-        // Arena mode can change behavior of the rest of the code and/or lead
+        // Arena mode can change behaviour of the rest of the code and/or lead
         // to asserts.
         crawl_state.type            = GAME_TYPE_NORMAL;
         crawl_state.arena_suspended = false;
         return;
     }
 
-    // Arena mode can change behavior of the rest of the code and/or lead
+    // Arena mode can change behaviour of the rest of the code and/or lead
     // to asserts.
     crawl_state.arena_suspended = false;
 
@@ -187,7 +187,7 @@ static void _dump_player(FILE *file)
     {
         fprintf(file, "Delayed (%u):\n",
                 (unsigned int)you.delay_queue.size());
-        for (const auto delay : you.delay_queue)
+        for (const auto &delay : you.delay_queue)
         {
             fprintf(file, "    type:     %s", delay->name());
             fprintf(file, "\n");

@@ -36,19 +36,17 @@ static const vector<spell_type> spellbook_templates[] =
 },
 
 {   // Book of Summonings
-    SPELL_RECALL,
-    SPELL_AURA_OF_ABJURATION,
     SPELL_SUMMON_DEMON,
     SPELL_SUMMON_FOREST,
     SPELL_SUMMON_MANA_VIPER,
     SPELL_SHADOW_CREATURES,
+    SPELL_SUMMON_HYDRA,
 },
 
 {   // Book of Fire
     SPELL_IGNITE_POISON,
     SPELL_FIREBALL,
     SPELL_STARBURST,
-    SPELL_RING_OF_FLAMES,
     SPELL_IGNITION,
 },
 
@@ -62,18 +60,16 @@ static const vector<spell_type> spellbook_templates[] =
 
 {   // Book of Spatial Translocations
     SPELL_BLINK,
-    SPELL_SHROUD_OF_GOLUBRIA,
     SPELL_BECKONING,
     SPELL_GRAVITAS,
     SPELL_TELEPORT_OTHER,
     SPELL_GOLUBRIAS_PASSAGE,
 },
 
-{   // Book of Enchantments
+{   // Book of Hexes
     SPELL_CAUSE_FEAR,
     SPELL_VIOLENT_UNRAVELLING,
     SPELL_SILENCE,
-    SPELL_DEFLECT_MISSILES,
     SPELL_DISCORD,
 },
 
@@ -111,7 +107,7 @@ static const vector<spell_type> spellbook_templates[] =
 
 {   // Book of Changes
     SPELL_BEASTLY_APPENDAGE,
-    SPELL_STICKS_TO_SNAKES,
+    SPELL_WEREBLOOD,
     SPELL_SPIDER_FORM,
     SPELL_ICE_FORM,
     SPELL_BLADE_HANDS,
@@ -133,21 +129,11 @@ static const vector<spell_type> spellbook_templates[] =
     SPELL_SUMMON_HYDRA,
 },
 
-#if TAG_MAJOR_VERSION > 34
-{   // Book of Battle
-    SPELL_INFUSION,
-    SPELL_SHROUD_OF_GOLUBRIA,
-    SPELL_SONG_OF_SLAYING,
-    SPELL_OZOCUBUS_ARMOUR,
-    SPELL_SPECTRAL_WEAPON,
-},
-#endif
 {   // Book of Clouds
     SPELL_POISONOUS_VAPOURS,
     SPELL_MEPHITIC_CLOUD,
     SPELL_CONJURE_FLAME,
     SPELL_FREEZING_CLOUD,
-    SPELL_RING_OF_FLAMES,
 },
 
 {   // Book of Necromancy
@@ -186,7 +172,6 @@ static const vector<spell_type> spellbook_templates[] =
 {   // Book of the Sky
     SPELL_SUMMON_LIGHTNING_SPIRE,
     SPELL_SILENCE,
-    SPELL_DEFLECT_MISSILES,
     SPELL_CONJURE_BALL_LIGHTNING,
     SPELL_TORNADO,
 },
@@ -208,7 +193,6 @@ static const vector<spell_type> spellbook_templates[] =
 #endif
 
 {   // Book of Unlife
-    SPELL_RECALL,
     SPELL_ANIMATE_DEAD,
     SPELL_BORGNJORS_VILE_CLUTCH,
     SPELL_DEATH_CHANNEL,
@@ -221,11 +205,8 @@ static const vector<spell_type> spellbook_templates[] =
 },
 
 {   // Book of Battle
-    SPELL_INFUSION,
-    SPELL_SHROUD_OF_GOLUBRIA,
-    SPELL_SONG_OF_SLAYING,
+    SPELL_WEREBLOOD,
     SPELL_OZOCUBUS_ARMOUR,
-    SPELL_SPECTRAL_WEAPON,
 },
 #endif
 
@@ -269,7 +250,6 @@ static const vector<spell_type> spellbook_templates[] =
 },
 
 {   // Book of Party Tricks
-    SPELL_SUMMON_BUTTERFLIES,
     SPELL_APPORTATION,
     SPELL_BECKONING,
     SPELL_TUKIMAS_DANCE,
@@ -307,7 +287,6 @@ static const vector<spell_type> spellbook_templates[] =
     SPELL_PASSWALL,
     SPELL_GOLUBRIAS_PASSAGE,
     SPELL_LRD,
-    SPELL_DARKNESS,
     SPELL_INVISIBILITY,
 },
 
@@ -315,7 +294,6 @@ static const vector<spell_type> spellbook_templates[] =
     SPELL_HIBERNATION,
     SPELL_BORGNJORS_VILE_CLUTCH,
     SPELL_SILENCE,
-    SPELL_DARKNESS,
     SPELL_SHADOW_CREATURES,
 },
 
@@ -328,18 +306,19 @@ static const vector<spell_type> spellbook_templates[] =
     SPELL_NOXIOUS_BOG,
 },
 
+#if TAG_MAJOR_VERSION == 34
 {   // Book of Beasts
-    SPELL_SUMMON_BUTTERFLIES,
     SPELL_CALL_CANINE_FAMILIAR,
     SPELL_SUMMON_ICE_BEAST,
     SPELL_SUMMON_MANA_VIPER,
     SPELL_SUMMON_HYDRA,
 },
+#endif
 
 {   // Book of Annihilations
     SPELL_CHAIN_LIGHTNING,
     SPELL_LEHUDIBS_CRYSTAL_SPEAR,
-    SPELL_GLACIATE,
+    SPELL_ABSOLUTE_ZERO,
     SPELL_FIRE_STORM,
 },
 

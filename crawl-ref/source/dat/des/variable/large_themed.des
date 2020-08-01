@@ -13,7 +13,7 @@
 function grandhive_vaults(e, hivewallglyph)
     e.tags('uniq_greathive no_monster_gen no_item_gen')
     e.kmons('P = plant')
-    e.item('ration / nothing')
+    e.item('potion of ambrosia / nothing')
     e.kitem('% = % no_pickup')
     e.kitem('* = * no_pickup')
     e.kfeat(hivewallglyph .. ' = x')
@@ -26,7 +26,7 @@ function grandhive_vaults(e, hivewallglyph)
         e.kmons('0 = yak / hippogriff / wolf w:8 / \
                      water moccasin w:8 / wyvern w:8 / basilisk w:8 / \
                      crocodile / river rat w:2 / steam dragon w:2')
-        e.kmons('9 = elephant / spiny frog / rime drake / \
+        e.kmons('9 = elephant / cane toad / rime drake / \
                      blink frog w:8 / manticore w:4 / hell rat w:4')
         e.kmons('8 = death yak w:14 / hydra / komodo dragon / \
                      black mamba / lindwurm w:8 / torpor snail w:4 / \
@@ -137,8 +137,7 @@ ORIENT: northwest
 WEIGHT: 5
 TAGS:   uniq_black_bear_nest
 DEPTH:  D:4-8
-NSUBST: ' = 1:1 / 1:R / *:.
-KITEM:  R = ration
+NSUBST: ' = 1:1 / *:.
 MONS:   patrolling black bear
 MAP
 xxxxxxxxxxxxxxx
@@ -155,8 +154,7 @@ ORIENT: southeast
 WEIGHT: 5
 TAGS:   uniq_black_bear_nest
 DEPTH:  D:4-8
-NSUBST: ' = 1:1 / 1:R / *:.
-KITEM:  R = ration
+NSUBST: ' = 1:1 / *:.
 MONS:   patrolling black bear
 MAP
 xxxxxxxx@xx
@@ -751,8 +749,8 @@ ORIENT: west
 DEPTH:  Depths, !Depths:$
 MONS:   crystal guardian, orange crystal statue
 ITEM:   any magical staff / any book / any jewellery w:15 / any scroll w:20 / \
-        potion of magic / potion of brilliance / fan of gales w:1 / \
-        lamp of fire w:1 / phial of floods w:1 / tremorstone w:5 / gold w:30
+        potion of magic / potion of brilliance / phial of floods w:3 / \
+        tin of tremorstones w:5 / gold w:30
 KFEAT:  _ = altar_sif_muna
 MAP
             bbbbb
@@ -956,7 +954,7 @@ SUBST:  d = def
 NSUBST: D = 6 / *=33., 4 = 1 / 6=4 / 6=5 / 6=45.. / . , 7 = 7 / 75
 MARKER: n = lua:portal_desc {prison="wall"}
 KFEAT:  g = runed_door
-KFEAT:  ^ = known teleport trap
+KFEAT:  ^ = teleport trap
 FTILE:  nc-457 = FLOOR_PEBBLE_DARKGRAY
 FTILE:  .@+g^d|*$236 = FLOOR_HALL
 TILE:   c = DNGN_STONE_WALL_DARKGRAY
@@ -2143,7 +2141,7 @@ KMONS:   9 = glowing shapeshifter / spriggan defender / deep elf annihilator
 KMONS:   8 = bone dragon / reaper / doom hound
 KMONS:   _ = tzitzimitl
 ITEM:    robe_of_night, ring_of_shadows
-ITEM:    cloak_of_the_thief, boots_of_the_assassin
+ITEM:    cloak_of_the_thief, hood_of_the_assassin
 ITEM:    shadow dragon scales randart, ring of stealth randart
 ITEM:    phantom mirror, potion of invisibility ident:type q:2
 KFEAT:   F = floor

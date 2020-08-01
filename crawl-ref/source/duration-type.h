@@ -21,9 +21,9 @@ enum duration_type
 #endif
     DUR_CORONA,
     DUR_DEATHS_DOOR,
-    DUR_FIRE_SHIELD,
 
 #if TAG_MAJOR_VERSION == 34
+    DUR_FIRE_SHIELD,
     DUR_BUILDING_RAGE,
 #endif
     DUR_EXHAUSTED,              // fatigue counter for berserk
@@ -64,9 +64,7 @@ enum duration_type
 #if TAG_MAJOR_VERSION == 34
     DUR_CONDENSATION_SHIELD,
     DUR_MAGIC_ARMOUR,
-#endif
     DUR_GOURMAND,
-#if TAG_MAJOR_VERSION == 34
     DUR_BARGAIN,
     DUR_INSULATION,
 #endif
@@ -103,9 +101,13 @@ enum duration_type
     DUR_FINESSE,
     DUR_LIFESAVING,
     DUR_PARALYSIS_IMMUNITY,
+#if TAG_MAJOR_VERSION == 34
     DUR_DARKNESS,
+#endif
     DUR_PETRIFYING,
+#if TAG_MAJOR_VERSION == 34
     DUR_SHROUD_OF_GOLUBRIA,
+#endif
     DUR_TORNADO_COOLDOWN,
 #if TAG_MAJOR_VERSION == 34
     DUR_NAUSEA,
@@ -134,9 +136,9 @@ enum duration_type
 #if TAG_MAJOR_VERSION == 34
     DUR_ANTIMAGIC,
     DUR_SPIRIT_HOWL,
-#endif
     DUR_INFUSION,
-    DUR_SONG_OF_SLAYING,
+#endif
+    DUR_WEREBLOOD,
 #if TAG_MAJOR_VERSION == 34
     DUR_SONG_OF_SHIELDING,
 #endif
@@ -162,7 +164,9 @@ enum duration_type
     DUR_FORESTED,
     DUR_DRAGON_CALL,
     DUR_DRAGON_CALL_COOLDOWN,
+#if TAG_MAJOR_VERSION == 34
     DUR_ABJURATION_AURA,
+#endif
     DUR_MESMERISE_IMMUNE,
     DUR_NO_POTIONS,
     DUR_QAZLAL_FIRE_RES,
@@ -205,5 +209,6 @@ enum duration_type
     DUR_SHAFT_IMMUNITY,
     DUR_NOXIOUS_BOG,
     DUR_FROZEN_RAMPARTS,
+    DUR_STABBING,
     NUM_DURATIONS
 };

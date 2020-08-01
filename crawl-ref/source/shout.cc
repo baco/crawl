@@ -845,79 +845,6 @@ bool fake_noisy(int loudness, const coord_def& where)
     return noisy(loudness, where, nullptr, MID_NOBODY, true);
 }
 
-void check_monsters_sense(sense_type sense, int range, const coord_def& where)
-{
-    for (monster_iterator mi; mi; ++mi)
-    {
-        if (grid_distance(mi->pos(), where) > range)
-            continue;
-
-        switch (sense)
-        {
-        case SENSE_SMELL_BLOOD:
-            if (!mons_class_flag(mi->type, M_BLOOD_SCENT))
-                break;
-
-            // Let sleeping hounds lie.
-            if (mi->asleep()
-                && mons_species(mi->type) != MONS_VAMPIRE)
-            {
-                // 33% chance of sleeping on
-                // 33% of being disturbed (start BEH_WANDER)
-                // 33% of being alerted   (start BEH_SEEK)
-                if (!one_chance_in(3))
-                {
-                    if (coinflip())
-                    {
-                        dprf(DIAG_NOISE, "disturbing %s (%d, %d)",
-                             mi->name(DESC_A, true).c_str(),
-                             mi->pos().x, mi->pos().y);
-                        behaviour_event(*mi, ME_DISTURB, 0, where);
-                    }
-                    break;
-                }
-            }
-            dprf(DIAG_NOISE, "alerting %s (%d, %d)",
-                            mi->name(DESC_A, true).c_str(),
-                            mi->pos().x, mi->pos().y);
-            behaviour_event(*mi, ME_ALERT, 0, where);
-            break;
-
-        case SENSE_WEB_VIBRATION:
-            if (!mons_class_flag(mi->type, M_WEB_SENSE))
-                break;
-
-            if (!one_chance_in(4))
-            {
-                if (coinflip())
-                {
-                    dprf(DIAG_NOISE, "disturbing %s (%d, %d)",
-                         mi->name(DESC_A, true).c_str(),
-                         mi->pos().x, mi->pos().y);
-                    behaviour_event(*mi, ME_DISTURB, 0, where);
-                }
-                else
-                {
-                    dprf(DIAG_NOISE, "alerting %s (%d, %d)",
-                         mi->name(DESC_A, true).c_str(),
-                         mi->pos().x, mi->pos().y);
-                    behaviour_event(*mi, ME_ALERT, 0, where);
-                }
-            }
-            break;
-        }
-    }
-}
-
-void blood_smell(int strength, const coord_def& where)
-{
-    const int range = strength;
-    dprf("blood stain at (%d, %d), range of smell = %d",
-         where.x, where.y, range);
-
-    check_monsters_sense(SENSE_SMELL_BLOOD, range, where);
-}
-
 //////////////////////////////////////////////////////////////////////////////
 // noise machinery
 
@@ -1177,15 +1104,15 @@ void noise_grid::apply_noise_effects(const coord_def &pos,
 //  - If the cells cannot see each other, calculate a noise source as follows:
 //
 //    Calculate a noise centroid between the noise source and the observer,
-//    weighted to the noise source if the noise has traveled in a straight line,
+//    weighted to the noise source if the noise has travelled in a straight line,
 //    weighted toward the observer the more the noise has deviated from a
 //    straight line.
 //
-//    Fuzz the centroid by the extra distance the noise has traveled over
+//    Fuzz the centroid by the extra distance the noise has travelled over
 //    the straight line distance. This is where the observer will think the
 //    noise originated.
 //
-//    Thus, if the noise has traveled in a straight line, the observer
+//    Thus, if the noise has travelled in a straight line, the observer
 //    will know the exact origin, 100% of the time, even if the
 //    observer is all the way across the level.
 coord_def noise_grid::noise_perceived_position(actor *act,
@@ -1385,7 +1312,7 @@ static void _actor_apply_noise(actor *act,
         // linear from p(0) = 100 to p(R) = 10. This replaces a version that
         // was 100% from 0 to 3, and 0% outward.
         //
-        // behavior around the old breakpoint for R=8: p(3) = 66, p(4) = 55.
+        // behaviour around the old breakpoint for R=8: p(3) = 66, p(4) = 55.
 
         const int player_distance = grid_distance(apparent_source, you.pos());
         const int alert_prob = max(player_distance * -90 / LOS_RADIUS + 100, 0);

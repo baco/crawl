@@ -14,9 +14,9 @@
 #include "output.h"
 #include "describe.h"
 #include "tile-inventory-flags.h"
-#include "tiledef-dngn.h"
-#include "tiledef-icons.h"
-#include "tiledef-player.h"
+#include "rltiles/tiledef-dngn.h"
+#include "rltiles/tiledef-icons.h"
+#include "rltiles/tiledef-player.h"
 #include "tilepick.h"
 #include "tilereg-dgn.h"
 #include "tiles-build-specific.h"
@@ -87,6 +87,7 @@ int MonsterRegion::handle_mouse(wm_mouse_event &event)
     {
         full_describe_square(gc);
         redraw_screen();
+        update_screen();
         return CK_MOUSE_CMD;
     }
 

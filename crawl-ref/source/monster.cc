@@ -20,6 +20,7 @@
 #include "cloud.h"
 #include "colour.h"
 #include "coordit.h"
+#include "corpse.h"
 #include "database.h"
 #include "dgn-event.h"
 #include "dgn-overview.h"
@@ -53,7 +54,6 @@
 #include "mon-tentacle.h"
 #include "mon-transit.h"
 #include "religion.h"
-#include "rot.h"
 #include "spl-monench.h"
 #include "spl-summoning.h"
 #include "spl-util.h"
@@ -228,6 +228,9 @@ void monster::ensure_has_client_id()
 
 mon_attitude_type monster::temp_attitude() const
 {
+    if (has_ench(ENCH_INSANE))
+        return ATT_NEUTRAL;
+
     if (has_ench(ENCH_HEXED))
     {
         actor *agent = monster_by_mid(get_ench(ENCH_HEXED).source);
@@ -686,7 +689,8 @@ bool monster::is_silenced() const
 {
     return silenced(pos())
             || has_ench(ENCH_MUTE)
-            || has_ench(ENCH_WATER_HOLD)
+            || (has_ench(ENCH_WATER_HOLD)
+                || has_ench(ENCH_WATERLOGGED))
                && !res_water_drowning();
 }
 
@@ -1150,7 +1154,6 @@ bool monster::pickup(item_def &item, mon_inv_type slot, bool msg)
 
             if (msg)
                 pickup_message(item);
-            merge_item_stacks(item, dest);
             inc_mitm_item_quantity(inv[slot], item.quantity);
             destroy_item(item.index());
             if (msg)
@@ -1680,15 +1683,11 @@ bool monster::pickup_armour(item_def &item, bool msg, bool force)
                                                             : type;
     equipment_type eq = EQ_NONE;
 
-    // HACK to allow nagas/centaurs to wear bardings. (jpeg)
+    // HACK to allow nagas to wear bardings. (jpeg)
     switch (item.sub_type)
     {
-    case ARM_NAGA_BARDING:
+    case ARM_BARDING:
         if (genus == MONS_NAGA || genus == MONS_SALAMANDER)
-            eq = EQ_BODY_ARMOUR;
-        break;
-    case ARM_CENTAUR_BARDING:
-        if (genus == MONS_CENTAUR || genus == MONS_YAKTAUR)
             eq = EQ_BODY_ARMOUR;
         break;
     // And another hack or two...
@@ -1785,8 +1784,7 @@ static int _get_monster_jewellery_value(const monster *mon,
 
     if (item.sub_type == RING_PROTECTION
         || item.sub_type == RING_EVASION
-        || item.sub_type == RING_SLAYING
-        || item.sub_type == AMU_REFLECTION)
+        || item.sub_type == RING_SLAYING)
     {
         value += item.plus;
     }
@@ -2755,10 +2753,6 @@ bool monster::go_frenzy(actor *source)
 
     const int duration = 16 + random2avg(13, 2);
 
-    // store the attitude for later retrieval
-    props["old_attitude"] = short(attitude);
-
-    attitude = ATT_NEUTRAL;
     add_ench(mon_enchant(ENCH_INSANE, 0, source, duration * BASELINE_DELAY));
     if (holiness() & MH_NATURAL)
     {
@@ -2879,21 +2873,16 @@ void monster::banish(actor *agent, const string &, const int, bool force)
 
     simple_monster_message(*this, " is devoured by a tear in reality.",
                            MSGCH_BANISHMENT);
-    if (agent && mons_gives_xp(*this, *agent))
+    if (agent && mons_gives_xp(*this, *agent)
+        && (agent->is_player() || agent->mid == MID_YOU_FAULTLESS))
     {
-        // Double the existing damage blame counts, so the unassigned xp for
-        // remaining hp is effectively halved. No need to pass flags this way.
-        damage_total *= 2;
-        damage_friendly *= 2;
-        blame_damage(agent, hit_points);
+        // Count all remaining HP as damage done by you - no need to
+        // pass flags this way.
+        damage_friendly += hit_points * 2;
         // Note: we do not set MF_PACIFIED, the monster is usually not
         // distinguishable from others of the same kind in the Abyss.
-
-        if (agent->is_player())
-        {
-            did_god_conduct(DID_BANISH, get_experience_level(),
-                            true /*possibly wrong*/, this);
-        }
+        did_god_conduct(DID_BANISH, get_experience_level(),
+                        true /*possibly wrong*/, this);
     }
     monster_die(*this, KILL_BANISHED, NON_MONSTER);
 
@@ -3019,7 +3008,7 @@ bool monster::cannot_act() const
 
 bool monster::cannot_move() const
 {
-    return cannot_act() || has_ench(ENCH_WHIRLWIND_PINNED);
+    return cannot_act();
 }
 
 bool monster::asleep() const
@@ -3123,8 +3112,7 @@ bool monster::pacified() const
  */
 bool monster::shielded() const
 {
-    return shield()
-           || wearing(EQ_AMULET_PLUS, AMU_REFLECTION) > 0;
+    return shield() || wearing(EQ_AMULET, AMU_REFLECTION);
 }
 
 int monster::shield_bonus() const
@@ -3145,11 +3133,7 @@ int monster::shield_bonus() const
     // shielding from jewellery
     const item_def *amulet = mslot_item(MSLOT_JEWELLERY);
     if (amulet && amulet->sub_type == AMU_REFLECTION)
-    {
-        const int jewellery_plus = amulet->plus;
-        ASSERT(abs(jewellery_plus) < 30); // sanity check
-        sh += jewellery_plus * 2;
-    }
+        sh += AMU_REFLECT_SH;
 
     return sh;
 }
@@ -3171,25 +3155,14 @@ int monster::shield_bypass_ability(int) const
     return 15 + get_hit_dice() * 2 / 3;
 }
 
-int monster::missile_deflection() const
+bool monster::missile_repulsion() const
 {
-    if (has_ench(ENCH_DEFLECT_MISSILES))
-        return 2;
-    else if (has_ench(ENCH_REPEL_MISSILES) || scan_artefacts(ARTP_RMSL))
-        return 1;
-    else
-        return 0;
+    return has_ench(ENCH_REPEL_MISSILES) || scan_artefacts(ARTP_RMSL);
 }
 
-void monster::ablate_deflection()
+void monster::ablate_repulsion()
 {
-    // TODO: deduplicate this code
-    if (has_ench(ENCH_DEFLECT_MISSILES))
-    {
-        if (one_chance_in(2 + spell_hd()))
-            del_ench(ENCH_DEFLECT_MISSILES);
-    }
-    else if (has_ench(ENCH_REPEL_MISSILES))
+    if (has_ench(ENCH_REPEL_MISSILES))
     {
         if (one_chance_in(2 + spell_hd()))
             del_ench(ENCH_REPEL_MISSILES);
@@ -3464,7 +3437,7 @@ int monster::evasion(ev_ignore_type evit, const actor* /*act*/) const
     }
 
     if (has_ench(ENCH_AGILE))
-        ev += 5;
+        ev += AGILITY_BONUS;
 
     if (evit & ev_ignore::helpless)
         return max(ev, 0);
@@ -3482,9 +3455,6 @@ int monster::evasion(ev_ignore_type evit, const actor* /*act*/) const
 
 bool monster::heal(int amount)
 {
-    if (mons_is_statue(type))
-        return false;
-
     if (amount < 1)
         return false;
     else if (hit_points == max_hit_points)
@@ -3584,8 +3554,6 @@ int monster::how_unclean(bool check_god) const
 {
     int uncleanliness = 0;
 
-    if (has_attack_flavour(AF_HUNGER))
-        uncleanliness++;
     if (has_attack_flavour(AF_ROT))
         uncleanliness++;
     if (has_attack_flavour(AF_STEAL))
@@ -3909,7 +3877,8 @@ bool monster::res_sticky_flame() const
     return is_insubstantial() || get_mons_resist(*this, MR_RES_STICKY_FLAME) > 0;
 }
 
-static rot_resistance _base_rot_resistance(const monster &mons) {
+static rot_resistance _base_rot_resistance(const monster &mons)
+{
     const mon_holy_type holi = mons.holiness();
 
     // handle undead first so that multi-holiness undead get their due
@@ -4454,7 +4423,7 @@ int monster::hurt(const actor *agent, int amount, beam_type flavour,
         else if (amount <= 0 && hit_points <= max_hit_points)
             return 0;
 
-        // Apply damage multipliers for amulet of harm
+        // Apply damage multipliers for scarf of harm
         if (amount != INSTANT_DEATH)
         {
             // +30% damage when the opponent has harm
@@ -4504,7 +4473,7 @@ int monster::hurt(const actor *agent, int amount, beam_type flavour,
            did_hurt_conduct(DID_HURT_FOE, *this, amount);
         }
 
-        // Handle pain bond behavior here. Is technically passive damage.
+        // Handle pain bond behaviour here. Is technically passive damage.
         // radiate_pain_bond may do additional damage by recursively looping
         // back to the original trigger.
         if (has_ench(ENCH_PAIN_BOND) && flavour != BEAM_SHARED_PAIN)
@@ -4724,7 +4693,7 @@ bool monster::is_trap_safe(const coord_def& where, bool just_check) const
 
     // Hostile monsters are not afraid of non-mechanical traps.
     // But, in the arena Zot traps affect all monsters.
-    if (trap.category() != DNGN_TRAP_MECHANICAL)
+    if (!trap.is_mechanical())
         return !crawl_state.game_is_arena() || trap.type != TRAP_ZOT;
 
     // Net traps always target the player, let's use them!
@@ -5133,6 +5102,13 @@ bool monster::can_go_frenzy() const
     if (!mons_has_attacks(*this))
         return false;
 
+    // These allies have a special loyalty
+    if (mons_is_hepliaklqana_ancestor(type)
+        || testbits(flags, MF_DEMONIC_GUARDIAN))
+    {
+        return false;
+    }
+
     return true;
 }
 
@@ -5536,7 +5512,7 @@ void monster::apply_location_effects(const coord_def &oldpos,
             if (you.see_cell(pos()) && !visible_to(&you))
             {
                 string desc =
-                    feature_description_at(pos(), false, DESC_THE, false);
+                    feature_description_at(pos(), false, DESC_THE);
                 mprf("The bloodstain on %s disappears!", desc.c_str());
             }
         }
@@ -5744,7 +5720,7 @@ int monster::action_energy(energy_use_type et) const
     // Floundering monsters get the same penalty as the player, except that
     // players get the penalty on entering water, while monsters get the
     // penalty when leaving it.
-    if (floundering())
+    if (floundering() || has_ench(ENCH_LIQUEFYING))
         move_cost += 6;
 
     // Never reduce the cost to zero
@@ -5823,16 +5799,10 @@ bool monster::can_drink_potion(potion_type ptype) const
         case POT_CURING:
         case POT_HEAL_WOUNDS:
             return !(holiness() & (MH_NONLIVING | MH_PLANT));
-#if TAG_MAJOR_VERSION == 34
-        case POT_BLOOD:
-        case POT_BLOOD_COAGULATED:
-            return mons_species() == MONS_VAMPIRE;
-#endif
         case POT_BERSERK_RAGE:
             return can_go_berserk();
         case POT_HASTE:
         case POT_MIGHT:
-        case POT_AGILITY:
         case POT_INVISIBILITY:
         case POT_RESISTANCE:
             // If there are any item using monsters that are permanently
@@ -5840,6 +5810,7 @@ bool monster::can_drink_potion(potion_type ptype) const
             return true;
         default:
             break;
+        CASE_REMOVED_POTIONS(ptype)
     }
 
     return false;
@@ -5856,11 +5827,6 @@ bool monster::should_drink_potion(potion_type ptype) const
                || has_ench(ENCH_CONFUSION);
     case POT_HEAL_WOUNDS:
         return hit_points <= max_hit_points / 2;
-#if TAG_MAJOR_VERSION == 34
-    case POT_BLOOD:
-    case POT_BLOOD_COAGULATED:
-        return hit_points <= max_hit_points / 2;
-#endif
     case POT_BERSERK_RAGE:
         // this implies !berserk()
         return !has_ench(ENCH_MIGHT) && !has_ench(ENCH_HASTE)
@@ -5869,8 +5835,6 @@ bool monster::should_drink_potion(potion_type ptype) const
         return !has_ench(ENCH_HASTE);
     case POT_MIGHT:
         return !has_ench(ENCH_MIGHT) && foe_distance() <= 2;
-    case POT_AGILITY:
-        return !has_ench(ENCH_AGILE);
     case POT_RESISTANCE:
         return !has_ench(ENCH_RESISTANCE);
     case POT_INVISIBILITY:
@@ -5880,6 +5844,7 @@ bool monster::should_drink_potion(potion_type ptype) const
                && (you.can_see_invisible(false) || !friendly());
     default:
         break;
+    CASE_REMOVED_POTIONS(ptype)
     }
 
     return false;
@@ -5913,17 +5878,6 @@ bool monster::drink_potion_effect(potion_type pot_eff, bool card)
             simple_monster_message(*this, " is healed!");
         break;
 
-#if TAG_MAJOR_VERSION == 34
-    case POT_BLOOD:
-    case POT_BLOOD_COAGULATED:
-        if (mons_species() == MONS_VAMPIRE)
-        {
-            heal(10 + random2avg(28, 3));
-            simple_monster_message(*this, " is healed!");
-        }
-        break;
-#endif
-
     case POT_BERSERK_RAGE:
         enchant_actor_with_flavour(this, this, BEAM_BERSERK);
         break;
@@ -5940,78 +5894,32 @@ bool monster::drink_potion_effect(potion_type pot_eff, bool card)
         enchant_actor_with_flavour(this, this, BEAM_INVISIBILITY);
         break;
 
-    case POT_AGILITY:
-        enchant_actor_with_flavour(this, this, BEAM_AGILITY);
-        break;
-
     case POT_RESISTANCE:
         enchant_actor_with_flavour(this, this, BEAM_RESISTANCE);
         break;
 
     default:
         return false;
+    CASE_REMOVED_POTIONS(pot_eff)
     }
 
     return !card;
 }
 
-bool monster::can_evoke_jewellery(jewellery_type jtype) const
+bool monster::can_evoke_jewellery(jewellery_type /*jtype*/) const
 {
-    if (mons_class_is_stationary(type))
-        return false;
-
-    if (mons_itemuse(*this) < MONUSE_STARTING_EQUIPMENT)
-        return false;
-
-    switch (jtype)
-    {
-        case AMU_RAGE:
-            return can_go_berserk();
-        default:
-            break;
-    }
-
     return false;
 }
 
-bool monster::should_evoke_jewellery(jewellery_type jtype) const
+bool monster::should_evoke_jewellery(jewellery_type /*jtype*/) const
 {
-    switch (jtype)
-    {
-    case AMU_RAGE:
-        // this implies !berserk()
-        return !has_ench(ENCH_MIGHT) && !has_ench(ENCH_HASTE)
-               && needs_berserk();
-    default:
-        break;
-    }
-
     return false;
 }
 
 // Return true if the jewellery should be identified.
-bool monster::evoke_jewellery_effect(jewellery_type jtype)
+bool monster::evoke_jewellery_effect(jewellery_type /*jtype*/)
 {
-    // XXX: this is mostly to prevent a funny message order:
-    // "$foo evokes its amulet. $foo wields a great mace. $foo goes berserk!"
-    if (jtype == AMU_RAGE)
-        wield_melee_weapon();
-
-    mprf("%s evokes %s %s.", name(DESC_THE).c_str(),
-         pronoun(PRONOUN_POSSESSIVE).c_str(),
-         jewellery_is_amulet(jtype) ? "amulet" : "ring");
-
-    switch (jtype)
-    {
-    case AMU_RAGE:
-        enchant_actor_with_flavour(this, this, BEAM_BERSERK);
-        break;
-
-    default:
-        return false;
-    }
-
-    return true;
+    return false;
 }
 
 void monster::react_to_damage(const actor *oppressor, int damage,
@@ -6383,19 +6291,6 @@ void monster::steal_item_from_player()
 
     // You'll want to autopickup it after killing Maurice.
     new_item.flags |= ISFLAG_THROWN;
-
-    // Fix up blood/chunk timers.
-    const int orig_qty = you.inv[steal_what].quantity;
-    if (is_perishable_stack(new_item))
-    {
-        // Somehow they always steal the freshest blood.
-        for (int i = new_item.quantity; i < orig_qty; ++i)
-            remove_oldest_perishable_item(new_item);
-
-        // If the whole stack is gone, it doesn't need to be cleaned up.
-        if (you.inv[steal_what].defined())
-            remove_newest_perishable_item(you.inv[steal_what]);
-    }
 }
 
 /**

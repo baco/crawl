@@ -12,6 +12,7 @@
 #include <sstream>
 
 #include "areas.h"
+#include "attack.h"
 #include "branch.h"
 #include "cloud.h"
 #include "coord.h"
@@ -31,6 +32,7 @@
 #include "libutil.h"
 #include "mapmark.h"
 #include "message.h"
+#include "mon-behv.h"
 #include "mon-place.h"
 #include "mon-poly.h"
 #include "mon-util.h"
@@ -898,6 +900,9 @@ int count_adjacent_icy_walls(const coord_def &pos)
 
 void feat_splash_noise(dungeon_feature_type feat)
 {
+    if (crawl_state.generating_level)
+        return;
+
     switch (feat)
     {
     case DNGN_SHALLOW_WATER:
@@ -1156,15 +1161,10 @@ static void _dgn_check_terrain_items(const coord_def &pos, bool preserve_items)
     }
 }
 
-static bool _dgn_check_terrain_monsters(const coord_def &pos)
+static void _dgn_check_terrain_monsters(const coord_def &pos)
 {
     if (monster* m = monster_at(pos))
-    {
         m->apply_location_effects(pos);
-        return true;
-    }
-    else
-        return false;
 }
 
 // Clear blood or off of terrain that shouldn't have it. Also clear of blood if
@@ -1233,8 +1233,17 @@ void dungeon_terrain_changed(const coord_def &pos,
 {
     if (grd(pos) == nfeat)
         return;
-    if (_dgn_check_terrain_monsters(pos) && feat_is_wall(nfeat))
+    if (feat_is_wall(nfeat) && monster_at(pos))
         return;
+    if (feat_is_trap(nfeat) && env.trap.find(pos) == env.trap.end())
+    {
+        // TODO: create a trap_def in env for this case?
+        mprf(MSGCH_ERROR,
+            "Attempting to change terrain to a trap without a corresponding"
+            " trap_def!");
+        nfeat = DNGN_FLOOR;
+    }
+
 
     _dgn_check_terrain_covering(pos, grd(pos), nfeat);
 
@@ -1260,6 +1269,7 @@ void dungeon_terrain_changed(const coord_def &pos,
     }
 
     _dgn_check_terrain_items(pos, preserve_items);
+    _dgn_check_terrain_monsters(pos);
     if (!wizmode)
         _dgn_check_terrain_player(pos);
     if (!temporary && feature_mimic_at(pos))
@@ -1277,8 +1287,7 @@ static void _announce_swap_real(coord_def orig_pos, coord_def dest_pos)
 
     const string orig_name =
         feature_description_at(dest_pos, false,
-                            you.see_cell(orig_pos) ? DESC_THE : DESC_A,
-                            false);
+                            you.see_cell(orig_pos) ? DESC_THE : DESC_A);
 
     string prep = feat_preposition(orig_feat, false);
 
@@ -1540,12 +1549,14 @@ bool swap_features(const coord_def &pos1, const coord_def &pos2,
         you.set_position(pos2);
         you.clear_invalid_constrictions();
         viewwindow();
+        update_screen();
     }
     else if (pos2 == you.pos())
     {
         you.set_position(pos1);
         you.clear_invalid_constrictions();
         viewwindow();
+        update_screen();
     }
 
     set_terrain_changed(pos1);
@@ -1640,27 +1651,7 @@ void fall_into_a_pool(dungeon_feature_type terrain)
          (terrain == DNGN_DEEP_WATER) ? "water"
                                       : "programming rift");
     // included in default force_more_message
-
-    clear_messages();
-    if (terrain == DNGN_LAVA)
-    {
-        if (you.species == SP_MUMMY)
-            mpr("You burn to ash...");
-        else
-            mpr("The lava burns you to a cinder!");
-        ouch(INSTANT_DEATH, KILLED_BY_LAVA);
-    }
-    else if (terrain == DNGN_DEEP_WATER)
-    {
-        mpr("You sink like a stone!");
-
-        if (you.is_nonliving() || you.undead_state())
-            mpr("You fall apart...");
-        else
-            mpr("You drown...");
-
-        ouch(INSTANT_DEATH, KILLED_BY_WATER);
-    }
+    enable_emergency_flight();
 }
 
 typedef map<string, dungeon_feature_type> feat_desc_map;
@@ -1683,13 +1674,10 @@ dungeon_feature_type feat_by_desc(string desc)
 {
     lowercase(desc);
 
-    if (desc[desc.size() - 1] != '.')
-        desc += ".";
-
 #if TAG_MAJOR_VERSION == 34
     // hard-coded because all the dry fountain variants match this description,
     // and they have a lower enum value, so the first is incorrectly returned
-    if (desc == "a dry fountain.")
+    if (desc == "a dry fountain")
         return DNGN_DRY_FOUNTAIN;
 #endif
 
@@ -1935,7 +1923,7 @@ void set_terrain_changed(const coord_def p)
 }
 
 /**
- * Does this cell count for exploraation piety?
+ * Does this cell count for exploration piety?
  *
  * Don't count: endless map borders, deep water, lava, and cells explicitly
  * marked. (player_view_update_at in view.cc updates the flags)
@@ -2378,29 +2366,27 @@ void ice_wall_damage(monster &mons, int delay)
     if (!walls)
         return;
 
-    mprf((walls > 1) ? "The walls release a blast of icicles at %s!"
-                     : "The wall releases a blast of icicles at %s!",
-         you.can_see(mons) ? mons.name(DESC_THE).c_str() : "something");
-
     const int pow = calc_spell_power(SPELL_FROZEN_RAMPARTS, true);
-    int dam = div_rand_round(delay * roll_dice(1, 2 + div_rand_round(pow, 4)),
-                BASELINE_DELAY);
-
-    dam = mons.apply_ac(dam);
+    const int orig_dam = div_rand_round(
+            delay * roll_dice(1, 2 + div_rand_round(pow, 5)), BASELINE_DELAY);
 
     bolt beam;
-    beam.flavour = BEAM_ICE;
+    beam.flavour = BEAM_COLD;
     beam.thrower = KILL_YOU;
-    dam = mons_adjust_flavoured(&mons, beam, dam);
+    int dam = mons_adjust_flavoured(&mons, beam, orig_dam);
+    mprf("The wall freezes %s%s%s",
+         you.can_see(mons) ? mons.name(DESC_THE).c_str() : "something",
+         dam ? "" : " but do no damage",
+         attack_strength_punctuation(dam).c_str());
 
     if (dam > 0)
     {
-        mons.hurt(&you, dam, BEAM_ICE);
+        mons.hurt(&you, dam, BEAM_COLD);
 
-        if (mons.alive() && !mons.has_ench(ENCH_FROZEN))
+        if (mons.alive())
         {
-            simple_monster_message(mons, " is encased in ice.");
-            mons.add_ench(ENCH_FROZEN);
+            behaviour_event(&mons, ME_WHACK, &you);
+            mons.expose_to_element(BEAM_COLD, orig_dam);
         }
     }
 }

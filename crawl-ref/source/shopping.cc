@@ -223,6 +223,7 @@ unsigned int item_value(item_def item, bool ident)
             case SPWPN_PAIN:
             case SPWPN_ACID: // Unrand-only.
             case SPWPN_PENETRATION: // Unrand-only.
+            case SPWPN_SPECTRAL:
                 valued *= 25;
                 break;
 
@@ -353,6 +354,9 @@ unsigned int item_value(item_def item, bool ident)
             case SPARM_PROTECTION:
             case SPARM_ARCHERY:
             case SPARM_REPULSION:
+            case SPARM_PRESERVATION:
+            case SPARM_SHADOWS:
+            case SPARM_RAMPAGING:
                 valued += 50;
                 break;
 
@@ -360,6 +364,7 @@ unsigned int item_value(item_def item, bool ident)
             case SPARM_POISON_RESISTANCE:
             case SPARM_REFLECTION:
             case SPARM_SPIRIT_SHIELD:
+            case SPARM_HARM:
                 valued += 20;
                 break;
 
@@ -404,7 +409,6 @@ unsigned int item_value(item_def item, bool ident)
             switch (item.sub_type)
             {
             case WAND_CLOUDS:
-            case WAND_SCATTERSHOT:
                 valued += 120;
                 good = true;
                 break;
@@ -456,19 +460,6 @@ unsigned int item_value(item_def item, bool ident)
                 valued += 500;
                 break;
 
-#if TAG_MAJOR_VERSION == 34
-            case POT_GAIN_DEXTERITY:
-            case POT_GAIN_INTELLIGENCE:
-            case POT_GAIN_STRENGTH:
-            case POT_BENEFICIAL_MUTATION:
-                valued += 350;
-                break;
-
-            case POT_CURE_MUTATION:
-                valued += 250;
-                break;
-#endif
-
             case POT_RESISTANCE:
             case POT_HASTE:
                 valued += 100;
@@ -484,14 +475,11 @@ unsigned int item_value(item_def item, bool ident)
 
             case POT_BERSERK_RAGE:
             case POT_HEAL_WOUNDS:
-#if TAG_MAJOR_VERSION == 34
-            case POT_RESTORE_ABILITIES:
-#endif
                 valued += 50;
                 break;
 
             case POT_MIGHT:
-            case POT_AGILITY:
+            case POT_STABBING:
             case POT_BRILLIANCE:
                 valued += 40;
                 break;
@@ -502,42 +490,14 @@ unsigned int item_value(item_def item, bool ident)
                 valued += 30;
                 break;
 
-#if TAG_MAJOR_VERSION == 34
-            case POT_POISON:
-            case POT_STRONG_POISON:
-            case POT_PORRIDGE:
-            case POT_SLOWING:
-            case POT_DECAY:
-            case POT_BLOOD:
-#endif
             case POT_DEGENERATION:
                 valued += 10;
                 break;
 
-#if TAG_MAJOR_VERSION == 34
-            case POT_BLOOD_COAGULATED:
-                valued += 5;
-                break;
-#endif
+            CASE_REMOVED_POTIONS(item.sub_type)
             }
         }
         break;
-
-    case OBJ_FOOD:
-        switch (item.sub_type)
-        {
-        case FOOD_RATION:
-            valued = 50;
-            break;
-
-        case FOOD_CHUNK:
-        default:
-            break;
-        }
-        break;
-
-    case OBJ_CORPSES:
-        valued = max_corpse_chunks(item.mon_type) * 5;
 
     case OBJ_SCROLLS:
         if (!item_type_known(item))
@@ -608,13 +568,7 @@ unsigned int item_value(item_def item, bool ident)
         {
             // Variable-strength rings.
             if (item_ident(item, ISFLAG_KNOW_PLUSES)
-                && (item.sub_type == RING_PROTECTION
-                    || item.sub_type == RING_STRENGTH
-                    || item.sub_type == RING_EVASION
-                    || item.sub_type == RING_DEXTERITY
-                    || item.sub_type == RING_INTELLIGENCE
-                    || item.sub_type == RING_SLAYING
-                    || item.sub_type == AMU_REFLECTION))
+                && jewellery_type_has_plusses(item.sub_type))
             {
                 // Formula: price = kn(n+1) / 2, where k depends on the subtype,
                 // n is the power. (The base variable is equal to 2n.)
@@ -635,7 +589,6 @@ unsigned int item_value(item_def item, bool ident)
                 case RING_STRENGTH:
                 case RING_DEXTERITY:
                 case RING_INTELLIGENCE:
-                case AMU_REFLECTION:
                     coefficient = 30;
                     break;
                 default:
@@ -652,17 +605,15 @@ unsigned int item_value(item_def item, bool ident)
                 switch (item.sub_type)
                 {
                 case AMU_FAITH:
-                case AMU_RAGE:
                     valued += 400;
                     break;
 
                 case RING_WIZARDRY:
                 case AMU_REGENERATION:
                 case AMU_GUARDIAN_SPIRIT:
-                case AMU_THE_GOURMAND:
-                case AMU_HARM:
                 case AMU_MANA_REGENERATION:
                 case AMU_ACROBAT:
+                case AMU_REFLECTION:
                     valued += 300;
                     break;
 
@@ -726,10 +677,9 @@ unsigned int item_value(item_def item, bool ident)
             valued += 5000;
             break;
 
-        case MISC_FAN_OF_GALES:
         case MISC_PHIAL_OF_FLOODS:
-        case MISC_LAMP_OF_FIRE:
         case MISC_LIGHTNING_ROD:
+        case MISC_TIN_OF_TREMORSTONES:
             valued += 400;
             break;
 
@@ -738,12 +688,7 @@ unsigned int item_value(item_def item, bool ident)
             break;
 
         case MISC_BOX_OF_BEASTS:
-        case MISC_SACK_OF_SPIDERS:
             valued += 200;
-            break;
-
-        case MISC_TREMORSTONE:
-            valued += 150;
             break;
 
         default:
@@ -822,17 +767,11 @@ bool is_worthless_consumable(const item_def &item)
         switch (item.sub_type)
         {
         // Blood potions are worthless because they are easy to make.
-#if TAG_MAJOR_VERSION == 34
-        case POT_BLOOD:
-        case POT_BLOOD_COAGULATED:
-        case POT_SLOWING:
-        case POT_DECAY:
-        case POT_POISON:
-#endif
         case POT_DEGENERATION:
             return true;
         default:
             return false;
+        CASE_REMOVED_POTIONS(item.sub_type)
         }
     case OBJ_SCROLLS:
         switch (item.sub_type)
@@ -1355,24 +1294,20 @@ bool ShopMenu::process_key(int keyin)
     if (keyin - 'a' >= 0 && keyin - 'a' < (int)items.size()
         && menu_action == ACT_EXAMINE)
     {
+        // A hack to make the description more useful.
+        // The default copy constructor is non-const for item_def,
+        // so we need this violation of const hygene to tweak the flags
+        // to make the description more useful. The flags are copied by
+        // value by the default copy constructor so this is safe.
         item_def& item(*const_cast<item_def*>(dynamic_cast<ShopEntry*>(
             items[letter_to_index(keyin)])->item));
-        // A hack to make the description more useful.
-        // In theory, the user could kill the process at this
-        // point and end up with valid ID for the item.
-        // That's not very useful, though, because it doesn't set
-        // type-ID and once you can access the item (by buying it)
-        // you have its full ID anyway. Worst case, it won't get
-        // noted when you buy it.
+        if (shoptype_identifies_stock(shop.type))
         {
-            unwind_var<iflags_t> old_flags(item.flags);
-            if (shoptype_identifies_stock(shop.type))
-            {
-                item.flags |= (ISFLAG_IDENT_MASK | ISFLAG_NOTED_ID
-                               | ISFLAG_NOTED_GET);
-            }
-            describe_item(item);
+            item.flags |= (ISFLAG_IDENT_MASK | ISFLAG_NOTED_ID
+                           | ISFLAG_NOTED_GET);
         }
+        describe_item_popup(item);
+
         return true;
     }
     else if (keyin - 'A' >= 0 && keyin - 'A' < (int)items.size())
@@ -1442,6 +1377,7 @@ void shop()
     if (shop.stock.empty())
         destroy_shop_at(you.pos());
     redraw_screen();
+    update_screen();
     if (menu.bought_something)
         mprf("Thank you for shopping at %s!", shopname.c_str());
     if (any_on_list)
@@ -1495,8 +1431,10 @@ string shop_type_name(shop_type type)
             return "Gadget";
         case SHOP_BOOK:
             return "Book";
+#if TAG_MAJOR_VERSION == 34
         case SHOP_FOOD:
-            return "Food";
+            return "Removed Food";
+#endif
         case SHOP_SCROLL:
             return "Magic Scroll";
         case SHOP_GENERAL_ANTIQUE:
@@ -1798,14 +1736,8 @@ bool ShoppingList::cull_identical_items(const item_def& item, int cost)
         break;
     case OBJ_MISCELLANY:
         // ... and a few of these.
-        switch (item.sub_type)
-        {
-            case MISC_CRYSTAL_BALL_OF_ENERGY:
-                break;
-            default:
-                if (!is_xp_evoker(item))
-                    return 0;
-        }
+        if (!is_xp_evoker(item))
+            return 0;
         break;
     default:
         return 0;
@@ -2255,12 +2187,10 @@ void ShoppingList::fill_out_menu(Menu& shopmenu)
             const int col = menu_colour(item.name(DESC_A),
                                         colprf, "shop");
 
-#ifdef USE_TILE
             vector<tile_def> item_tiles;
             get_tiles_for_item(item, item_tiles, true);
             for (const auto &tile : item_tiles)
                 me->add_tile(tile);
-#endif
 
             if (col != -1)
                 me->colour = col;
@@ -2329,7 +2259,7 @@ void ShoppingList::display(bool view_only)
             if (is_item)
             {
                 const item_def &item = get_thing_item(*thing);
-                describe_item(const_cast<item_def&>(item));
+                describe_item_popup(item);
             }
             else // not an item, so we only stored a description.
             {
@@ -2372,6 +2302,7 @@ void ShoppingList::display(bool view_only)
 
     shopmenu.show();
     redraw_screen();
+    update_screen();
 }
 
 static bool _compare_shopping_things(const CrawlStoreValue& a,

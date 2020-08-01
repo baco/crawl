@@ -95,6 +95,40 @@ static const body_facet_def _body_facets[] =
     { EQ_BOOTS, MUT_TALONS }
 };
 
+static vector<mutation_type> removed_mutations =
+    {
+#if TAG_MAJOR_VERSION == 34
+        MUT_ROUGH_BLACK_SCALES,
+        MUT_BREATHE_FLAMES,
+        MUT_BREATHE_POISON,
+        MUT_CARNIVOROUS,
+        MUT_CLING,
+        MUT_CONSERVE_POTIONS,
+        MUT_CONSERVE_SCROLLS,
+        MUT_EXOSKELETON,
+        MUT_FAST_METABOLISM,
+        MUT_FLEXIBLE_WEAK,
+        MUT_FOOD_JELLY,
+        MUT_FORLORN,
+        MUT_FUMES,
+        MUT_HERBIVOROUS,
+        MUT_JUMP,
+        MUT_SAPROVOROUS,
+        MUT_SLOW_METABOLISM,
+        MUT_STRONG_STIFF,
+        MUT_SUSTAIN_ATTRIBUTES,
+        MUT_TELEPORT_CONTROL,
+        MUT_TRAMPLE_RESISTANCE,
+        MUT_MUMMY_RESTORATION,
+        MUT_NO_CHARM_MAGIC,
+#endif
+    };
+
+vector<mutation_type> get_removed_mutations()
+{
+    return removed_mutations;
+}
+
 /**
  * Conflicting mutation pairs. Entries are symmetric (so if A conflicts
  * with B, B conflicts with A in the same way).
@@ -121,7 +155,9 @@ static const body_facet_def _body_facets[] =
  */
 static const int conflict[][3] =
 {
+#if TAG_MAJOR_VERSION == 34
     { MUT_REGENERATION,        MUT_SLOW_METABOLISM,         0},
+#endif
     { MUT_REGENERATION,        MUT_INHIBITED_REGENERATION,  0},
     { MUT_ACUTE_VISION,        MUT_BLURRY_VISION,           0},
     { MUT_FAST,                MUT_SLOW,                    0},
@@ -134,8 +170,10 @@ static const int conflict[][3] =
     { MUT_ROBUST,              MUT_FRAIL,                   1},
     { MUT_HIGH_MAGIC,          MUT_LOW_MAGIC,               1},
     { MUT_WILD_MAGIC,          MUT_SUBDUED_MAGIC,           1},
+#if TAG_MAJOR_VERSION == 34
     { MUT_CARNIVOROUS,         MUT_HERBIVOROUS,             1},
     { MUT_SLOW_METABOLISM,     MUT_FAST_METABOLISM,         1},
+#endif
     { MUT_REGENERATION,        MUT_INHIBITED_REGENERATION,  1},
     { MUT_ACUTE_VISION,        MUT_BLURRY_VISION,           1},
     { MUT_BERSERK,             MUT_CLARITY,                 1},
@@ -809,7 +847,7 @@ static string _display_vampire_attributes()
 
     for (int y = 0; y < lines; y++)  // lines   (properties)
     {
-        for (int x = 0; x < 3; x++)  // columns (hunger states)
+        for (int x = 0; x < 3; x++)  // columns (states)
         {
             if (y > 0 && x == current)
                 result += "<w>";
@@ -946,6 +984,9 @@ static bool _accept_mutation(mutation_type mutat, bool ignore_weight = false)
 
     if (ignore_weight)
         return true;
+
+    if (mdef.weight == 0)
+        return false;
 
     // bias towards adding (non-innate) levels to existing innate mutations.
     const int weight = mdef.weight + you.get_innate_mutation_level(mutat);
@@ -1241,11 +1282,9 @@ bool physiology_mutation_conflict(mutation_type mutat)
         return true;
     }
 
-    // Vampires' healing and thirst rates depend on their blood level.
+    // Vampires' healing rates depend on their blood level.
     if (you.species == SP_VAMPIRE
-        && (mutat == MUT_CARNIVOROUS || mutat == MUT_HERBIVOROUS
-            || mutat == MUT_REGENERATION || mutat == MUT_INHIBITED_REGENERATION
-            || mutat == MUT_FAST_METABOLISM || mutat == MUT_SLOW_METABOLISM))
+        && (mutat == MUT_REGENERATION || mutat == MUT_INHIBITED_REGENERATION))
     {
         return true;
     }
@@ -1666,8 +1705,11 @@ bool mutate(mutation_type which_mutation, const string &reason, bool failMsg,
         case MUT_HOOVES:
         case MUT_TALONS:
             // Hooves and talons force boots off at 3.
-            if (cur_base_level >= 3 && !you.melded[EQ_BOOTS])
+            if (cur_base_level >= 3 && !you.melded[EQ_BOOTS]
+                && !you.wear_barding())
+            {
                 remove_one_equip(EQ_BOOTS, false, true);
+            }
             // Recheck Ashenzari bondage in case our available slots changed.
             ash_check_bondage();
             break;
@@ -1745,6 +1787,7 @@ bool mutate(mutation_type which_mutation, const string &reason, bool failMsg,
     {
         tiles.layout_statcol();
         redraw_screen();
+        update_screen();
     }
 #endif
     if (crawl_state.game_is_hints()
@@ -1868,6 +1911,14 @@ static bool _delete_single_mutation_level(mutation_type mutat,
     return true;
 }
 
+static bool _is_appendage_mutation(mutation_type mut)
+{
+    for (auto app : you.props[APPENDAGE_KEY].get_vector())
+        if (mut == static_cast<mutation_type>(app.get_int()))
+            return true;
+    return false;
+}
+
 /*
  * Delete a mutation level, accepting random mutation types and checking mutation resistance.
  * This will not delete temporary or innate mutations.
@@ -1945,7 +1996,7 @@ bool delete_mutation(mutation_type which_mutation, const string &reason,
                 continue;
 
             // MUT_ANTENNAE is 0, and you.attribute[] is initialized to 0.
-            if (mutat && mutat == you.attribute[ATTR_APPENDAGE])
+            if (mutat && _is_appendage_mutation(mutat))
                 continue;
 
             const mutation_def& mdef = _get_mutation_def(mutat);
@@ -2262,7 +2313,7 @@ string mutation_desc(mutation_type mut, int level, bool colour,
             colourname = "darkgrey";
         else if (partially_active)
             colourname = "brown";
-        else if (you.form == transformation::appendage && you.attribute[ATTR_APPENDAGE] == mut)
+        else if (_is_appendage_mutation(mut) && you.form == transformation::appendage)
             colourname = "lightgreen";
         else if (is_slime_mutation(mut))
             colourname = "green";
@@ -2336,8 +2387,6 @@ static const facet_def _demon_facets[] =
       { -33, 0, 0 } },
     { 2, { MUT_DEMONIC_GUARDIAN, MUT_DEMONIC_GUARDIAN, MUT_DEMONIC_GUARDIAN },
       { -66, 17, 50 } },
-    { 2, { MUT_NIGHTSTALKER, MUT_NIGHTSTALKER, MUT_NIGHTSTALKER },
-      { -33, 0, 0 } },
     { 2, { MUT_SPINY, MUT_SPINY, MUT_SPINY },
       { -33, 0, 0 } },
     { 2, { MUT_POWERED_BY_PAIN, MUT_POWERED_BY_PAIN, MUT_POWERED_BY_PAIN },
@@ -2658,14 +2707,14 @@ int player::how_mutated(bool innate, bool levels, bool temp) const
 // Return whether current tension is balanced
 static bool _balance_demonic_guardian()
 {
-    // if tension is unfavorably high, perhaps another guardian should spawn
+    // if tension is unfavourably high, perhaps another guardian should spawn
     const int mutlevel = you.get_mutation_level(MUT_DEMONIC_GUARDIAN);
     const int tension = get_tension(GOD_NO_GOD);
     return tension*3/4 <= mutlevel*6 + random2(mutlevel*mutlevel*2);
 }
 
 // Primary function to handle and balance demonic guardians, if the tension
-// is unfavorably high and a guardian was not recently spawned, a new guardian
+// is unfavourably high and a guardian was not recently spawned, a new guardian
 // will be made, if tension is below a threshold (determined by the mutations
 // level and a bit of randomness), guardians may be dismissed in
 // _balance_demonic_guardian()

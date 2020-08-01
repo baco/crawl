@@ -166,8 +166,7 @@ function explorer.item_ignore_boring(item)
     if item.is_useless then
         return false
     elseif item.base_type == "gold"
-            or item.base_type == "missile"
-            or item.base_type == "food" then
+            or item.base_type == "missile" then
         return false
     elseif (item.base_type == "weapon" or item.base_type == "armour")
             and item.pluses() <= 0 and not item.branded then
@@ -270,7 +269,7 @@ end
 
 function explorer.describe_mons(mons)
     local mi = mons.get_info()
-    -- TODO: weird distribution of labor between mons and moninfo, can this be
+    -- TODO: weird distribution of labour between mons and moninfo, can this be
     -- cleaned up?
     -- TODO: does it make sense to use the same item notability function here?
     local feats = util.map(function (i) return "item:" .. i.name() end,

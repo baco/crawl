@@ -1064,24 +1064,6 @@ _mon_hex_zap(ZAP_SLEEP, BEAM_SLEEP),
 },
 
 {
-    ZAP_SCATTERSHOT,
-    "burst of metal fragments",
-    200,
-    new calcdice_calculator<9, 8, 3, 8>,
-    new tohit_calculator<7, 1, 15>,
-    nullptr,
-    nullptr,
-    CYAN,
-    false,
-    BEAM_FRAG,
-    DCHAR_FIRED_BOLT,
-    true,
-    false,
-    false,
-    6
-},
-
-{
     ZAP_UNRAVELLING,
     "unravelling",
     200,
@@ -1360,9 +1342,9 @@ _mon_hex_zap(ZAP_DRAIN_MAGIC, BEAM_DRAIN_MAGIC),
 
 {
     ZAP_TREMORSTONE,
-    "shards of rock",
+    "burst of rock shards",
     200,
-    new dicedef_calculator<6, 12, 0, 1>,
+    new dicedef_calculator<6, 6, 0, 1>,
     new tohit_calculator<40>,
     nullptr,
     nullptr,

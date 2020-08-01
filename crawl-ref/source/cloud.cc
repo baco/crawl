@@ -36,7 +36,7 @@
 #include "state.h"
 #include "stringutil.h"
 #include "terrain.h"
-#include "tiledef-main.h"
+#include "rltiles/tiledef-main.h"
 #include "unwind.h"
 
 cloud_struct* cloud_at(coord_def pos)
@@ -453,7 +453,7 @@ static void _spread_fire(const cloud_struct &cloud)
             continue;
         }
 
-        if (env.markers.property_at(*ai, MAT_ANY, "veto_fire") == "veto")
+        if (env.markers.property_at(*ai, MAT_ANY, "veto_destroy") == "veto")
             continue;
 
         if (you.see_cell(*ai))
@@ -796,6 +796,17 @@ void place_cloud(cloud_type cl_type, const coord_def& ctarget, int cl_range,
         return;
     }
 
+    const monster * const mons = monster_at(ctarget);
+
+    // Fedhas protects plants from damaging clouds placed by the player.
+    if (agent
+        && agent->deity() == GOD_FEDHAS
+        && fedhas_protects(mons)
+        && !actor_cloud_immune(*mons, cl_type))
+    {
+        return;
+    }
+
     ASSERT(!cell_is_solid(ctarget));
 
     god_conduct_trigger conducts[3];
@@ -804,7 +815,6 @@ void place_cloud(cloud_type cl_type, const coord_def& ctarget, int cl_range,
     mid_t source        = MID_NOBODY;
     if (agent && agent->is_player())
     {
-        const monster * const mons = monster_at(ctarget);
         if (do_conducts
             && mons && mons->alive()
             && !actor_cloud_immune(*mons, cl_type))
@@ -930,7 +940,7 @@ bool actor_cloud_immune(const actor &act, cloud_type type)
         case CLOUD_FOREST_FIRE:
             if (!act.is_player())
                 return act.res_fire() >= 3;
-            return you.duration[DUR_FIRE_SHIELD]
+            return player_equip_unrand(UNRAND_SALAMANDER)
                 || you.has_mutation(MUT_FLAME_CLOUD_IMMUNITY)
                 || player_equip_unrand(UNRAND_FIRESTARTER);
         case CLOUD_HOLY:

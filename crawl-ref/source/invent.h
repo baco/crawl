@@ -106,6 +106,7 @@ class InvEntry : public MenuEntry
 {
 private:
     static bool show_glyph;
+    static bool show_coordinates;
 
     mutable string basename;
     mutable string qualname;
@@ -122,6 +123,7 @@ public:
     InvEntry(const item_def &i);
     string get_text(const bool need_cursor = false) const override;
     void set_show_glyph(bool doshow);
+    void set_show_coordinates(bool doshow);
     static void set_show_cursor(bool doshow);
 
     const string &get_basename() const;
@@ -237,6 +239,8 @@ vector<SelItem> select_items(
                         const char *title, bool noselect = false,
                         menu_type mtype = menu_type::pickup);
 
+void describe_items(const vector<const item_def*> &items, const char * title);
+
 vector<SelItem> prompt_drop_items(const vector<SelItem> &preselected_items);
 
 void display_inventory();
@@ -247,9 +251,7 @@ void identify_inventory();
 const char *item_class_name(int type, bool terse = false);
 const char *item_slot_name(equipment_type type);
 
-#ifdef USE_TILE
 bool get_tiles_for_item(const item_def &item, vector<tile_def>& tileset, bool show_background);
-#endif
 
 bool check_old_item_warning(const item_def& item, operation_types oper);
 bool check_warning_inscriptions(const item_def& item, operation_types oper);

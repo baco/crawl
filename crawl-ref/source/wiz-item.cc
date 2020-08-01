@@ -183,7 +183,7 @@ void wizard_create_spec_object()
                 =  max(1, min(27, prompt_for_int("How many heads? ", false)));
         }
 
-        if (!place_monster_corpse(dummy, false, true))
+        if (!place_monster_corpse(dummy, true))
         {
             mpr("Failed to create corpse.");
             return;
@@ -876,7 +876,7 @@ static void _debug_acquirement_stats(FILE *ostat)
 
     clear_messages();
     mpr("[a] Weapons [b] Armours   [c] Jewellery [d] Books");
-    mpr("[e] Staves  [f] Evocables [g] Food");
+    mpr("[e] Staves  [f] Evocables");
     mprf(MSGCH_PROMPT, "What kind of item would you like to get acquirement stats on? ");
 
     object_class_type type;
@@ -889,7 +889,6 @@ static void _debug_acquirement_stats(FILE *ostat)
     case 'd': type = OBJ_BOOKS;      break;
     case 'e': type = OBJ_STAVES;     break;
     case 'f': type = OBJ_MISCELLANY; break;
-    case 'g': type = OBJ_FOOD;       break;
     default:
         canned_msg(MSG_OK);
         return;
@@ -1004,8 +1003,7 @@ static void _debug_acquirement_stats(FILE *ostat)
             type == OBJ_BOOKS      ? "books" :
             type == OBJ_STAVES     ? "staves" :
             type == OBJ_WANDS      ? "wands" :
-            type == OBJ_MISCELLANY ? "misc. items" :
-            type == OBJ_FOOD       ? "food"
+            type == OBJ_MISCELLANY ? "misc. items"
                                    : "buggy items");
 
     // Print player species/profession.
@@ -1151,6 +1149,7 @@ static void _debug_acquirement_stats(FILE *ostat)
 #endif
             "penetration",
             "reaping",
+            "spectral",
             "INVALID",
             "acid",
 #if TAG_MAJOR_VERSION > 34
@@ -1197,9 +1196,7 @@ static void _debug_acquirement_stats(FILE *ostat)
             "resistance",
             "positive energy",
             "archmagi",
-#if TAG_MAJOR_VERSION == 34
             "preservation",
-#endif
             "reflection",
             "spirit shield",
             "archery",
@@ -1207,7 +1204,11 @@ static void _debug_acquirement_stats(FILE *ostat)
             "jumping",
 #endif
             "repulsion",
+#if TAG_MAJOR_VERSION == 34
             "cloud immunity",
+#endif
+            "harm",
+            "rampaging",
         };
 
         const int non_art = acq_calls - num_arts;
@@ -1233,7 +1234,7 @@ static void _debug_acquirement_stats(FILE *ostat)
             {
                 "none",
                 "conjuration",
-                "enchantment",
+                "hexes",
                 "fire magic",
                 "ice magic",
                 "transmutation",
@@ -1244,7 +1245,8 @@ static void _debug_acquirement_stats(FILE *ostat)
                 "earth magic",
                 "air magic",
             };
-            COMPILE_CHECK(ARRAYSZ(names) == SPSCHOOL_LAST_EXPONENT + 1);
+            // + 2 because we have the exponent bits plus "none"
+            COMPILE_CHECK(ARRAYSZ(names) == SPSCHOOL_LAST_EXPONENT + 2);
 
             for (int i = 0; i <= SPSCHOOL_LAST_EXPONENT; ++i)
             {
@@ -1461,6 +1463,7 @@ static void _debug_rap_stats(FILE *ostat)
                 / (float) MAX_TRIES;
             mprf("%4.1f%% done.", curr_percent / 10.0);
             viewwindow();
+            update_screen();
         }
 
     }
@@ -1658,7 +1661,7 @@ void wizard_identify_all_items()
         object_class_type i = (object_class_type)ii;
         if (!item_type_has_ids(i))
             continue;
-        for (int j = 0; j < get_max_subtype(i); j++)
+        for (const auto j : all_item_subtypes(i))
             set_ident_type(i, j, true);
     }
 }
@@ -1677,7 +1680,7 @@ void wizard_unidentify_all_items()
         object_class_type i = (object_class_type)ii;
         if (!item_type_has_ids(i))
             continue;
-        for (int j = 0; j < get_max_subtype(i); j++)
+        for (const auto j : all_item_subtypes(i))
             set_ident_type(i, j, false);
     }
 }

@@ -34,7 +34,6 @@
 #include "output.h"
 #include "prompt.h"
 #include "religion.h"
-#include "rot.h"
 #include "shout.h"
 #include "showsymb.h"
 #include "skills.h"
@@ -103,7 +102,7 @@ public:
     }
 
     // targeting_behaviour API
-    virtual command_type get_command(int key = -1) override;
+    virtual command_type get_command(int key) override;
     virtual bool should_redraw() const override { return need_redraw; }
     virtual void clear_redraw()        override { need_redraw = false; }
     virtual void update_top_prompt(string* p_top_prompt) override;
@@ -235,15 +234,13 @@ void fire_target_behaviour::display_help()
 {
     show_targeting_help();
     redraw_screen();
+    update_screen();
     need_redraw = true;
     set_prompt();
 }
 
 command_type fire_target_behaviour::get_command(int key)
 {
-    if (key == -1)
-        key = get_key();
-
     if (key == CMD_TARGET_CANCEL)
         chosen_ammo = false;
     else if (!(-key > CMD_NO_CMD && -key < CMD_MIN_SYNTHETIC)
@@ -291,13 +288,13 @@ vector<string> fire_target_behaviour::get_monster_desc(const monster_info& mi)
             if (brand == SPMSL_FRENZY || brand == SPMSL_BLINDING)
             {
                 int chance = _get_dart_chance(mi.hd);
-                bool immune = false;
+                bool immune = brand == SPMSL_FRENZY && !mi.can_go_frenzy;
                 if (mi.holi & (MH_UNDEAD | MH_NONLIVING))
                     immune = true;
 
                 string verb = brand == SPMSL_FRENZY ? "frenzy" : "blind";
 
-                string chance_string = immune ? "immune to darts" :
+                string chance_string = immune ? "immune" :
                                        make_stringf("chance to %s on hit: %d%%",
                                                     verb.c_str(), chance);
                 descs.emplace_back(chance_string);
@@ -906,16 +903,6 @@ bool throw_it(bolt &pbolt, int throw_2, dist *target)
     // Now start real firing!
     origin_set_unknown(item);
 
-    // bloodpots & chunks need special handling.
-    if (thrown.quantity > 1 && is_perishable_stack(item))
-    {
-        // Initialise thrown item with oldest item in stack.
-        const int rot_timer = remove_oldest_perishable_item(thrown)
-                              - you.elapsed_time;
-        item.props.clear();
-        init_perishable_stack(item, rot_timer);
-    }
-
     // Even though direction is allowed, we're throwing so we
     // want to use tx, ty to make the missile fly to map edge.
     if (!teleport)
@@ -1024,6 +1011,7 @@ bool throw_it(bolt &pbolt, int throw_2, dist *target)
         // Fire beam in reverse.
         pbolt.setup_retrace();
         viewwindow();
+        update_screen();
         pbolt.fire();
     }
     else
@@ -1156,6 +1144,7 @@ bool mons_throw(monster* mons, bolt &beam, int msl, bool teleport)
     // Redraw the screen before firing, in case the monster just
     // came into view and the screen hasn't been updated yet.
     viewwindow();
+    update_screen();
     if (teleport)
     {
         beam.use_target_as_pos = true;
@@ -1178,6 +1167,7 @@ bool mons_throw(monster* mons, bolt &beam, int msl, bool teleport)
         // Fire beam in reverse.
         beam.setup_retrace();
         viewwindow();
+        update_screen();
         beam.fire();
 
         // Only print a message if you can see the target or the thrower.

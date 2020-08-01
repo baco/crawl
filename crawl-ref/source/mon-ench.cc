@@ -15,6 +15,7 @@
 #include "bloodspatter.h"
 #include "cloud.h"
 #include "coordit.h"
+#include "corpse.h"
 #include "delay.h"
 #include "dgn-shoals.h"
 #include "english.h"
@@ -34,7 +35,6 @@
 #include "mon-poly.h"
 #include "mon-tentacle.h"
 #include "religion.h"
-#include "rot.h"
 #include "spl-clouds.h"
 #include "spl-damage.h"
 #include "spl-summoning.h"
@@ -318,8 +318,11 @@ void monster::add_enchantment_effect(const mon_enchant &ench, bool quiet)
 
     case ENCH_RING_OF_THUNDER:
         _place_thunder_ring(*this);
-        mprf(MSGCH_WARN, "A violent storm begins to rage around %s.",
-             name(DESC_THE).c_str());
+        if (you.see_cell(pos()))
+        {
+            mprf(MSGCH_WARN, "A violent storm begins to rage around %s.",
+                name(DESC_THE).c_str());
+        }
         break;
 
     case ENCH_VILE_CLUTCH:
@@ -329,7 +332,11 @@ void monster::add_enchantment_effect(const mon_enchant &ench, bool quiet)
         const string noun = ench.ench == ENCH_VILE_CLUTCH ? "Zombie hands" :
                                                             "Roots";
         source_actor->start_constricting(*this);
-        mprf(MSGCH_WARN, "%s grab %s.", noun.c_str(), name(DESC_THE).c_str());
+        if (you.see_cell(pos()))
+        {
+            mprf(MSGCH_WARN, "%s grab %s.", noun.c_str(),
+                 name(DESC_THE).c_str());
+        }
         break;
     }
 
@@ -452,8 +459,6 @@ void monster::remove_enchantment_effect(const mon_enchant &me, bool quiet)
             else
                 attitude = ATT_HOSTILE;
         }
-        else
-            attitude = static_cast<mon_attitude_type>(props["old_attitude"].get_short());
         mons_att_changed(this);
         break;
 
@@ -935,11 +940,6 @@ void monster::remove_enchantment_effect(const mon_enchant &me, bool quiet)
             simple_monster_message(*this, " is no longer repelling missiles.");
         break;
 
-    case ENCH_DEFLECT_MISSILES:
-        if (!quiet)
-            simple_monster_message(*this, " is no longer deflecting missiles.");
-        break;
-
     case ENCH_RESISTANCE:
         if (!quiet)
             simple_monster_message(*this, " is no longer unusually resistant.");
@@ -991,6 +991,11 @@ void monster::remove_enchantment_effect(const mon_enchant &me, bool quiet)
 
     case ENCH_STILL_WINDS:
         end_still_winds();
+        break;
+
+    case ENCH_WATERLOGGED:
+        if (!quiet)
+            simple_monster_message(*this, " is no longer waterlogged.");
         break;
 
     default:
@@ -1397,9 +1402,9 @@ void monster::apply_enchantment(const mon_enchant &me)
     case ENCH_BLACK_MARK:
     case ENCH_STILL_WINDS:
     case ENCH_RING_OF_THUNDER:
-    case ENCH_WHIRLWIND_PINNED:
     case ENCH_VILE_CLUTCH:
     case ENCH_GRASPING_ROOTS:
+    case ENCH_WATERLOGGED:
         decay_enchantment(en);
         break;
 
@@ -1964,8 +1969,9 @@ static const char *enchant_names[] =
 #if TAG_MAJOR_VERSION == 34
     "eat_items",
 #endif
-    "aquatic_land", "spore_production",
+    "aquatic_land",
 #if TAG_MAJOR_VERSION == 34
+    "spore_production",
     "slouch",
 #endif
     "swift", "tide",
@@ -2025,20 +2031,28 @@ static const char *enchant_names[] =
 #if TAG_MAJOR_VERSION == 34
     "grand_avatar",
 #endif
-    "sap magic", "shroud", "phantom_mirror", "bribed", "permabribed",
-    "corrosion", "gold_lust", "drained", "repel missiles",
-    "deflect missiles",
+    "sap magic",
 #if TAG_MAJOR_VERSION == 34
+    "shroud",
+#endif
+    "phantom_mirror", "bribed", "permabribed",
+    "corrosion", "gold_lust", "drained", "repel missiles",
+#if TAG_MAJOR_VERSION == 34
+    "deflect missiles",
     "negative_vuln", "condensation_shield",
 #endif
-    "resistant", "hexed", "corpse_armour",
+    "resistant", "hexed",
 #if TAG_MAJOR_VERSION == 34
+    "corpse_armour",
     "chanting_fire_storm", "chanting_word_of_entropy",
 #endif
     "aura_of_brilliance", "empowered_spells", "gozag_incite", "pain_bond",
     "idealised", "bound_soul", "infestation",
-    "stilling the winds", "thunder_ringed", "pinned_by_whirlwind",
-    "vortex", "vortex_cooldown", "vile_clutch",
+    "stilling the winds", "thunder_ringed",
+#if TAG_MAJOR_VERSION == 34
+    "pinned_by_whirlwind",
+#endif
+    "vortex", "vortex_cooldown", "vile_clutch", "waterlogged",
     "buggy",
 };
 

@@ -21,6 +21,7 @@
 #endif
 
 #include "artefact.h"
+#include "art-enum.h"
 #include "beam.h"
 #include "chardump.h"
 #include "colour.h"
@@ -356,6 +357,7 @@ void lose_level()
     // In case of intrinsic ability changes.
     tiles.layout_statcol();
     redraw_screen();
+    update_screen();
 #endif
 
     xom_is_stimulated(200);
@@ -524,6 +526,32 @@ static void _maybe_ru_retribution(int dam, mid_t death_source)
     }
 }
 
+static void _maybe_spawn_rats(int dam, kill_method_type death_type)
+{
+    if (dam <= 0
+        || death_type == KILLED_BY_POISON
+        || !player_equip_unrand(UNRAND_RATSKIN_CLOAK))
+    {
+        return;
+    }
+
+    // chance rises linearly with damage taken, up to 50% at half hp.
+    const int capped_dam = min(dam, you.hp_max / 2);
+    dprf("%d -> %d / %d", dam, capped_dam, you.hp_max / 2);
+    if (!x_chance_in_y(capped_dam, you.hp_max))
+        return;
+
+    monster_type mon = coinflip() ? MONS_HELL_RAT : MONS_RIVER_RAT;
+
+    mgen_data mg(mon, BEH_FRIENDLY, you.pos(), MHITYOU);
+    mg.flags |= MG_FORCE_BEH; // don't mention how much it hates you before it appears
+    if (monster *m = create_monster(mg)) {
+        m->add_ench(mon_enchant(ENCH_FAKE_ABJURATION, 3));
+        mprf("%s scurries out from under your cloak.", m->name(DESC_A).c_str());
+        check_lovelessness(*m);
+    }
+}
+
 static void _maybe_spawn_monsters(int dam, kill_method_type death_type,
                                   mid_t death_source)
 {
@@ -613,7 +641,7 @@ static void _powered_by_pain(int dam)
             break;
         case 3:
             mpr("You focus on the pain.");
-            potionlike_effect(POT_AGILITY, level * 20);
+            you.be_agile(level * 20);
             break;
         }
     }
@@ -783,7 +811,7 @@ void ouch(int dam, kill_method_type death_type, mid_t source, const char *aux,
 
     int drain_amount = 0;
 
-    // Multiply damage if amulet of harm is in play
+    // Multiply damage if scarf of harm is in play
     if (dam != INSTANT_DEATH)
         dam = _apply_extra_harm(dam, source);
 
@@ -824,9 +852,9 @@ void ouch(int dam, kill_method_type death_type, mid_t source, const char *aux,
                                || death_type == KILLED_BY_WATER);
 
     // death's door protects against everything but falling into water/lava,
-    // excessive rot, leaving the dungeon, or quitting.
+    // Zot, excessive rot, leaving the dungeon, or quitting.
     if (you.duration[DUR_DEATHS_DOOR] && !env_death && !non_death
-        && you.hp_max > 0)
+        && death_type != KILLED_BY_ZOT && you.hp_max > 0)
     {
         return;
     }
@@ -941,6 +969,7 @@ void ouch(int dam, kill_method_type death_type, mid_t source, const char *aux,
             _yred_mirrors_injury(dam, source);
             _maybe_ru_retribution(dam, source);
             _maybe_spawn_monsters(dam, death_type, source);
+            _maybe_spawn_rats(dam, death_type);
             _maybe_fog(dam);
             _powered_by_pain(dam);
             if (sanguine_armour_valid())

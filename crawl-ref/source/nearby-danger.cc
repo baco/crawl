@@ -19,8 +19,8 @@
 #include "delay.h"
 #include "directn.h"
 #include "env.h"
-#include "food.h"
 #include "fprop.h"
+#include "god-passive.h"
 #include "monster.h"
 #include "mon-pathfind.h"
 #include "mon-tentacle.h"
@@ -29,6 +29,7 @@
 #include "stringutil.h"
 #include "state.h"
 #include "terrain.h"
+#include "timed-effects.h" // decr_zot_clock
 #include "transform.h"
 #include "traps.h"
 #include "travel.h"
@@ -81,8 +82,7 @@ static bool _mons_has_path_to_player(const monster* mon, bool want_move = false)
     // direct path to you "safe" just because it would be too stupid to
     // track you that far out-of-sight. Use a factor of 2 for smarter
     // creatures as a safety margin.
-    if (range > 0)
-        mp.set_range(max(LOS_RADIUS, range * 2));
+    mp.set_range(max(LOS_RADIUS, range * 2));
 
     if (mp.init_pathfind(mon, you.pos(), true, false, true))
         return true;
@@ -447,7 +447,6 @@ void revive()
 
     you.disease = 0;
     you.magic_contamination = 0;
-    set_hunger(HUNGER_DEFAULT, true);
     restore_stat(STAT_ALL, 0, true);
 
     clear_trapping_net();
@@ -463,15 +462,18 @@ void revive()
     you.attribute[ATTR_FLIGHT_UNCANCELLABLE] = 0;
     you.attribute[ATTR_XP_DRAIN] = 0;
     you.attribute[ATTR_SERPENTS_LASH] = 0;
-    you.attribute[ATTR_HEAVENLY_STORM] = 0;
-    you.attribute[ATTR_WALL_JUMP_READY] = 0;
+    decr_zot_clock();
     you.los_noise_level = 0;
     you.los_noise_last_turn = 0; // silence in death
+
     if (you.duration[DUR_SCRYING])
         you.xray_vision = false;
+    if (you.duration[DUR_HEAVENLY_STORM])
+        wu_jian_end_heavenly_storm();
 
+    // TODO: this doesn't seem to call any duration end effects?
     for (int dur = 0; dur < NUM_DURATIONS; dur++)
-        if (dur != DUR_GOURMAND && dur != DUR_PIETY_POOL)
+        if (dur != DUR_PIETY_POOL)
             you.duration[dur] = 0;
 
     update_vision_range(); // in case you had darkness cast before

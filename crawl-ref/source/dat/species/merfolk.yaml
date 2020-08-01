@@ -26,7 +26,6 @@ aptitudes:
   unarmed_combat: 1
   spellcasting: -1
   conjurations: -2
-  charms: 1
   necromancy: -2
   translocations: -2
   transmutations: 3
@@ -51,7 +50,6 @@ fake_mutations:
 recommended_jobs:
   - JOB_GLADIATOR
   - JOB_BERSERKER
-  - JOB_SKALD
   - JOB_TRANSMUTER
   - JOB_SUMMONER
   - JOB_ICE_ELEMENTALIST
@@ -59,4 +57,6 @@ recommended_jobs:
 recommended_weapons:
   - SK_POLEARMS
   - SK_LONG_BLADES
+# start TAG_MAJOR_VERSION == 34
 create_enum: false
+# end TAG_MAJOR_VERSION

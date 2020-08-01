@@ -25,7 +25,7 @@
 #include "spl-util.h"
 #include "state.h"
 #include "stringutil.h"
-#include "tiledef-dngn.h"
+#include "rltiles/tiledef-dngn.h"
 #include "tileview.h"
 #include "view.h"
 
@@ -762,7 +762,10 @@ static int dgn_change_floor_colour(lua_State *ls)
     env.floor_colour = colour;
 
     if (crawl_state.need_save && update_now)
+    {
         viewwindow();
+        update_screen();
+    }
     return 0;
 }
 
@@ -774,7 +777,10 @@ static int dgn_change_rock_colour(lua_State *ls)
     env.rock_colour = colour;
 
     if (crawl_state.need_save && update_now)
+    {
         viewwindow();
+        update_screen();
+    }
     return 0;
 }
 
@@ -1859,41 +1865,42 @@ const struct luaL_reg dgn_dlib[] =
 };
 
 #define VP(name) \
-    vault_placement &name =                                             \
-        **clua_get_userdata<vault_placement*>(                       \
-            ls, VAULT_PLACEMENT_METATABLE)
+    vault_placement **name = \
+        clua_get_userdata<vault_placement*>(ls, VAULT_PLACEMENT_METATABLE); \
+    if (!name || !*name) \
+        return 0
 
 LUAFN(_vp_pos)
 {
     VP(vp);
-    clua_pushpoint(ls, vp.pos);
+    clua_pushpoint(ls, (*vp)->pos);
     return 1;
 }
 
 LUAFN(_vp_size)
 {
     VP(vp);
-    clua_pushpoint(ls, vp.size);
+    clua_pushpoint(ls, (*vp)->size);
     return 1;
 }
 
 LUAFN(_vp_orient)
 {
     VP(vp);
-    PLUARET(number, vp.orient);
+    PLUARET(number, (*vp)->orient);
 }
 
 LUAFN(_vp_map)
 {
     VP(vp);
-    clua_push_map(ls, &vp.map);
+    clua_push_map(ls, &(*vp)->map);
     return 1;
 }
 
 LUAFN(_vp_exits)
 {
     VP(vp);
-    return clua_gentable(ls, vp.exits, clua_pushpoint);
+    return clua_gentable(ls, (*vp)->exits, clua_pushpoint);
 }
 
 static const luaL_reg dgn_vaultplacement_ops[] =

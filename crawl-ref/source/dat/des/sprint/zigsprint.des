@@ -32,7 +32,7 @@
 ###############################################################################
 
 {{
--- Remove this code when TAG_MAJOR > 34
+-- start TAG_MAJOR_VERSION == 34
 function callback.zig_tele(data, triggerable, triggerer, marker, ev)
   local position = dgn.point(marker:pos())
   my_slaves = dgn.find_marker_positions_by_prop("teleport_spot",
@@ -46,6 +46,7 @@ function callback.zig_tele(data, triggerable, triggerer, marker, ev)
 --                       " of Ziggurat Sprint.", "")
   end
 end
+-- end TAG_MAJOR_VERSION
 
 function callback.zig_message(data, triggerable, triggerer, marker, ev)
   if data.arena_number > 1 then
@@ -94,11 +95,11 @@ function setup_room(e, id)
     e.tile("X = wall_stone_white")
 
     -- Create items
-e.kitem("1 = superb_item ident:all w:590 / ration w:2 /\
+e.kitem("1 = superb_item ident:all w:590 /\
             potion of heal wounds ident:all q:4 w:3 /\
             potion of haste ident:all q:4 w:3 /\
             scroll of fog w:1 ident:all / scroll of holy word w:1 ident:all /\
-            potion of might ident:all w:2 / potion of agility w:2 ident:all /\
+            potion of might ident:all w:2 / potion of stabbing w:2 ident:all /\
             scroll of acquirement q:1 w:1 ident:all /\
             scroll of enchant weapon ident:all q:4 w:2 /\
             scroll of enchant armour ident:all q:4 w:2 /\
@@ -220,7 +221,7 @@ function choose_mset_2(e)
 -- Lair
   elseif rnd < 29 then
     e.kmons("1 =  river rat / iguana / porcupine / yak /\
-               jackal / wolf / bullfrog / spiny frog w:5 /\
+               jackal / wolf / bullfrog / cane toad w:5 /\
                komodo dragon w:5 / basilisk w:5 / place:Lair:1 w:30")
 -- Spider
   elseif rnd < 34 then
@@ -330,9 +331,9 @@ function choose_mset_3(e)
 -- Abyss
   elseif rnd < 39 then
     e.kmons("1 = lesser demon w:5 / place:Abyss")
--- Forest
+-- "Forest"
   elseif rnd < 44 then
-    e.kmons("1 = place:Forest:$ w:50 /\
+    e.kmons("1 = place:Lair:$ w:50 /\
                spriggan druid w:2 / spriggan air mage w:5 / spriggan berserker w:5")
 -- Shoals
   elseif rnd < 49 then
@@ -460,9 +461,9 @@ local rnd = crawl.random2(142)
 -- Abyss
   elseif rnd < 42 then
     e.kmons("1 = pandemonium lord / place:Abyss w:500")
--- Forest
+-- "Forest"
   elseif rnd < 47 then
-    e.kmons("1 = place:Forest:$ w:50 / spriggan defender /\
+    e.kmons("1 = place:Lair:$ w:50 / spriggan defender /\
                spriggan air mage / spriggan druid w:3 / spriggan berserker")
 -- Shoals
   elseif rnd < 52 then
@@ -764,7 +765,7 @@ KITEM:    K = potion of curing q:9 ident:all, \
               potion of heal wounds q:9 ident:all, \
               potion of berserk rage q:2 ident:all, \
               potion of might q:5 ident:all, \
-              potion of agility q:5 ident:all, \
+              potion of stabbing q:5 ident:all, \
               potion of magic q:5 ident:all, \
               potion of experience q:1 ident:all, \
               potion of resistance q:4 ident:all, \
@@ -778,18 +779,17 @@ KITEM:    L = scroll of blinking q:3 ident:all, \
               scroll of holy word q:1 ident:all, \
               scroll of fog q:7 ident:all, \
               scroll of amnesia q:4 ident:all
-KITEM:    M = ration q:6
 KITEM:    N = wand of acid ident:all charges:7, \
               wand of iceblast ident:all charges:7, \
               wand of disintegration ident:all charges:7
-KITEM:    O = crystal ball of energy ident:all, staff of energy not_cursed ident:all
+KITEM:    O = staff of energy not_cursed ident:all
 KITEM:    P = ring of strength not_cursed ident:all plus:6, \
               ring of strength not_cursed ident:all plus:6, \
               ring of intelligence not_cursed ident:all plus:6, \
               ring of intelligence not_cursed ident:all plus:6, \
               ring of dexterity not_cursed ident:all plus:6, \
               ring of dexterity not_cursed ident:all plus:6, \
-          ring of flight not_cursed ident:all
+              ring of flight not_cursed ident:all
 KITEM:    R = obsidian_axe ident:all, \
               shield_of_the_gong ident:all, \
               maxwells_patent_armour ident:all, \
@@ -825,7 +825,7 @@ f.........RT..n
 e..HG.........o
 ^..IF.........^
 d..JE.....S...q
-^...D..M..P...^
+^...D.....P...^
 c......L..O...r
 ^...C..K..N...^
 b...B.{.......s

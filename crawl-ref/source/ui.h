@@ -10,7 +10,7 @@
 #include "format.h"
 #include "KeymapContext.h"
 #include "state.h"
-#include "tiledef-gui.h"
+#include "rltiles/tiledef-gui.h"
 #include "tilefont.h"
 #include "unwind.h"
 #include "cio.h"
@@ -62,6 +62,11 @@ public:
             && width == other.width && height == other.height;
     }
 
+    constexpr bool operator != (const Region& other) const
+    {
+        return !(*this == other);
+    }
+
     constexpr bool empty() const
     {
         return width == 0 || height == 0;
@@ -82,8 +87,31 @@ public:
         return _x >= x && _x < ex() && _y >= y && _y < ey();
     }
 
+    Region aabb_intersect(const Region &b) const
+    {
+        const Region& a = *this;
+        Region i = { max(a.x, b.x), max(a.y, b.y), min(a.ex(), b.ex()), min(a.ey(), b.ey()) };
+        i.width -= i.x; i.height -= i.y;
+        return i;
+    }
+
+    Region aabb_union(const Region &b) const
+    {
+        const Region& a = *this;
+        Region i = { min(a.x, b.x), min(a.y, b.y), max(a.ex(), b.ex()), max(a.ey(), b.ey()) };
+        i.width -= i.x; i.height -= i.y;
+        return i;
+    }
+
     int x, y, width, height;
 };
+
+inline ostream& operator << (ostream& ostr, Region const& value)
+{
+    ostr << "Region(x=" << value.x << ", y=" << value.y << ", ";
+    ostr << "w=" << value.width << ", h=" << value.height << ")";
+    return ostr;
+}
 
 class Size
 {
@@ -329,7 +357,7 @@ public:
     {
     }
 
-    // Wrapper functions which handle common behavior
+    // Wrapper functions which handle common behaviour
     // - margins
     // - caching
     void render();
@@ -773,7 +801,7 @@ public:
     SizeReq _get_preferred_size(Direction dim, int prosp_width) override;
 
 protected:
-    tile_def m_tile = {TILEG_ERROR, TEX_GUI};
+    tile_def m_tile = {TILEG_ERROR};
     int m_tw {0}, m_th {0};
 
 #ifdef USE_TILE_LOCAL
@@ -1223,10 +1251,6 @@ void force_render();
 void render();
 void delay(unsigned int ms);
 
-void push_scissor(Region scissor);
-void pop_scissor();
-Region get_scissor();
-
 void set_focused_widget(Widget* w);
 Widget* get_focused_widget();
 bool raise_event(Event& event);
@@ -1265,4 +1289,11 @@ private:
     unwind_bool no_more;
 };
 
+#ifdef USE_TILE_LOCAL
+wm_mouse_event to_wm_event(const MouseEvent &);
+#endif
+
+#ifdef USE_TILE_LOCAL
+extern bool should_render_current_regions;
+#endif
 }

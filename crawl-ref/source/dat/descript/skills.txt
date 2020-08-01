@@ -129,8 +129,7 @@ do so.
 Spellcasting
 
 Being skilled in Spellcasting slightly increases the success rate and spell
-power of all spells, along with increasing your magical reserves and reducing
-the effects of spell hunger.
+power of all spells, along with increasing your magical reserves.
 
 Training Spellcasting also gives you more spell slots to spend on new spells.
 %%%%
@@ -156,16 +155,6 @@ enchantments to have an effect. Being skilled in Hexes will help overcome this
 resistance.
 
 Being skilled in Hexes increases the success rate and spell power of spells in
-this school. Many spells belong to a combination of several schools, in which
-case spellcasting success and power will depend on the average skill in these
-schools.
-%%%%
-Charms
-
-Charms provide you with a number of self-enhancing auras. Training Charms skill
-will often increase the duration or effectiveness of these auras.
-
-Being skilled in Charms increases the success rate and spell power of spells in
 this school. Many spells belong to a combination of several schools, in which
 case spellcasting success and power will depend on the average skill in these
 schools.
@@ -287,7 +276,4 @@ Evocations skill affects your ability to use magical items like wands and other
 uncommon objects. High skill may increase the power or success rate of such
 items, and may also let you determine the amount of charges a zapped wand has
 left.
-
-The Evocations skill also affects your magical reserves, but to a lesser degree
-than the Spellcasting skill, and only the highest contribution is used.
 %%%%

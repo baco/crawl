@@ -39,7 +39,7 @@
 using namespace ui;
 
 #ifdef USE_TILE
- #include "tiledef-gui.h"
+ #include "rltiles/tiledef-gui.h"
 #endif
 
 static const char *features[] =
@@ -98,10 +98,7 @@ static string _get_version_features()
     {
         if (you.fully_seeded)
         {
-            result += make_stringf(
-                "Game seed: %" PRIu64 ", levelgen mode: %s",
-                crawl_state.seed, you.deterministic_levelgen
-                                                ? "deterministic" : "classic");
+            result += seed_description();
             if (Version::history_size() > 1)
                 result += " (seed may be affected by game upgrades)";
         }
@@ -213,7 +210,7 @@ static void _print_version()
     auto title_hbox = make_shared<Box>(Widget::HORZ);
 #ifdef USE_TILE
     auto icon = make_shared<Image>();
-    icon->set_tile(tile_def(TILEG_STARTUP_STONESOUP, TEX_GUI));
+    icon->set_tile(tile_def(TILEG_STARTUP_STONESOUP));
     title_hbox->add_child(move(icon));
 #endif
 
@@ -271,8 +268,11 @@ void list_armour()
                  (i == EQ_SHIELD)      ? "Shield " :
                  (i == EQ_BODY_ARMOUR) ? "Armour " :
                  (i == EQ_BOOTS) ?
-                 ((you.species == SP_CENTAUR
-                   || you.species == SP_NAGA) ? "Barding"
+                 ((
+#if TAG_MAJOR_VERSION == 34
+                   you.species == SP_CENTAUR ||
+#endif
+                   you.species == SP_NAGA) ? "Barding"
                                               : "Boots  ")
                                  : "unknown")
              << " : ";
@@ -365,6 +365,7 @@ void list_jewellery()
 static const char *targeting_help_1 =
     "<h>Examine surroundings ('<w>x</w><h>' in main):\n"
     "<w>Esc</w> : cancel (also <w>Space</w>, <w>x</w>)\n"
+    "<w>Ctrl-X</w> : list all things in view\n"
     "<w>Dir.</w>: move cursor in that direction\n"
     "<w>.</w> : move to cursor (also <w>Enter</w>, <w>Del</w>)\n"
     "<w>g</w> : pick up item at cursor\n"
@@ -408,7 +409,8 @@ static const char *targeting_help_wiz =
 static const char *targeting_help_2 =
     "<h>Targeting (zap wands, cast spells, etc.):\n"
     "Most keys from examine surroundings work.\n"
-    "Some keys fire at the target. By default,\n"
+    "Some keys fire at the target. <w>Ctrl-X</w> only\n"
+    "lists eligible targets. By default,\n"
     "range is respected and beams don't stop.\n"
     "<w>Enter</w> : fire (<w>Space</w>, <w>Del</w>)\n"
     "<w>.</w> : fire, stop at target\n"
@@ -555,11 +557,6 @@ void show_interlevel_travel_altar_help()
 void show_stash_search_help()
 {
     show_specific_help("stash-search.prompt");
-}
-
-void show_butchering_help()
-{
-    show_specific_help("butchering");
 }
 
 void show_skill_menu_help()
@@ -748,9 +745,6 @@ static void _add_formatted_keyhelp(column_composer &cols)
                            CMD_CYCLE_QUIVER_BACKWARD });
     _add_insert_commands(cols, 0, "<cyan>[</cyan> : armour (<w>%</w>ear and <w>%</w>ake off)",
                          { CMD_WEAR_ARMOUR, CMD_REMOVE_ARMOUR });
-    _add_insert_commands(cols, 0, "<brown>percent</brown> : corpses and food "
-                                  "(<w>%</w>hop up and <w>%</w>at)",
-                         { CMD_BUTCHER, CMD_EAT });
     _add_insert_commands(cols, 0, "<w>?</w> : scrolls (<w>%</w>ead)",
                          { CMD_READ });
     _add_insert_commands(cols, 0, "<magenta>!</magenta> : potions (<w>%</w>uaff)",
@@ -792,7 +786,7 @@ static void _add_formatted_keyhelp(column_composer &cols)
                          { CMD_USE_ABILITY });
     _add_command(cols, 0, CMD_CAST_SPELL, "cast spell, abort without targets", 2);
     _add_command(cols, 0, CMD_FORCE_CAST_SPELL, "cast spell, no matter what", 2);
-    _add_command(cols, 0, CMD_DISPLAY_SPELLS, "list all memorized spells", 2);
+    _add_command(cols, 0, CMD_DISPLAY_SPELLS, "list all memorised spells", 2);
     _add_command(cols, 0, CMD_MEMORISE_SPELL, "Memorise a spell from your library", 2);
 
     _add_insert_commands(cols, 0, 2, CMD_SHOUT,
@@ -911,8 +905,6 @@ static void _add_formatted_keyhelp(column_composer &cols)
             "<h>Item Interaction:\n");
 
     _add_command(cols, 1, CMD_INSCRIBE_ITEM, "inscribe item", 2);
-    _add_command(cols, 1, CMD_BUTCHER, "Chop up a corpse on floor", 2);
-    _add_command(cols, 1, CMD_EAT, "Eat food (tries floor first) \n", 2);
     _add_command(cols, 1, CMD_FIRE, "Fire next appropriate item", 2);
     _add_command(cols, 1, CMD_THROW_ITEM_NO_QUIVER, "select an item and Fire it", 2);
     _add_command(cols, 1, CMD_QUIVER_ITEM, "select item slot to be Quivered", 2);
@@ -1037,10 +1029,6 @@ static void _add_formatted_hints_help(column_composer &cols)
                          "<console><cyan>[</cyan> : </console>"
                          "armour (<w>%</w>ear and <w>%</w>ake off)",
                          { CMD_WEAR_ARMOUR, CMD_REMOVE_ARMOUR });
-    _add_insert_commands(cols, 1,
-                         "<console><brown>percent</brown> : </console>"
-                         "corpses and food (<w>%</w>hop up and <w>%</w>at)",
-                         { CMD_BUTCHER, CMD_EAT });
     _add_insert_commands(cols, 1,
                          "<console><w>?</w> : </console>"
                          "scrolls (<w>%</w>ead)",

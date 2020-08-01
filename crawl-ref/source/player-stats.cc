@@ -26,7 +26,7 @@
 #include "state.h"
 #include "stringutil.h"
 #ifdef TOUCH_UI
-#include "tiledef-gui.h"
+#include "rltiles/tiledef-gui.h"
 #include "tilepick.h"
 #endif
 #include "transform.h"
@@ -101,6 +101,8 @@ static void _handle_stat_change(stat_type stat);
  */
 bool attribute_increase()
 {
+    const bool need_caps = Options.easy_confirm != easy_confirm_type::all;
+
     const string stat_gain_message = make_stringf("Your experience leads to a%s "
                                                   "increase in your attributes!",
                                                   you.species == SP_DEMIGOD ?
@@ -110,12 +112,15 @@ bool attribute_increase()
     learned_something_new(HINT_CHOOSE_STAT);
     Menu pop(MF_SINGLESELECT | MF_ANYPRINTABLE);
     MenuEntry * const status = new MenuEntry("", MEL_SUBTITLE);
-    MenuEntry * const s_me = new MenuEntry("Strength", MEL_ITEM, 1, 'S');
-    s_me->add_tile(tile_def(TILEG_FIGHTING_ON, TEX_GUI));
-    MenuEntry * const i_me = new MenuEntry("Intelligence", MEL_ITEM, 1, 'I');
-    i_me->add_tile(tile_def(TILEG_SPELLCASTING_ON, TEX_GUI));
-    MenuEntry * const d_me = new MenuEntry("Dexterity", MEL_ITEM, 1, 'D');
-    d_me->add_tile(tile_def(TILEG_DODGING_ON, TEX_GUI));
+    MenuEntry * const s_me = new MenuEntry("Strength", MEL_ITEM, 1,
+                                                        need_caps ? 'S' : 's');
+    s_me->add_tile(tile_def(TILEG_FIGHTING_ON));
+    MenuEntry * const i_me = new MenuEntry("Intelligence", MEL_ITEM, 1,
+                                                        need_caps ? 'I' : 'i');
+    i_me->add_tile(tile_def(TILEG_SPELLCASTING_ON));
+    MenuEntry * const d_me = new MenuEntry("Dexterity", MEL_ITEM, 1,
+                                                        need_caps ? 'D' : 'd');
+    d_me->add_tile(tile_def(TILEG_DODGING_ON));
 
     pop.set_title(new MenuEntry("Increase Attributes", MEL_TITLE));
     pop.add_entry(new MenuEntry(stat_gain_message + " Increase:", MEL_TITLE));
@@ -135,7 +140,9 @@ bool attribute_increase()
              innate_stat(STAT_INT),
              innate_stat(STAT_DEX));
     }
-    mprf(MSGCH_PROMPT, "Increase (S)trength, (I)ntelligence, or (D)exterity? ");
+    mprf(MSGCH_PROMPT, need_caps
+        ? "Increase (S)trength, (I)ntelligence, or (D)exterity? "
+        : "Increase (s)trength, (i)ntelligence, or (d)exterity? ");
 #endif
     mouse_control mc(MOUSE_MODE_PROMPT);
 
@@ -161,10 +168,16 @@ bool attribute_increase()
             keyin = pop.getkey();
 #else
             while ((keyin = getchm()) == CK_REDRAW)
+            {
                 redraw_screen();
+                update_screen();
+            }
 #endif
         }
         tried_lua = true;
+
+        if (!need_caps)
+            keyin = toupper_safe(keyin);
 
         switch (keyin)
         {
@@ -381,9 +394,6 @@ static int _strength_modifier(bool innate_only)
 
     if (!innate_only)
     {
-        if (you.duration[DUR_MIGHT] || you.duration[DUR_BERSERK])
-            result += 5;
-
         if (you.duration[DUR_DIVINE_STAMINA])
             result += you.attribute[ATTR_DIVINE_STAMINA];
 
@@ -419,9 +429,6 @@ static int _int_modifier(bool innate_only)
 
     if (!innate_only)
     {
-        if (you.duration[DUR_BRILLIANCE])
-            result += 5;
-
         if (you.duration[DUR_DIVINE_STAMINA])
             result += you.attribute[ATTR_DIVINE_STAMINA];
 
@@ -450,9 +457,6 @@ static int _dex_modifier(bool innate_only)
 
     if (!innate_only)
     {
-        if (you.duration[DUR_AGILITY])
-            result += 5;
-
         if (you.duration[DUR_DIVINE_STAMINA])
             result += you.attribute[ATTR_DIVINE_STAMINA];
 

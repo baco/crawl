@@ -7,7 +7,6 @@
 #include "cio.h"
 #include "describe.h"
 #include "env.h"
-#include "food.h"
 #include "invent.h"
 #include "item-name.h"
 #include "item-prop.h"
@@ -23,10 +22,10 @@
 #include "stringutil.h"
 #include "terrain.h"
 #include "tile-inventory-flags.h"
-#include "tiledef-dngn.h"
-#include "tiledef-icons.h"
-#include "tiledef-icons.h"
-#include "tiledef-main.h"
+#include "rltiles/tiledef-dngn.h"
+#include "rltiles/tiledef-icons.h"
+#include "rltiles/tiledef-icons.h"
+#include "rltiles/tiledef-main.h"
 #include "tilepick.h"
 #include "unicode.h"
 
@@ -162,12 +161,7 @@ int InventoryRegion::handle_mouse(wm_mouse_event &event)
         m_last_clicked_item = item_idx;
         tiles.set_need_redraw();
         if (on_floor)
-        {
-            if (event.mod & TILES_MOD_SHIFT)
-                tile_item_use_floor(idx);
-            else
-                tile_item_pickup(idx, (event.mod & TILES_MOD_CTRL));
-        }
+            tile_item_pickup(idx, (event.mod & TILES_MOD_CTRL));
         else
         {
             if (event.mod & TILES_MOD_SHIFT)
@@ -184,22 +178,15 @@ int InventoryRegion::handle_mouse(wm_mouse_event &event)
     {
         if (on_floor)
         {
-            if (event.mod & TILES_MOD_SHIFT)
-            {
-                m_last_clicked_item = item_idx;
-                tiles.set_need_redraw();
-                tile_item_eat_floor(idx);
-            }
-            else
-            {
-                describe_item(mitm[idx]);
-                redraw_screen();
-            }
+            describe_item(mitm[idx]);
+            redraw_screen();
+            update_screen();
         }
         else // in inventory
         {
             describe_item(you.inv[idx]);
             redraw_screen();
+            update_screen();
         }
         return CK_MOUSE_CMD;
     }
@@ -239,9 +226,9 @@ static bool _can_use_item(const item_def &item, bool equipped)
         return !_is_true_equipped_item(item);
     }
 
-    // Mummies can't do anything with food or potions.
+    // Mummies can't do anything with potions.
     if (you.species == SP_MUMMY)
-        return item.base_type != OBJ_POTIONS && item.base_type != OBJ_FOOD;
+        return item.base_type != OBJ_POTIONS;
 
     // In all other cases you can use the item in some way.
     return true;
@@ -337,18 +324,6 @@ bool InventoryRegion::update_tip_text(string& tip)
                 cmd.push_back(CMD_PICKUP_QUANTITY);
             }
         }
-        if (item.base_type == OBJ_CORPSES
-            && item.sub_type != CORPSE_SKELETON)
-        {
-            tip += "\n[Shift + L-Click] Chop up (%)";
-            cmd.push_back(CMD_BUTCHER);
-        }
-        else if (item.base_type == OBJ_FOOD
-                 && !you_foodless())
-        {
-            tip += "\n[Shift + R-Click] Eat (e)";
-            cmd.push_back(CMD_EAT);
-        }
     }
     else
     {
@@ -413,11 +388,13 @@ bool InventoryRegion::update_tip_text(string& tip)
                 cmd.push_back(CMD_EVOKE);
                 break;
             case OBJ_MISCELLANY + EQUIP_OFFSET:
+#if TAG_MAJOR_VERSION == 34
             case OBJ_RODS + EQUIP_OFFSET:
                 tmp += "Evoke (%)";
                 cmd.push_back(CMD_EVOKE_WIELDED);
                 _handle_wield_tip(tmp, cmd, "\n[Ctrl + L-Click] ", true);
                 break;
+#endif
             case OBJ_ARMOUR:
                 if (you.species != SP_FELID)
                 {
@@ -478,12 +455,6 @@ bool InventoryRegion::update_tip_text(string& tip)
             case OBJ_POTIONS:
                 tmp += "Quaff (%)";
                 cmd.push_back(CMD_QUAFF);
-                if (wielded)
-                    _handle_wield_tip(tmp, cmd, "\n[Ctrl + L-Click] ", true);
-                break;
-            case OBJ_FOOD:
-                tmp += "Eat (%)";
-                cmd.push_back(CMD_EAT);
                 if (wielded)
                     _handle_wield_tip(tmp, cmd, "\n[Ctrl + L-Click] ", true);
                 break;

@@ -35,6 +35,7 @@ enum WebtilesUIState
 struct player_info
 {
     player_info();
+    bool _state_ever_synced;
 
     string name;
     string job_title;
@@ -116,9 +117,6 @@ public:
     void add_text_tag(text_tag_type type, const monster_info& mon);
 
     const coord_def &get_cursor() const;
-
-    void add_overlay(const coord_def &gc, tileidx_t idx);
-    void clear_overlays();
 
     void draw_doll_edit();
 

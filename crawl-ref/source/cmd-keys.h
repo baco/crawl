@@ -37,9 +37,7 @@
 {'y', CMD_MOVE_UP_LEFT},
 // other commands
 {'a', CMD_USE_ABILITY},
-{'c', CMD_BUTCHER},
 {'d', CMD_DROP},
-{'e', CMD_EAT},
 {'f', CMD_FIRE},
 {'g', CMD_PICKUP},
 {'i', CMD_DISPLAY_INVENTORY},
@@ -175,6 +173,7 @@
 {'(', CMD_TARGET_WIZARD_CREATE_MIMIC},
 #endif
 {'v', CMD_TARGET_DESCRIBE},
+{CONTROL('X'), CMD_TARGET_FULL_DESCRIBE},
 {'?', CMD_TARGET_HELP},
 {' ', CMD_TARGET_SELECT}, // XXX hack: can also be CMD_TARGET_CANCEL
 {CONTROL('P'), CMD_TARGET_SHOW_PROMPT},

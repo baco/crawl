@@ -17,7 +17,6 @@
 #include "english.h"
 #include "env.h"
 #include "fight.h"
-#include "food.h"
 #include "god-abil.h" // RU_SAC_XP_LEVELS
 #include "god-conduct.h"
 #include "god-item.h"
@@ -433,14 +432,6 @@ item_def *player::shield() const
     return slot_item(EQ_SHIELD, false);
 }
 
-void player::make_hungry(int hunger_increase, bool silent)
-{
-    if (hunger_increase > 0)
-        ::make_hungry(hunger_increase, silent);
-    else if (hunger_increase < 0)
-        ::lessen_hunger(-hunger_increase, silent);
-}
-
 string player::name(description_level_type dt, bool, bool) const
 {
     switch (dt)
@@ -735,15 +726,11 @@ bool player::go_berserk(bool intentional, bool potion)
 
     mpr("You feel mighty!");
 
-    int berserk_duration = (20 + random2avg(19,2)) / 2;
-
+    const int berserk_duration = (20 + random2avg(19,2)) / 2;
     you.increase_duration(DUR_BERSERK, berserk_duration);
 
-    //Apply Berserk's +50% Current/Max HP
+    // Apply Berserk's +50% Current/Max HP.
     calc_hp(true, false);
-
-    if (!you.duration[DUR_MIGHT])
-        notify_stat_change(STAT_STR, 5, true);
 
     you.berserk_penalty = 0;
 

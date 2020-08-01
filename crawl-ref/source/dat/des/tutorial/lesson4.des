@@ -32,12 +32,13 @@ DESC:    Lesson 4: Magic and Spellcasting
 ORDER:   4
 ORIENT:  encompass
 KFEAT:   ABCDEF = .
+# TODO: pad g here was for spell hunger, what else could go here?
 COLOUR:  ABCDEFdefg = lightblue
 FTILE:   ABCDEFdefg = tutorial_pad
 ITEM:    randbook numspells:2 spells:magic_dart&mephitic_cloud title:Introduction_to_Spellcasting owner:player
 ITEM:    ring of magical power not_cursed
 ITEM:    staff of wizardry not_cursed
-ITEM:    ration
+# TODO: 4 was rations for spell hunger, replace with something more modern
 MONS:    training dummy ; stone q:20
 MONS:    bat skeleton, goblin skeleton
 MONS:    rat, goblin
@@ -50,7 +51,6 @@ MARKER:  f = lua:tutorial4.msg("spell_success")
 MARKER:  D = lua:tutorial4.msg("mephitic_cloud")
 MARKER:  E = lua:tutorial4.msg("meph_reminder")
 MARKER:  F = lua:tutorial4.msg("aiming_clouds")
-MARKER:  g = lua:tutorial4.msg("spell_hunger")
 MARKER:  { = lua:one_way_stair { dst  = "tutorial_lesson4", \
                                  onclimb = "tutorial4.exit" }
 epilogue{{

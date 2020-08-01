@@ -21,7 +21,6 @@
 #include "colour.h"
 #include "describe.h"
 #include "dungeon.h"
-#include "food.h"
 #include "god-item.h"
 #include "god-passive.h"
 #include "item-name.h"
@@ -30,9 +29,11 @@
 #include "items.h"
 #include "item-use.h"
 #include "invent.h"
+#include "known-items.h"
 #include "libutil.h"
 #include "macro.h"
 #include "message.h"
+#include "notes.h"
 #include "output.h"
 #include "options.h"
 #include "prompt.h"
@@ -54,7 +55,6 @@ static armour_type _acquirement_armour_for_slot(equipment_type, bool);
 static armour_type _acquirement_shield_type();
 static armour_type _acquirement_body_armour(bool);
 static armour_type _useless_armour_type();
-
 
 /**
  * Get a randomly rounded value for the player's specified skill, unmodified
@@ -119,8 +119,8 @@ M filtered_vector_select(vector<pair<M, int>> weights, function<bool(M)> filter)
  * For most races, even odds for all armour slots when acquiring, or 50-50
  * split between body armour/aux armour when getting god gifts.
  *
- * Centaurs & nagas get a high extra chance for bardings, especially if they
- * haven't seen any yet.
+ * Nagas get a high extra chance for bardings, especially if they haven't
+ * seen any yet.
  *
  * Guaranteed to be wearable, in principle.
  *
@@ -129,12 +129,9 @@ M filtered_vector_select(vector<pair<M, int>> weights, function<bool(M)> filter)
  */
 static equipment_type _acquirement_armour_slot(bool divine)
 {
-    if (you.species == SP_NAGA || you.species == SP_CENTAUR)
+    if (you.wear_barding()
+        && one_chance_in(you.seen_armour[ARM_BARDING] ? 4 : 2))
     {
-        const armour_type bard =
-            (you.species == SP_NAGA) ? ARM_NAGA_BARDING
-                                     : ARM_CENTAUR_BARDING;
-        if (one_chance_in(you.seen_armour[bard] ? 4 : 2))
             return EQ_BOOTS;
     }
 
@@ -177,15 +174,10 @@ static armour_type _acquirement_armour_for_slot(equipment_type slot_type,
         case EQ_GLOVES:
             return ARM_GLOVES;
         case EQ_BOOTS:
-            switch (you.species)
-            {
-                case SP_NAGA:
-                    return ARM_NAGA_BARDING;
-                case SP_CENTAUR:
-                    return ARM_CENTAUR_BARDING;
-                default:
-                    return ARM_BOOTS;
-            }
+            if (you.wear_barding())
+                return ARM_BARDING;
+            else
+                return ARM_BOOTS;
         case EQ_HELMET:
             if (you_can_wear(EQ_HELMET) == MB_TRUE)
                 return random_choose(ARM_HELMET, ARM_HAT);
@@ -332,14 +324,9 @@ static armour_type _useless_armour_type()
     switch (slot)
     {
         case EQ_BOOTS:
-            // Boots-wearers get bardings, bardings-wearers get the wrong
-            // barding, everyone else gets boots.
+            // Boots-wearers get bardings, everyone else gets boots.
             if (you_can_wear(EQ_BOOTS) == MB_TRUE)
-                return random_choose(ARM_CENTAUR_BARDING, ARM_NAGA_BARDING);
-            if (you.species == SP_NAGA)
-                return ARM_CENTAUR_BARDING;
-            if (you.species == SP_CENTAUR)
-                return ARM_NAGA_BARDING;
+                return ARM_BARDING;
             return ARM_BOOTS;
         case EQ_GLOVES:
             return ARM_GLOVES;
@@ -406,25 +393,6 @@ static armour_type _pick_unseen_armour()
     }
 
     return picked;
-}
-
-static int _acquirement_food_subtype(bool /*divine*/, int& quantity,
-                                     int /*agent*/)
-{
-    int type_wanted;
-    // Food is a little less predictable now. - bwr
-    if (you.species == SP_GHOUL)
-        type_wanted = FOOD_CHUNK;
-    else
-        type_wanted = FOOD_RATION;
-
-    quantity = 3 + random2(5);
-
-    // giving more of the lower food value items
-    if (type_wanted == FOOD_CHUNK)
-        quantity += 2 + random2avg(10, 2);
-
-    return type_wanted;
 }
 
 /**
@@ -641,64 +609,46 @@ static int _acquirement_staff_subtype(bool /*divine*/, int & /*quantity*/,
         return result;
 
     // Otherwise pick a non-enhancer staff.
-    switch (random2(5))
-    {
-    case 0: case 1: result = STAFF_WIZARDRY;   break;
-    case 2: case 3: result = STAFF_ENERGY;     break;
-    case 4: result = STAFF_POWER;              break;
-    }
-    return result;
+    return coinflip() ? STAFF_WIZARDRY : STAFF_ENERGY;
 }
 
 /**
  * Return a miscellaneous evokable item for acquirement.
  * @return   The item type chosen.
  */
-static int _acquirement_misc_subtype(bool /*divine*/, int & quantity,
+static int _acquirement_misc_subtype(bool /*divine*/, int & /*quantity*/,
                                      int /*agent*/)
 {
-    // Give a crystal ball based on both evocations and either spellcasting or
-    // invocations if we haven't seen one.
-    int skills = _skill_rdiv(SK_EVOCATIONS)
-        * max(_skill_rdiv(SK_SPELLCASTING), _skill_rdiv(SK_INVOCATIONS));
-    if (x_chance_in_y(skills, MAX_SKILL_LEVEL * MAX_SKILL_LEVEL)
-        && !you.seen_misc[MISC_CRYSTAL_BALL_OF_ENERGY])
-    {
-        return MISC_CRYSTAL_BALL_OF_ENERGY;
-    }
-
     const bool NO_LOVE = you.get_mutation_level(MUT_NO_LOVE);
 
     const vector<pair<int, int> > choices =
     {
         // These have charges, so give them a constant weight.
-        {MISC_BOX_OF_BEASTS,
-                                       (NO_LOVE ?     0 :  7)},
-        {MISC_SACK_OF_SPIDERS,
-                                       (NO_LOVE ?     0 :  7)},
-        {MISC_PHANTOM_MIRROR,
-                                       (NO_LOVE ?     0 :  7)},
+        {MISC_BOX_OF_BEASTS,            (NO_LOVE ? 0 : 10)},
+        {MISC_PHANTOM_MIRROR,           (NO_LOVE ? 0 : 10)},
+        // The player never needs more than one of the rest.
         // Tremorstones are better for heavily armoured characters.
-        {MISC_TREMORSTONE, 3 + _skill_rdiv(SK_ARMOUR) / 3 },
-        // The player never needs more than one.
+        {MISC_TIN_OF_TREMORSTONES,
+            (you.seen_misc[MISC_TIN_OF_TREMORSTONES]
+                     ? 0 : 5 + _skill_rdiv(SK_ARMOUR) / 3)},
         {MISC_LIGHTNING_ROD,
-            (you.seen_misc[MISC_LIGHTNING_ROD] ?      0 : 17)},
-        {MISC_LAMP_OF_FIRE,
-            (you.seen_misc[MISC_LAMP_OF_FIRE] ?       0 : 17)},
+            (you.seen_misc[MISC_LIGHTNING_ROD]   ? 0 : 20)},
         {MISC_PHIAL_OF_FLOODS,
-            (you.seen_misc[MISC_PHIAL_OF_FLOODS] ?    0 : 17)},
-        {MISC_FAN_OF_GALES,
-            (you.seen_misc[MISC_FAN_OF_GALES] ?       0 : 17)},
+            (you.seen_misc[MISC_PHIAL_OF_FLOODS] ? 0 : 20)},
 
     };
 
     const int * const choice = random_choose_weighted(choices);
 
-    if (choice != nullptr && *choice == MISC_TREMORSTONE)
-        quantity = 2; // not quite worth it alone
+    // Possible for everything to be 0 weight - if so just give a random spare.
+    if (choice == nullptr)
+    {
+        return random_choose(MISC_TIN_OF_TREMORSTONES,
+                             MISC_LIGHTNING_ROD,
+                             MISC_PHIAL_OF_FLOODS);
+    }
 
-    // Could be nullptr if all the weights were 0.
-    return choice ? *choice : MISC_CRYSTAL_BALL_OF_ENERGY;
+    return *choice;
 }
 
 /**
@@ -714,8 +664,7 @@ static int _acquirement_wand_subtype(bool /*divine*/, int & /*quantity*/,
 {
     // basic total: 120
     vector<pair<wand_type, int>> weights = {
-        { WAND_SCATTERSHOT,     25 },
-        { WAND_CLOUDS,          25 },
+        { WAND_CLOUDS,          18 },
         { WAND_ACID,            18 },
         { WAND_ICEBLAST,        18 },
         { WAND_ENSLAVEMENT,     you.get_mutation_level(MUT_NO_LOVE) ? 0 : 8 },
@@ -752,10 +701,12 @@ static const acquirement_subtype_finder _subtype_finders[] =
     _acquirement_missile_subtype,
     _acquirement_armour_subtype,
     _acquirement_wand_subtype,
-    _acquirement_food_subtype,
+#if TAG_MAJOR_VERSION == 34
+    0, // no food
+#endif
     0, // no scrolls
     _acquirement_jewellery_subtype,
-    _acquirement_food_subtype, // potion acquirement = food for vampires
+    0, // no potions
     _acquirement_book_subtype,
     _acquirement_staff_subtype,
     0, // no, you can't acquire the orb
@@ -962,9 +913,7 @@ static bool _acquire_manual(item_def &book)
                     choose_random_weighted(weights, end(weights)));
     // Set number of bonus skill points.
     book.skill_points = random_range(2000, 3000);
-    // Identify.
-    set_ident_type(book, true);
-    set_ident_flags(book, ISFLAG_IDENT_MASK);
+
     return true;
 }
 
@@ -1220,23 +1169,9 @@ static string _why_reject(const item_def &item, int agent)
         return "Destroying unusable weapon or armour!";
     }
 
-    // Trog does not gift the Wrath of Trog, nor weapons of pain
-    // (which work together with Necromantic magic).
-    // nor fancy magic staffs (wucad mu, majin-bo, staff of battle, elem
-    // staff, staff of olgreb)
-    if (agent == GOD_TROG)
-    {
-        if (is_unrandom_artefact(item, UNRAND_TROG)
-            || is_unrandom_artefact(item, UNRAND_WUCAD_MU)
-            || is_unrandom_artefact(item, UNRAND_MAJIN)
-            || is_unrandom_artefact(item, UNRAND_BATTLE)
-            || is_unrandom_artefact(item, UNRAND_ELEMENTAL_STAFF)
-            || is_unrandom_artefact(item, UNRAND_OLGREB)
-            || get_weapon_brand(item) == SPWPN_PAIN)
-        {
-            return "Destroying a weapon Trog hates!";
-        }
-    }
+    // Trog does not gift the Wrath of Trog.
+    if (agent == GOD_TROG && is_unrandom_artefact(item, UNRAND_TROG))
+        return "Destroying Trog-gifted Wrath of Trog!";
 
     // Pain brand is useless if you've sacrificed Necromacy.
     if (you.get_mutation_level(MUT_NO_NECROMANCY_MAGIC)
@@ -1253,19 +1188,6 @@ static string _why_reject(const item_def &item, int agent)
         ASSERT(item.base_type == OBJ_BOOKS);
         return "Destroying sif-gifted rarebook!";
     }
-
-#if TAG_MAJOR_VERSION == 34
-    // The crystal ball case should be handled elsewhere, but just in
-    // case, it's also handled here.
-    if (agent == GOD_PAKELLAS)
-    {
-        if (item.base_type == OBJ_MISCELLANY
-            && item.sub_type == MISC_CRYSTAL_BALL_OF_ENERGY)
-        {
-            return "Destroying CBoE that Pakellas hates!";
-        }
-    }
-#endif
 
     return ""; // all OK
 }
@@ -1292,7 +1214,7 @@ int acquirement_create_item(object_class_type class_wanted,
             type_wanted = _useless_armour_type();
         else
         {
-            // This may clobber class_wanted (e.g. staves or vampire food)
+            // This may clobber class_wanted (e.g. staves)
             type_wanted = _find_acquirement_subtype(class_wanted, quant,
                                                     divine, agent);
         }
@@ -1572,7 +1494,7 @@ public:
 
 AcquireMenu::AcquireMenu(CrawlVector &aitems)
     : InvMenu(MF_SINGLESELECT | MF_NO_SELECT_QTY | MF_QUIET_SELECT
-              | MF_ALWAYS_SHOW_MORE | MF_ALLOW_FORMATTING | MF_UNCANCEL),
+              | MF_ALWAYS_SHOW_MORE | MF_ALLOW_FORMATTING),
       acq_items(aitems)
 {
     menu_action = ACT_EXECUTE;
@@ -1619,14 +1541,46 @@ void AcquireMenu::update_help()
 
     set_more(formatted_string::parse_string(top_line + make_stringf(
         //[!] acquire|examine item  [a-i] select item to acquire
-        //[$] show shopping list    [\] show identification knowledge
+        //[Esc/R-Click] exit
         "%s  [%s] %s\n"
-        "[$] show shopping list" "     " "[\\] show identification knowledge",
+        "[Esc/R-Click] exit",
         menu_action == ACT_EXECUTE ? "[<w>!</w>] <w>acquire</w>|examine items" :
                                      "[<w>!</w>] acquire|<w>examine</w> items",
         _hyphenated_letters(item_count(), 'a').c_str(),
         menu_action == ACT_EXECUTE ? "select item for acquirement"
                                    : "examine item")));
+}
+
+static void _create_acquirement_item(item_def &item)
+{
+    auto &acq_items = you.props[ACQUIRE_ITEMS_KEY].get_vector();
+
+    // Now that we have a selection, mark any generated unrands as not having
+    // been generated, so they go back in circulation. Exclude the selected
+    // item from this, if it's an unrand.
+    for (auto aitem : acq_items)
+    {
+        if (is_unrandom_artefact(aitem)
+            && (!is_unrandom_artefact(item)
+                || !is_unrandom_artefact(aitem, item.unrand_idx)))
+        {
+            set_unique_item_status(aitem, UNIQ_NOT_EXISTS);
+        }
+    }
+
+    take_note(Note(NOTE_ACQUIRE_ITEM, 0, 0, item.name(DESC_A),
+              origin_desc(item)));
+    item.flags |= (ISFLAG_NOTED_ID | ISFLAG_NOTED_GET);
+
+    set_ident_type(item, true);
+
+    if (copy_item_to_grid(item, you.pos()))
+        canned_msg(MSG_SOMETHING_APPEARS);
+    else
+        canned_msg(MSG_NOTHING_HAPPENS);
+
+    acq_items.clear();
+    you.props.erase(ACQUIRE_ITEMS_KEY);
 }
 
 bool AcquireMenu::acquire_selected()
@@ -1649,18 +1603,15 @@ bool AcquireMenu::acquire_selected()
 
     if (!yesno(nullptr, true, 'n', false, false, true))
     {
-        entry.select();
+        deselect_all();
         more = old_more;
         update_more();
         return true;
     }
 
     item_def &acq_item = *static_cast<item_def*>(entry.data);
-    if (copy_item_to_grid(acq_item, you.pos()))
-        canned_msg(MSG_SOMETHING_APPEARS);
-    else
-        canned_msg(MSG_NOTHING_HAPPENS);
-    acq_items.clear();
+    _create_acquirement_item(acq_item);
+
     return false;
 }
 
@@ -1677,12 +1628,6 @@ bool AcquireMenu::process_key(int keyin)
         update_help();
         update_more();
         return true;
-    case '$':
-        shopping_list.display(true);
-        return true;
-    case '\\':
-        check_item_knowledge();
-        return true;
     default:
         break;
     }
@@ -1691,21 +1636,16 @@ bool AcquireMenu::process_key(int keyin)
     {
         if (menu_action == ACT_EXAMINE)
         {
+            // Use a copy to set flags that make the description better
+            // See the similar code in shopping.cc for details about const
+            // hygene
             item_def& item(*const_cast<item_def*>(dynamic_cast<AcquireEntry*>(
                 items[letter_to_index(keyin)])->item));
-            // A hack to make the description more useful.
-            // In theory, the user could kill the process at this
-            // point and end up with valid ID for the item.
-            // That's not very useful, though, because it doesn't set
-            // type-ID and once you can access the item (by buying it)
-            // you have its full ID anyway. Worst case, it won't get
-            // noted when you buy it.
-            {
-                unwind_var<iflags_t> old_flags(item.flags);
-                item.flags |= (ISFLAG_IDENT_MASK | ISFLAG_NOTED_ID
-                               | ISFLAG_NOTED_GET);
-                describe_item(item);
-            }
+
+            item.flags |= (ISFLAG_IDENT_MASK | ISFLAG_NOTED_ID
+                           | ISFLAG_NOTED_GET);
+            describe_item_popup(item);
+
             return true;
         }
         else
@@ -1716,55 +1656,83 @@ bool AcquireMenu::process_key(int keyin)
         }
     }
 
-    return true;
+    const bool ret = InvMenu::process_key(keyin);
+    auto selected = selected_entries();
+    if (selected.size() == 1)
+        return acquire_selected();
+    else
+        return ret;
+}
+
+static item_def _acquirement_item_def(object_class_type item_type)
+{
+    item_def item;
+
+    const int item_index = acquirement_create_item(item_type, AQ_SCROLL, true);
+
+    if (item_index != NON_ITEM)
+    {
+        ASSERT(!god_hates_item(mitm[item_index]));
+
+        // We make a copy of the item def, but we don't keep the real item.
+        item = mitm[item_index];
+        set_ident_flags(item,
+                // Act as if we've recieved this item already to prevent notes.
+                ISFLAG_IDENT_MASK | ISFLAG_NOTED_ID | ISFLAG_NOTED_GET);
+        destroy_item(item_index);
+    }
+
+    return item;
 }
 
 static void _make_acquirement_items()
 {
-    vector<object_class_type> rand_acq_classes;
+    vector<object_class_type> rand_classes;
 
     if (you.species != SP_FELID)
     {
-        rand_acq_classes.emplace_back(OBJ_WEAPONS);
-        rand_acq_classes.emplace_back(OBJ_ARMOUR);
-        rand_acq_classes.emplace_back(OBJ_STAVES);
+        rand_classes.emplace_back(OBJ_WEAPONS);
+        rand_classes.emplace_back(OBJ_ARMOUR);
+        rand_classes.emplace_back(OBJ_STAVES);
     }
 
-    rand_acq_classes.emplace_back(OBJ_JEWELLERY);
-    rand_acq_classes.emplace_back(OBJ_BOOKS);
+    rand_classes.emplace_back(OBJ_JEWELLERY);
+    rand_classes.emplace_back(OBJ_BOOKS);
 
-    vector<object_class_type> chosen_classes;
-    const int num_wanted = min(3, (int) rand_acq_classes.size());
-    shuffle_array(rand_acq_classes);
-    for (int i = 0 ; i < num_wanted ; i++)
-        chosen_classes.emplace_back(rand_acq_classes[i]);
-
-    // Gold and food (for characters that eat) are guaranteed.
-    chosen_classes.emplace_back(OBJ_GOLD);
-    if (!you_foodless(false))
-        chosen_classes.emplace_back(OBJ_FOOD);
+    const int num_wanted = min(3, (int) rand_classes.size());
+    shuffle_array(rand_classes);
 
     CrawlVector &acq_items = you.props[ACQUIRE_ITEMS_KEY].get_vector();
     acq_items.empty();
-    for (auto acq_class : chosen_classes)
+
+    // Generate item defs until we have enough, skipping any random classes
+    // that fail to generate an item.
+    for (auto obj_type : rand_classes)
     {
-        const int item_index = acquirement_create_item(acq_class, AQ_SCROLL,
-                true);
+        if (acq_items.size() == num_wanted)
+            break;
 
-        // If we couldn't make an item of this type, just skip it.
-        // TODO: it would be nice to instead try another item class.
-        if (item_index == NON_ITEM)
-            continue;
-        ASSERT(!god_hates_item(mitm[item_index]));
-
-        item_def item = mitm[item_index];
-        set_ident_flags(item, ISFLAG_IDENT_MASK);
-        acq_items.push_back(item);
-        // Copy the item def, but we don't want to keep the real item.
-        destroy_item(item_index, true);
+        auto item = _acquirement_item_def(obj_type);
+        if (item.defined())
+            acq_items.push_back(item);
     }
+
+    // Gold is guaranteed.
+    auto gold_item = _acquirement_item_def(OBJ_GOLD);
+    if (gold_item.defined())
+            acq_items.push_back(gold_item);
 }
 
+/*
+ * Handle scroll of acquirement.
+ *
+ * Generate acquirement choices as items in a prop if these don't already exist
+ * (because a scroll was read and canceled. Then either get the acquirement
+ * choice from the c_choose_acquirement lua handler if one exists or present a
+ * menu for the player to choose an item.
+ *
+ * returns True if the scroll was used, false if it was canceled.
+*/
 bool acquirement_menu()
 {
     ASSERT(!crawl_state.game_is_arena());
@@ -1774,14 +1742,22 @@ bool acquirement_menu()
 
     auto &acq_items = you.props[ACQUIRE_ITEMS_KEY].get_vector();
 
+#ifdef CLUA_BINDINGS
+    int index = 0;
+    if (!clua.callfn("c_choose_acquirement", ">d", &index))
+    {
+        if (!clua.error.empty())
+            mprf(MSGCH_ERROR, "Lua error: %s", clua.error.c_str());
+    }
+    else if (index >= 1 && index <= acq_items.size())
+    {
+        _create_acquirement_item(acq_items[index - 1]);
+        return true;
+    }
+#endif
+
     AcquireMenu acq_menu(acq_items);
     acq_menu.show();
 
-    if (acq_items.empty())
-    {
-        you.props.erase(ACQUIRE_ITEMS_KEY);
-        return true;
-    }
-    else
-        return false;
+    return !you.props.exists(ACQUIRE_ITEMS_KEY);
 }

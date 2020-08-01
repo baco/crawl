@@ -191,7 +191,7 @@ bullfrog MONS_BULLFROG
 %rim 0
 blink_frog MONS_BLINK_FROG
 %rim 1
-spiny_frog MONS_SPINY_FROG
+cane_toad MONS_CANE_TOAD
 
 ## Snakes ('S')
 %rim 0
@@ -333,6 +333,7 @@ hellwing MONS_HELLWING
 # type '5' demons
 crimson_imp MONS_CRIMSON_IMP
 %rim 0
+lemure MONS_LEMURE
 quasit MONS_QUASIT
 %rim 1
 iron_imp MONS_IRON_IMP
@@ -390,6 +391,7 @@ abomination_large7
 abomination_large8
 abomination_large9
 tentacled_monstrosity MONS_TENTACLED_MONSTROSITY
+nameless_horror MONS_NAMELESS_HORROR
 %sdir mon/vault
 cigotuvis_monster MONS_CIGOTUVIS_MONSTER
 
@@ -548,8 +550,6 @@ killer_klown_green
 killer_klown_purple
 killer_klown_red
 killer_klown_yellow
-slave MONS_SLAVE
-slave_freed
 %sdir mon/vault
 ## From a Lair ending
 %rim 0
@@ -922,6 +922,7 @@ deep_elf_master_archer MONS_DEEP_ELF_MASTER_ARCHER
 deep_elf_elementalist1 MONS_DEEP_ELF_ELEMENTALIST
 deep_elf_elementalist2
 deep_elf_elementalist3
+deep_elf_elementalist4
 %sdir mon/vault
 ## From the Cigotuvi wizlab
 deformed_elf MONS_DEFORMED_ELF
@@ -1037,10 +1038,8 @@ silent_spectre MONS_SILENT_SPECTRE
 lost_soul MONS_LOST_SOUL /*'*'*/
 drowned_soul MONS_DROWNED_SOUL
 flayed_ghost MONS_FLAYED_GHOST
-%rim 1
-hungry_ghost MONS_HUNGRY_GHOST
-%sdir mon/unique
 %sdir mon/nonliving
+%rim 1
 insubstantial_wisp MONS_INSUBSTANTIAL_WISP
 
 ## Dwarves ('q')

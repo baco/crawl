@@ -17,7 +17,7 @@
 #include "state.h"
 #include "stringutil.h"
 #ifdef USE_TILE
-#include "tiledef-gui.h"
+#include "rltiles/tiledef-gui.h"
 #endif
 #include "viewchar.h"
 #include "ui.h"
@@ -77,10 +77,8 @@ bool yesno(const char *str, bool allow_lowercase, int default_answer, bool clear
         status = new MenuEntry("", MEL_SUBTITLE);
         MenuEntry * const y_me = new MenuEntry("Yes", MEL_ITEM, 1, 'Y');
         MenuEntry * const n_me = new MenuEntry("No", MEL_ITEM, 1, 'N');
-#ifdef USE_TILE
-        y_me->add_tile(tile_def(TILEG_PROMPT_YES, TEX_GUI));
-        n_me->add_tile(tile_def(TILEG_PROMPT_NO, TEX_GUI));
-#endif
+        y_me->add_tile(tile_def(TILEG_PROMPT_YES));
+        n_me->add_tile(tile_def(TILEG_PROMPT_NO));
 
         pop.set_title(new MenuEntry(prompt, MEL_TITLE));
         pop.add_entry(status);

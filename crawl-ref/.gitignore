@@ -186,13 +186,15 @@ makefile.dep
 /source/debian/files
 
 # Windows packaging
-/source/crawl-win
+/source/stone_soup*.exe
+/source/stone_soup*.zip
 
 # Windows thumbnail files
 Thumbs.db
 
 # Python (webtiles) junk
 *.pyc
+.mypy_cache/
 
 # Webtiles stuff
 passwd.db3

@@ -10,6 +10,8 @@
 
 #include "caction-type.h"
 
+#define TIME_PER_LEVEL_KEY "auts_on_level"
+
 enum item_origin_dump_selector
 {
     IODS_PRICE            = 0,      // Extra info is provided based on price
@@ -38,7 +40,8 @@ void dump_map(FILE *fp, bool debug = false, bool dist = false);
 void display_notes();
 void display_char_dump();
 string chardump_desc(const item_def& item);
-const char *hunger_level();
+
+string seed_description();
 
 #ifdef DGL_WHEREIS
 void whereis_record(const char *status = "active");
@@ -62,7 +65,7 @@ enum evoc_type
 enum dodge_type    // subtype for counted actions
 {
     DODGE_EVASION,
-    DODGE_DEFLECT,
+    DODGE_REPEL,
     NUM_DODGES
 };
 

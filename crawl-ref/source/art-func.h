@@ -23,16 +23,19 @@
 #include "areas.h"         // For silenced() and invalidate_agrid()
 #include "attack.h"        // For attack_strength_punctuation()
 #include "beam.h"          // For Lajatang of Order's silver damage
-#include "cloud.h"         // For storm bow's and robe of clouds' rain
+#include "bloodspatter.h"  // For Leech
+#include "cloud.h"         // For robe of clouds' thunder and salamander's flame
 #include "coordit.h"       // For distance_iterator()
+#include "death-curse.h"   // For the Scythe of Curses
 #include "english.h"       // For apostrophise
 #include "exercise.h"      // For practise_evoking
 #include "fight.h"
-#include "food.h"          // For evokes
 #include "ghost.h"         // For is_dragonkind ghost_demon datas
-#include "god-conduct.h"    // did_god_conduct
-#include "god-passive.h"    // passive_t::want_curses
+#include "god-conduct.h"   // did_god_conduct
+#include "god-passive.h"   // passive_t::want_curses
 #include "mgen-data.h"     // For Sceptre of Asmodeus evoke
+#include "message.h"
+#include "monster.h"
 #include "mon-death.h"     // For demon axe's SAME_ATTITUDE
 #include "mon-place.h"     // For Sceptre of Asmodeus evoke
 #include "nearby-danger.h" // For Zhor
@@ -42,7 +45,7 @@
 #include "spl-cast.h"      // For evokes
 #include "spl-damage.h"    // For the Singing Sword.
 #include "spl-goditem.h"   // For Sceptre of Torment tormenting
-#include "spl-miscast.h"   // For Staff of Wucad Mu and Scythe of Curses miscasts
+#include "spl-miscast.h"   // For Spellbinder and plutonium sword miscasts
 #include "spl-monench.h"   // For Zhor's aura
 #include "spl-summoning.h" // For Zonguldrok animating dead
 #include "terrain.h"       // For storm bow
@@ -77,6 +80,12 @@ static void _equip_mpr(bool* show_msgs, const char* msg,
 
 static bool _evoke_sceptre_of_asmodeus()
 {
+    if (you.get_mutation_level(MUT_NO_LOVE))
+    {
+        mpr("You are hated by all, and nothing answers your call!");
+        return false;
+    }
+
     if (!x_chance_in_y(you.skill(SK_EVOCATIONS, 100), 3000))
         return false;
 
@@ -101,8 +110,7 @@ static bool _evoke_sceptre_of_asmodeus()
 
         m->add_ench(mon_enchant(ENCH_FAKE_ABJURATION, 6));
 
-        if (!player_angers_monster(m))
-            mpr("You don't feel so good about this...");
+        mpr("You don't feel so good about this...");
     }
     else
         mpr("The air shimmers briefly.");
@@ -115,7 +123,6 @@ static bool _ASMODEUS_evoke(item_def */*item*/, bool* did_work,
 {
     if (_evoke_sceptre_of_asmodeus())
     {
-        make_hungry(200, false, true);
         *did_work = true;
         practise_evoking(1);
     }
@@ -158,33 +165,16 @@ static void _CURSES_equip(item_def */*item*/, bool *show_msgs, bool unmeld)
 {
     _equip_mpr(show_msgs, "A shiver runs down your spine.");
     if (!unmeld)
-    {
-        const int pow = random2(9);
-        MiscastEffect(&you, nullptr, {miscast_source::wield},
-                      spschool::necromancy, pow, random2(70),
-                      "the scythe of Curses", nothing_happens::NEVER);
-    }
-}
-
-static void _CURSES_world_reacts(item_def */*item*/)
-{
-    // don't spam messages for ash worshippers
-    if (one_chance_in(30) && !have_passive(passive_t::want_curses))
-        curse_an_item();
+        death_curse(you, nullptr, "the scythe of Curses", 0);
 }
 
 static void _CURSES_melee_effects(item_def* /*weapon*/, actor* attacker,
-                                  actor* defender, bool mondied, int /*dam*/)
+                                  actor* defender, bool mondied, int dam)
 {
     if (attacker->is_player())
         did_god_conduct(DID_EVIL, 3);
     if (!mondied && defender->holiness() == MH_NATURAL)
-    {
-        const int pow = random2(9);
-        MiscastEffect(defender, attacker, {miscast_source::melee},
-                      spschool::necromancy, pow, random2(70),
-                      "the scythe of Curses", nothing_happens::NEVER);
-    }
+        death_curse(*defender, attacker, "the scythe of Curses", min(dam, 27));
 }
 
 /////////////////////////////////////////////////////
@@ -216,7 +206,6 @@ static bool _DISPATER_evoke(item_def */*item*/, bool* did_work, bool* unevokable
     mpr("You feel the staff feeding on your energy!");
     dec_hp(14, false);
     dec_mp(4);
-    make_hungry(100, false, true);
     practise_evoking(random_range(1, 2));
 
     return false;
@@ -287,22 +276,42 @@ static bool _OLGREB_evoke(item_def */*item*/, bool* did_work, bool* unevokable)
         return false;
     }
 
-    if (x_chance_in_y(you.skill(SK_EVOCATIONS, 100) + 100, 2000))
-        your_spells(SPELL_VENOM_BOLT, power, false);
-
     dec_mp(4);
-    make_hungry(50, false, true);
     practise_evoking(1);
+    did_god_conduct(DID_WIZARDLY_ITEM, 10);
 
     return false;
 }
 
+// Based on melee_attack::staff_damage(), but using only evocations skill.
+static int _calc_olgreb_damage(actor* attacker, actor* defender)
+{
+    int base_dam = 0;
+    if (x_chance_in_y(attacker->skill(SK_EVOCATIONS, 100), 1000))
+        base_dam = random2(attacker->skill(SK_EVOCATIONS, 150) / 80);
+
+    return resist_adjust_damage(defender, BEAM_POISON_ARROW, base_dam);
+}
+
+
 static void _OLGREB_melee_effects(item_def* /*weapon*/, actor* attacker,
-                                  actor* defender, bool /*mondied*/,
+                                  actor* defender, bool mondied,
                                   int /*dam*/)
 {
-    if (defender->alive())
-        defender->poison(attacker, 2);
+    const int bonus_dam = _calc_olgreb_damage(attacker, defender);
+
+    if (!mondied && bonus_dam)
+    {
+        mprf("%s %s %s%s",
+             attacker->name(DESC_THE).c_str(),
+             attacker->conj_verb("envenom").c_str(),
+             defender->name(DESC_THE).c_str(),
+             attack_strength_punctuation(bonus_dam).c_str());
+
+        defender->hurt(attacker, bonus_dam);
+        if (defender->alive())
+            defender->poison(attacker, 2, true);
+    }
 }
 
 ////////////////////////////////////////////////////
@@ -374,8 +383,8 @@ static void _SINGING_SWORD_world_reacts(item_def *item)
 }
 
 static void _SINGING_SWORD_melee_effects(item_def* weapon, actor* attacker,
-                                         actor* defender, bool /*mondied*/,
-                                         int /*dam*/)
+                                         actor* /* defender */,
+                                         bool /*mondied*/, int /*dam*/)
 {
     int tier;
 
@@ -410,7 +419,7 @@ static void _SINGING_SWORD_melee_effects(item_def* weapon, actor* attacker,
         return; // Can't cast when silenced.
 
     const int spellpower = 100 + 13 * (tier - 1) + (tier == 4 ? 36 : 0);
-    fire_los_attack_spell(SPELL_SONIC_WAVE, spellpower, attacker, defender);
+    fire_los_attack_spell(SPELL_SONIC_WAVE, spellpower, attacker);
 }
 ////////////////////////////////////////////////////
 
@@ -506,6 +515,7 @@ static bool _WUCAD_MU_evoke(item_def */*item*/, bool* did_work, bool* unevokable
     {
         _wucad_backfire();
         did_god_conduct(DID_CHANNEL, 10, true);
+        did_god_conduct(DID_WIZARDLY_ITEM, 10);
         return false;
     }
 
@@ -513,11 +523,11 @@ static bool _WUCAD_MU_evoke(item_def */*item*/, bool* did_work, bool* unevokable
 
     const int mp_inc_base = 3 + random2(5);
     inc_mp(mp_inc_base + you.skill_rdiv(SK_EVOCATIONS, 1, 3));
-    make_hungry(50, false, true);
 
     *did_work = true;
     practise_evoking(1);
     did_god_conduct(DID_CHANNEL, 10, true);
+    did_god_conduct(DID_WIZARDLY_ITEM, 10);
 
     return false;
 }
@@ -529,8 +539,7 @@ static bool _WUCAD_MU_evoke(item_def */*item*/, bool* did_work, bool* unevokable
 
 static void _VAMPIRES_TOOTH_equip(item_def */*item*/, bool *show_msgs, bool /*unmeld*/)
 {
-    if (you.undead_state() == US_ALIVE
-        && (you.species == SP_VAMPIRE || !you_foodless()))
+    if (you.undead_state() == US_ALIVE && you.species == SP_VAMPIRE)
     {
         _equip_mpr(show_msgs,
                    "You feel a strange hunger, and smell blood in the air...");
@@ -838,12 +847,14 @@ static void _DRAGONSKIN_unequip(item_def */*item*/, bool *show_msgs)
     _equip_mpr(show_msgs, "You no longer feel protected from the elements.");
 }
 
+#if TAG_MAJOR_VERSION == 34
 ///////////////////////////////////////////////////
 static void _BLACK_KNIGHT_HORSE_world_reacts(item_def */*item*/)
 {
     if (one_chance_in(10))
         did_god_conduct(DID_EVIL, 1);
 }
+#endif
 
 ///////////////////////////////////////////////////
 static void _NIGHT_equip(item_def */*item*/, bool *show_msgs, bool /*unmeld*/)
@@ -862,20 +873,23 @@ static void _NIGHT_unequip(item_def */*item*/, bool *show_msgs)
 
 static void _PLUTONIUM_SWORD_melee_effects(item_def* /*weapon*/,
                                            actor* attacker, actor* defender,
-                                           bool mondied, int /*dam*/)
+                                           bool mondied, int dam)
 {
-    if (!mondied && one_chance_in(5)
-        && (!defender->is_monster()
-             || !mons_immune_magic(*defender->as_monster())))
+    if (!mondied && one_chance_in(5) && defender->can_mutate())
     {
         mpr("Mutagenic energy flows through the plutonium sword!");
-        const int pow = random2(9);
-        MiscastEffect(defender, attacker, {miscast_source::melee},
-                      spschool::transmutation, pow, random2(70),
-                      "the plutonium sword", nothing_happens::NEVER);
 
         if (attacker->is_player())
             did_god_conduct(DID_CHAOS, 3);
+
+        if (one_chance_in(10))
+            defender->polymorph(0); // Low duration if applied to the player.
+        else
+        {
+            miscast_effect(*defender, attacker, {miscast_source::melee},
+                           spschool::transmutation, 5, random2(dam),
+                           "the plutonium sword");
+        }
     }
 }
 
@@ -1054,16 +1068,15 @@ static void _ARC_BLADE_melee_effects(item_def* /*weapon*/, actor* attacker,
 
 static void _SPELLBINDER_melee_effects(item_def* /*weapon*/, actor* attacker,
                                        actor* defender, bool mondied,
-                                       int /*dam*/)
+                                       int dam)
 {
     // Only cause miscasts if the target has magic to disrupt.
     if (defender->antimagic_susceptible()
         && !mondied)
     {
-        const int pow = random2(9);
-        MiscastEffect(defender, attacker, {miscast_source::melee},
-                      spschool::random, pow, random2(70),
-                      "the demon whip \"Spellbinder\"", nothing_happens::NEVER);
+        miscast_effect(*defender, attacker, {miscast_source::melee},
+                       spschool::random, random_range(1, 9), dam,
+                       "the demon whip \"Spellbinder\"");
     }
 }
 
@@ -1287,6 +1300,7 @@ static void _FENCERS_equip(item_def */*item*/, bool *show_msgs, bool /*unmeld*/)
     _equip_mpr(show_msgs, "En garde!");
 }
 
+#if TAG_MAJOR_VERSION == 34
 ///////////////////////////////////////////////////
 
 static void _ETHERIC_CAGE_equip(item_def */*item*/, bool *show_msgs,
@@ -1308,7 +1322,6 @@ static void _ETHERIC_CAGE_world_reacts(item_def */*item*/)
 
 ///////////////////////////////////////////////////
 
-#if TAG_MAJOR_VERSION == 34
 static void _ETERNAL_TORMENT_equip(item_def */*item*/, bool */*show_msgs*/,
                                    bool /*unmeld*/)
 {
@@ -1373,16 +1386,25 @@ static void _FROSTBITE_melee_effects(item_def* /*weapon*/, actor* attacker,
 
 static void _LEECH_equip(item_def */*item*/, bool *show_msgs, bool /*unmeld*/)
 {
-    if (you.undead_state() == US_ALIVE
-        && (you.species == SP_VAMPIRE || !you_foodless()))
-    {
+    if (you.undead_state() == US_ALIVE && you.species == SP_VAMPIRE)
         _equip_mpr(show_msgs, "You feel a powerful hunger.");
-    }
     else if (you.species != SP_VAMPIRE)
         _equip_mpr(show_msgs, "You feel very empty.");
     // else let player-equip.cc handle message
 }
 
+// Big killing blows give a bloodsplosion effect sometimes
+static void _LEECH_melee_effects(item_def* /*item*/, actor* attacker,
+                                 actor* defender, bool mondied, int dam)
+{
+    if (attacker->is_player() && defender->can_bleed()
+        && mondied && x_chance_in_y(dam, 729))
+    {
+        simple_monster_message(*(defender->as_monster()),
+                               " liquefies into a cloud of blood!");
+        blood_spray(defender->pos(), defender->type, 50);
+    }
+}
 
 ///////////////////////////////////////////////////
 
@@ -1471,7 +1493,7 @@ static void _BATTLE_world_reacts(item_def */*item*/)
     if (!find_battlesphere(&you) && there_are_monsters_nearby(true, true, false))
     {
         your_spells(SPELL_BATTLESPHERE, 0, false);
-        did_god_conduct(DID_SPELL_CASTING, 1);
+        did_god_conduct(DID_WIZARDLY_ITEM, 10);
     }
 }
 
@@ -1480,7 +1502,8 @@ static void _BATTLE_world_reacts(item_def */*item*/)
 static void _EMBRACE_unequip(item_def *item, bool *show_msgs)
 {
     int &armour = item->props[EMBRACE_ARMOUR_KEY].get_int();
-    if (armour > 0) {
+    if (armour > 0)
+    {
         _equip_mpr(show_msgs, "Your corpse armour falls away.");
         armour = 0;
         item->plus = get_unrand_entry(item->unrand_idx)->plus;
@@ -1512,12 +1535,6 @@ static int _harvest_corpses()
 
             did_god_conduct(DID_EVIL, 1);
 
-             // apply these in addition to use of an evil item
-             if (mons_class_holiness(item.mon_type) & MH_HOLY)
-                 did_god_conduct(DID_DESECRATE_HOLY_REMAINS, 4);
-             else if (corpse_intelligence(item) >= I_HUMAN)
-                 did_god_conduct(DID_DESECRATE_SOULED_BEING, 1);
-
             ++harvested;
 
             // don't spam animations
@@ -1535,6 +1552,7 @@ static int _harvest_corpses()
                 beam.draw_delay = 3;
                 beam.fire();
                 viewwindow();
+                update_screen();
             }
 
             destroy_item(item.index());
@@ -1549,31 +1567,66 @@ static void _EMBRACE_world_reacts(item_def *item)
     int &armour = item->props[EMBRACE_ARMOUR_KEY].get_int();
     const int harvested = _harvest_corpses();
     // diminishing returns for more corpses
-    for (int i = 0; i < harvested; i++) {
+    for (int i = 0; i < harvested; i++)
         armour += div_rand_round(100 * 100, (armour + 100));
-    }
 
     // decay over time - 1 turn per 'armour' base, 0.5 turns at 400 'armour'
     armour -= div_rand_round(you.time_taken * (armour + 400), 10 * 400);
 
     const int last_plus = item->plus;
     const int base_plus = get_unrand_entry(item->unrand_idx)->plus;
-    if (armour <= 0) {
+    if (armour <= 0)
+    {
         armour = 0;
         item->plus = base_plus;
-        if (last_plus > base_plus) {
+        if (last_plus > base_plus)
             mpr("Your corpse armour falls away.");
-        }
-    } else {
+    }
+    else
+    {
         item->plus = base_plus + 1 + (armour-1) * 6 / 100;
-        if (item->plus < last_plus) {
+        if (item->plus < last_plus)
             mpr("A chunk of your corpse armour falls away.");
-        } else if (last_plus == base_plus) {
+        else if (last_plus == base_plus)
             mpr("The bodies of the dead rush to embrace you!");
-        } else if (item->plus > last_plus)
+        else if (item->plus > last_plus)
             mpr("Your shell of carrion and bone grows thicker.");
     }
 
     if (item->plus != last_plus)
         you.redraw_armour_class = true;
+}
+
+////////////////////////////////////////////////////
+
+static void _manage_fire_shield()
+{
+    // Melt ice armour entirely.
+    maybe_melt_player_enchantments(BEAM_FIRE, 100);
+
+    // Remove fire clouds on top of you
+    if (cloud_at(you.pos()) && cloud_at(you.pos())->type == CLOUD_FIRE)
+        delete_cloud(you.pos());
+
+    // Place fire clouds all around you
+    for (adjacent_iterator ai(you.pos()); ai; ++ai)
+        if (!cell_is_solid(*ai) && !cloud_at(*ai))
+            place_cloud(CLOUD_FIRE, *ai, 1 + random2(3), &you);
+}
+
+static void _SALAMANDER_equip(item_def * /* item */, bool * show_msgs,
+                              bool /* unmeld */)
+{
+    _equip_mpr(show_msgs, "The air around you leaps into flame!");
+    _manage_fire_shield();
+}
+
+static void _SALAMANDER_unequip(item_def * /* item */, bool * show_msgs)
+{
+   _equip_mpr(show_msgs, "Your ring of flames gutters out.");
+}
+
+static void _SALAMANDER_world_reacts(item_def * /* item */)
+{
+    _manage_fire_shield();
 }

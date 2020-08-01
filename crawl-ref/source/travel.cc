@@ -31,7 +31,6 @@
 #include "english.h"
 #include "env.h"
 #include "files.h"
-#include "food.h"
 #include "format.h"
 #include "god-abil.h"
 #include "god-passive.h"
@@ -214,15 +213,12 @@ static inline bool _is_safe_cloud(const coord_def& c)
 static inline int _feature_traverse_cost(dungeon_feature_type feature)
 {
     if (feat_is_closed_door(feature)
-        // Higher cost for shallow water if species doesn't like water or if
-        // they are merfolk, since those will prefer to avoid melding their
-        // boots during travel.
-        || feature == DNGN_SHALLOW_WATER
-           && (!player_likes_water(true) || you.species == SP_MERFOLK))
+        // Higher cost for shallow water if species doesn't like water
+        || feature == DNGN_SHALLOW_WATER && (!player_likes_water(true)))
     {
         return 2;
     }
-    else if (feat_is_trap(feature))
+    else if (feat_is_trap(feature) && feature != DNGN_TRAP_SHAFT)
         return 3;
 
     return 1;
@@ -271,6 +267,10 @@ bool feat_is_traversable_now(dungeon_feature_type grid, bool try_fallback)
             return true;
         }
 
+        // The player can safely walk over shafts.
+        if (grid == DNGN_TRAP_SHAFT)
+            return true;
+
         // Permanently flying players can cross most hostile terrain.
         if (grid == DNGN_DEEP_WATER || grid == DNGN_LAVA)
             return you.permanent_flight();
@@ -286,7 +286,7 @@ bool feat_is_traversable(dungeon_feature_type feat, bool try_fallback)
     if (feat_is_trap(feat) && feat != DNGN_PASSAGE_OF_GOLUBRIA)
     {
         if (ignore_player_traversability)
-            return !(feat == DNGN_TRAP_SHAFT || feat == DNGN_TRAP_TELEPORT);
+            return !(feat == DNGN_TRAP_SHAFT || feat == DNGN_TRAP_TELEPORT || feat == DNGN_TRAP_TELEPORT_PERMANENT);
         return false;
     }
 #if TAG_MAJOR_VERSION == 34
@@ -328,8 +328,7 @@ static inline bool is_stash(const LevelStashes *ls, const coord_def& p)
 static bool _monster_blocks_travel(const monster_info *mons)
 {
     return mons
-           && (mons_class_is_stationary(mons->type)
-               || mons->type == MONS_FOXFIRE)
+           && mons_class_is_stationary(mons->type)
            && !fedhas_passthrough(mons);
 }
 
@@ -637,9 +636,12 @@ static void _start_running()
 {
     _userdef_run_startrunning_hook();
     you.running.init_travel_speed();
+    const bool unsafe = Options.travel_one_unsafe_move &&
+                        (you.running == RMODE_TRAVEL
+                         || you.running == RMODE_INTERLEVEL);
 
     if (you.running < 0)
-        start_delay<TravelDelay>();
+        start_delay<TravelDelay>(unsafe);
 }
 
 // Stops shift+running and all forms of travel.
@@ -864,7 +866,7 @@ static command_type _get_non_move_command()
     if (level_target == curr)
         return CMD_NO_CMD;
 
-    // If we we're not at our running position and we're not traveled to a
+    // If we we're not at our running position and we're not travelled to a
     // transporter, simply stop running.
     if (fell_short && grd(you.pos()) != DNGN_TRANSPORTER)
         return CMD_NO_CMD;
@@ -975,7 +977,7 @@ command_type travel()
         // we turn off travel (find_travel_pos does that automatically).
         find_travel_pos(you.pos(), move_x, move_y);
 
-        // Stop greedy explore when visiting an unverified stash.
+        // Stop greedy explore when visiting a stash for the first time.
         if ((*move_x || *move_y)
             && you.running == RMODE_EXPLORE_GREEDY
             && ES_stack)
@@ -1255,7 +1257,7 @@ coord_def travel_pathfind::pathfind(run_mode_type rmode, bool fallback_explore)
     // How many points we'll consider next iteration.
     next_iter_points = 0;
 
-    // How far we've traveled from (start_x, start_y), in moves (a diagonal move
+    // How far we've travelled from (start_x, start_y), in moves (a diagonal move
     // is no longer than an orthogonal move).
     traveled_distance = 1;
 
@@ -1493,7 +1495,7 @@ bool travel_pathfind::path_flood(const coord_def &c, const coord_def &dc)
 
                 if (need_for_greed && Options.explore_item_greed > 0)
                 {
-                    // Penalize distance to favor item pickup
+                    // Penalize distance to favour item pickup
                     dist += Options.explore_item_greed;
                 }
 
@@ -1501,7 +1503,7 @@ bool travel_pathfind::path_flood(const coord_def &c, const coord_def &dc)
                 {
                     dist += Options.explore_wall_bias * 4;
 
-                    // Favor squares directly adjacent to walls
+                    // Favour squares directly adjacent to walls
                     for (int dir = 0; dir < 8; dir += 2)
                     {
                         const coord_def ddc = dc + Compass[dir];
@@ -1521,7 +1523,7 @@ bool travel_pathfind::path_flood(const coord_def &c, const coord_def &dc)
         }
 
         // Short-circuit if we can. If traveled_distance (the current
-        // distance from the center of the floodfill) is greater
+        // distance from the centre of the floodfill) is greater
         // than the adjusted distance to the nearest greedy explore
         // target, we have a target. Note the adjusted distance is
         // the distance with explore_item_greed applied (if
@@ -2154,6 +2156,7 @@ static int _prompt_travel_branch(int prompt_flags)
         case '?':
             show_interlevel_travel_branch_help();
             redraw_screen();
+            update_screen();
             break;
         case '_':
             return ID_ALTAR;
@@ -2328,6 +2331,7 @@ static level_pos _prompt_travel_altar()
             case '?':
                 show_interlevel_travel_altar_help();
                 redraw_screen();
+                update_screen();
                 break;
             case '\n': case '\r':
                 return level_target;
@@ -2520,6 +2524,7 @@ static level_pos _travel_depth_munge(int munge_method, const string &s,
     case '?':
         show_interlevel_travel_depth_help();
         redraw_screen();
+        update_screen();
         return level_pos(targ); // no change
     case '<':
         result.id = find_up_level(result.id);
@@ -2731,7 +2736,7 @@ void start_translevel_travel(const level_pos &pos)
 
     trans_travel_dest = _get_trans_travel_dest(level_target);
 
-    if (!i_feel_safe(true, true))
+    if (!Options.travel_one_unsafe_move && !i_feel_safe(true, true))
         return;
     if (you.confused())
     {
@@ -2782,7 +2787,7 @@ static int _target_distance_from(const coord_def &pos)
  * populated with a floodout call to find_travel_pos starting from the player's
  * location.
  *
- * This function has undefined behavior when the target position is not
+ * This function has undefined behaviour when the target position is not
  * traversable.
  */
 static int _find_transtravel_stair(const level_id &cur,
@@ -3041,7 +3046,7 @@ static bool _find_transtravel_square(const level_pos &target, bool verbose)
 
     // either off-level, or traversable and on-level
     // TODO: actually check this when the square is off-level? The current
-    // behavior is that it will go to the level and then fail.
+    // behaviour is that it will go to the level and then fail.
     const bool maybe_traversable = (target.id != current
                                     || (in_bounds(target.pos)
                                         && feat_is_traversable_now(env.map_knowledge(target.pos).feat())));
@@ -3053,7 +3058,7 @@ static bool _find_transtravel_square(const level_pos &target, bool verbose)
                                 best_level_distance, best_stair);
         dprf("found stair at %d,%d", best_stair.x, best_stair.y);
     }
-    // even without _find_transtravel_stair called, the values are initalized
+    // even without _find_transtravel_stair called, the values are initialized
     // enough for the rest of this to go forward.
 
     if (best_stair.x != -1 && best_stair.y != -1)
@@ -3139,7 +3144,7 @@ void start_travel(const coord_def& p)
 
     if (!can_travel_interlevel())
     {
-        if (!i_feel_safe(true, true))
+        if (!Options.travel_one_unsafe_move && !i_feel_safe(true, true))
             return;
         if (you.confused())
         {
@@ -3175,9 +3180,7 @@ void start_explore(bool grab_items)
 
 void do_explore_cmd()
 {
-    if (apply_starvation_penalties())
-        mpr("You need to eat something NOW!");
-    else if (you.berserk())
+    if (you.berserk())
         mpr("Calm down first, please.");
     else                        // Start exploring
         start_explore(Options.explore_greedy);
@@ -4156,9 +4159,7 @@ bool TravelCache::is_known_branch(uint8_t branch) const
 
 void TravelCache::save(writer& outf) const
 {
-    // Travel cache version information
-    marshallUByte(outf, TAG_MAJOR_VERSION);
-    marshallUByte(outf, TAG_MINOR_VERSION);
+    write_save_version(outf, save_version::current());
 
     // Write level count.
     marshallShort(outf, levels.size());
@@ -4178,8 +4179,8 @@ void TravelCache::load(reader& inf, int minorVersion)
     levels.clear();
 
     // Check version. If not compatible, we just ignore the file altogether.
-    int major = unmarshallUByte(inf),
-        minor = unmarshallUByte(inf);
+    const auto version = get_save_version(inf);
+    const auto major = version.major, minor = version.minor;
     if (major != TAG_MAJOR_VERSION || minor > TAG_MINOR_VERSION)
         return;
 
@@ -4450,7 +4451,10 @@ void runrest::stop(bool clear_delays)
 #endif
 
     if (need_redraw)
+    {
         viewwindow();
+        update_screen();
+    }
 }
 
 bool runrest::is_rest() const
@@ -4526,6 +4530,7 @@ string explore_discoveries::cleaned_feature_description(
     const coord_def &pos) const
 {
     string s = lowercase_first(feature_description_at(pos));
+    // TODO: can feature_description_at()'s return value still end in '.'?
     if (s.length() && s[s.length() - 1] == '.')
         s.erase(s.length() - 1);
     if (starts_with(s, "a "))
@@ -4656,7 +4661,7 @@ void explore_discoveries::found_feature(const coord_def &pos,
         if (!feat_stop.empty())
         {
             string desc = lowercase_first(feature_description_at(pos));
-            marked_feats.push_back(desc);
+            marked_feats.push_back(desc + ".");
             return;
         }
     }

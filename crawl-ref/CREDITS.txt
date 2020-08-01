@@ -31,22 +31,23 @@
 
 * The administrators of public crawl servers, both present:
     John Boyle (crawl.berotato.org)
+    Jan Anders Bremer (underhound.eu)
     Rax E. Dillon (crawl.akrasiac.org)
     Wongi Hong (webzook.net / kr.dobrazupa.org)
     Alex Jurkiewicz (crawl.project357.org)
-    Neil Moore (crawl.s-z.org)
     Marc H. Thoben (crawl.develz.org)
     dplusplus (lazy-life.ddo.jp)
     floraline (crawl.kelbi.org)
     Namanix (crawl.xtahua.com)
   and past:
     Jan Anders Bremer (crawl.lantea.net)
-    Aleksi Miikkael Luukkonen (crawl.lantea.net)
     joosa (rl.heh.fi)
-    sd1989 (kr.dobrazupa.org)
-    phunktion (crawl.somatika.net)
-    ZiBuDo (crawl.jorgrun.rocks)
     Medar, Zkyp (crawl.xtahua.com)
+    Aleksi Miikkael Luukkonen (crawl.lantea.net)
+    Neil Moore (crawl.s-z.org)
+    phunktion (crawl.somatika.net)
+    sd1989 (kr.dobrazupa.org)
+    ZiBuDo (crawl.jorgrun.rocks)
 
 * The members of various usability testing teams from the department of
   Information Processing Science in Oulu University:
@@ -73,6 +74,7 @@
 
 * Members of the Dungeon Crawl community who have contributed to Dungeon
   Crawl Stone Soup:
+    Eugene Abramchuk
     achuah
     AdamPG
     Brent Adams
@@ -107,6 +109,7 @@
     bones
     Peter Borgmann
     Matthew Boeh
+    Clare Boothby
     Mike Boutin
     John Boyle
     Josh Braden
@@ -121,6 +124,7 @@
     Cedor
     Cerol
     Rahul Chandra
+    Joe Childers
     Thom Chiovoloni
     Anthony Chuah
     Henry Cipolla
@@ -131,6 +135,7 @@
     Aaron Curtis
     Simon Curtis
     cut1less
+    David Damerell
     Paul Dejean
     Denzi
     Lothar Dierkes
@@ -158,10 +163,12 @@
     GenericPseudonym
     Ge0ff
     Joshua Gelbard
+    Peter Gerlagh
     Benoît Giannangeli
     Ben Goetter
     Aaron Golden
     Ed Gonzalez
+    Goratrix
     Rob Grant
     John Greenberg
     GreyKnight
@@ -172,6 +179,7 @@
     Tomas Krag Hansen
     Taylor Hedberg
     Anders Heggestøyl
+    hellmonk
     Alex Henry
     R. Dan Henry
     Max 'Ploomutoo' Hon-Anderson
@@ -195,6 +203,7 @@
     Kornel Kisielewicz
     Vesa Kivimäki
     Daniel Klein
+    klorpa
     Jon Knapp
     Quinten Konyn
     Ilkka Koskela
@@ -211,6 +220,7 @@
     Jordan Lewis
     Sami Liedes
     Dom 'Bodrick' Light
+    Lightli
     Mark Lodato
     Matthew Ludivico
     Rob Lund
@@ -220,7 +230,6 @@
     Lain I. W. Madreisz
     Johannes Maier
     Markus Maier
-    MainiacJoe
     Arien Malec
     Paul Maloney
     Pablo Mansanet
@@ -232,6 +241,7 @@
     Jacob Meigs
     mgdelmonte
     mikee
+    Nathan Mills
     Andrew Minton
     Byrel Mitchell
     Yer Mivvaggah
@@ -244,6 +254,7 @@
     Naruni
     neofelis
     nicolae
+    nirrattner
     Jonathon Nooner
     NormalPerson7
     Michael Nowack
@@ -279,6 +290,7 @@
     Remsleep
     Chris Rendle-Short
     Ryan Riegel
+    riverfiend
     RjY
     rmcneive
     Andy Roche
@@ -300,6 +312,7 @@
     Aditya Shevade
     Alexandra Shields
     Robert Shimmin
+    Shummie
     Sigurd
     Edgar Simo
     Alex Smith
@@ -317,6 +330,7 @@
     John Stilley
     Johan Strandell
     Ben Striegel
+    Cebolla Sunbeam
     Derrick Sund
     Pavel 'Curio' Svinarchuk
     Tanner Swett
@@ -324,12 +338,12 @@
     William Tanksley, Jr.
     Tedronai
     Chris Terenzi
-    theJollySin
     Jared 'Twinge' Tinney
     Matt Titus
     Tommy
     Sean VanMeter
     Mikko Vepsäläinen
+    vla22
     WanderingBlade
     Richard Wardin
     waylon531
@@ -342,6 +356,7 @@
     Yelve Yakut
     Edward Z. Yang
     Yermak
+    Andrew G. York
     Rob Young
     Zannick
     Zooko

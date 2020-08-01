@@ -15,20 +15,19 @@ enum class spschool
   none           = 0,
   conjuration    = 1<<0,
   hexes          = 1<<1,
-  charms         = 1<<2,
-  fire           = 1<<3,
-  ice            = 1<<4,
-  transmutation  = 1<<5,
-  necromancy     = 1<<6,
-  summoning      = 1<<7,
-  translocation  = 1<<8,
-  poison         = 1<<9,
-  earth          = 1<<10,
-  air            = 1<<11,
+  fire           = 1<<2,
+  ice            = 1<<3,
+  transmutation  = 1<<4,
+  necromancy     = 1<<5,
+  summoning      = 1<<6,
+  translocation  = 1<<7,
+  poison         = 1<<8,
+  earth          = 1<<9,
+  air            = 1<<10,
   LAST_SCHOOL    = spschool::air,
   random         = spschool::LAST_SCHOOL << 1,
 };
-DEF_BITFIELD(spschools_type, spschool, 11);
+DEF_BITFIELD(spschools_type, spschool, 10);
 const int SPSCHOOL_LAST_EXPONENT = spschools_type::last_exponent;
 COMPILE_CHECK(spschools_type::exponent(SPSCHOOL_LAST_EXPONENT)
               == spschool::LAST_SCHOOL);
@@ -42,10 +41,10 @@ struct direction_chooser_args;
 enum spell_highlight_colours
 {
     COL_UNKNOWN      = LIGHTGRAY,   // spells for which no known brand applies.
-    COL_UNMEMORIZED  = LIGHTBLUE,   // spell hasn't been memorized (used reading spellbooks)
-    COL_MEMORIZED    = LIGHTGRAY,   // spell has been memorized
+    COL_UNMEMORIZED  = LIGHTBLUE,   // spell hasn't been memorised (used reading spellbooks)
+    COL_MEMORIZED    = LIGHTGRAY,   // spell has been memorised
     COL_USELESS      = DARKGRAY,    // ability would have no useful effect
-    COL_INAPPLICABLE = COL_USELESS, // ability cannot be meanifully applied (eg, no targets)
+    COL_INAPPLICABLE = COL_USELESS, // ability cannot be meaningfully applied (e.g., no targets)
     COL_FORBIDDEN    = LIGHTRED,    // The player's god hates this ability
     COL_DANGEROUS    = LIGHTRED,    // ability/spell use could be dangerous
 };
@@ -65,13 +64,12 @@ bool add_spell_to_memory(spell_type spell);
 bool del_spell_from_memory_by_slot(int slot);
 bool del_spell_from_memory(spell_type spell);
 
-int spell_hunger(spell_type which_spell);
 int spell_mana(spell_type which_spell);
 int spell_difficulty(spell_type which_spell);
 int spell_power_cap(spell_type spell);
 int spell_range(spell_type spell, int pow, bool allow_bonus = true);
 int spell_noise(spell_type spell);
-int spell_effect_noise(spell_type spell);
+int spell_effect_noise(spell_type spell, bool random = true);
 
 const char *get_spell_target_prompt(spell_type which_spell);
 tileidx_t get_spell_tile(spell_type which_spell);
@@ -137,3 +135,5 @@ bool spell_no_hostile_in_range(spell_type spell);
 
 bool spell_is_soh_breath(spell_type spell);
 const vector<spell_type> *soh_breath_spells(spell_type spell);
+
+bool spell_removed(spell_type spell);

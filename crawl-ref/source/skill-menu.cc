@@ -244,20 +244,11 @@ void SkillMenuEntry::set_name(bool keep_hotkey)
     {
         m_name->clear_tile();
         if (you.skills[m_sk] >= MAX_SKILL_LEVEL)
-        {
-            m_name->add_tile(tile_def(tileidx_skill(m_sk, TRAINING_MASTERED),
-                                      TEX_GUI));
-        }
+            m_name->add_tile(tile_def(tileidx_skill(m_sk, TRAINING_MASTERED)));
         else if (you.training[m_sk] == TRAINING_DISABLED)
-        {
-            m_name->add_tile(tile_def(tileidx_skill(m_sk, TRAINING_INACTIVE),
-                                      TEX_GUI));
-        }
+            m_name->add_tile(tile_def(tileidx_skill(m_sk, TRAINING_INACTIVE)));
         else
-        {
-            m_name->add_tile(tile_def(tileidx_skill(m_sk, you.train[m_sk]),
-                                      TEX_GUI));
-        }
+            m_name->add_tile(tile_def(tileidx_skill(m_sk, you.train[m_sk])));
     }
 #endif
     set_level();
@@ -786,6 +777,7 @@ void SkillMenu::init_experience()
         m_skill_backup.save();
         you.auto_training = false;
         reset_training();
+        you.clear_training_targets();
 
         for (int i = 0; i < NUM_SKILLS; ++i)
         {
@@ -814,6 +806,7 @@ void SkillMenu::finish_experience(bool experience_change)
         if (experience_change)
         {
             redraw_screen();
+            update_screen();
             unwind_bool change_xp_for_real(crawl_state.simulating_xp_gain, false);
             train_skills();
         }
@@ -1800,19 +1793,9 @@ bool UISkillMenu::on_event(const Event& ev)
 
     const auto mouse_event = static_cast<const MouseEvent&>(ev);
 
-    // XXX: convert Event back into a wm_mouse_event for the PrecisionMenu
-    // code. once skill-menu is widgified, PrecisionMenu can be removed
-    wm_mouse_event mev;
-    mev.event = ev.type() == Event::Type::MouseMove ? wm_mouse_event::MOVE :
-                ev.type() == Event::Type::MouseDown ? wm_mouse_event::PRESS :
-                wm_mouse_event::WHEEL;
-    mev.button = static_cast<wm_mouse_event::mouse_event_button>(
-            mouse_event.button());
-    mev.mod = wm->get_mod_state();
-    int x, y;
-    mev.held = wm->get_mouse_state(&x, &y);
-    mev.px = x - m_region.x;
-    mev.py = y - m_region.y;
+    wm_mouse_event mev = ui::to_wm_event(mouse_event);
+    mev.px -= m_region.x;
+    mev.py -= m_region.y;
 
     int key = skm.handle_mouse(mev);
     if (key && key != CK_NO_KEY)

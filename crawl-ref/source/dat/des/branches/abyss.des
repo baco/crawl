@@ -26,10 +26,11 @@ function abyss_entry(e, glyph)
   e.depth_chance("Depths:1-3", 3333)
   e.depth_chance("Depths:4",   10000)
   e.depth_chance("Depths:5-",  3333)
--- D:21-27 entries for save compat, remove when TAG_MAJOR_VERSION > 34
+-- start TAG_MAJOR_VERSION == 34
   e.depth_chance("D:21-24", 3333)
   e.depth_chance("D:25",    10000)
   e.depth_chance("D:26-",   3333)
+-- end TAG_MAJOR_VERSION
   e.kfeat(glyph .. ' = enter_abyss')
 end
 }}
@@ -346,7 +347,7 @@ KMONS:  2 = hornet / killer bee w:2 / nothing w:2
 KMONS:  3 = death drake / green death
 KFEAT:  123 = W
 NSUBST: 3 = 1:3, *:.
-KITEM:  3 = ration
+: dgn.delayed_decay(_G, '3', 'raiju corpse')
 COLOUR: x = yellow
 TILE:   x = wall_wax
 MAP
@@ -539,7 +540,7 @@ NAME:    hangedman_abyss_batty_box
 MONS:    bat / fire bat / vampire bat, butterfly, wyvern
 MONS:    spatial vortex, wind drake, harpy, unseen horror
 KMONS:   8 = wind drake w:9 / harpy w:1
-KITEM:   8 = acquire any / any good_item / stone q:1 w:5
+KITEM:   8 = any good_item w:20 / stone q:1 w:5
 NSUBST:  A = 2:2 / 1:2 / 2 = 1122., B = 1:3 / 1:4 / 1:1334. / 1:12334.
 NSUBST:  C = 1:556 / 1:6 / 1:7 / 1:66777. / 1:1234567.
 SUBST:   x = x:25 c:14 v:6 b:4 G:1 n:2, y = c:3 v:1 b:1, z = x:2 c:1 v:1 b:1 .:1
@@ -954,14 +955,14 @@ MONS:    draconian shifter w:5 / shadow demon w:5 / lich / \
 MONS:    bone dragon / tentacled starspawn / starcursed mass / \
          apocalypse crab / dancing weapon / tentacled monstrosity / \
          glowing shapeshifter
-ITEM:    superb_item, ration
+ITEM:    superb_item
 ITEM:    bolt good_item q:40 / arrow good_item q:40, any magical staff
 ITEM:    scroll of magic mapping q:4 / scroll of random uselessness q:4
 ITEM:    ring mail randart / scale mail randart / chain mail randart w:20
 ITEM:    demon blade ego:chaos good_item ident:type / \
          demon trident ego:chaos good_item ident:type / \
          demon whip ego:chaos good_item ident:type
-KITEM:   k = acquire misc, acquire misc
+KITEM:   k = any misc, any misc
 SHUFFLE: defghijk
 NSUBST:  0 : 2:0 / 1 = VY / *:.
 SUBST:   c = c:7 b:2 v:1, x = x:8 c:1 b:1
@@ -1189,7 +1190,8 @@ TAGS:   abyss_rune unrand patrolling
 MONS:   killer bee, meliai, spark wasp
 MONS:   wretched star, green very ugly thing
 KMONS:  O = queen bee
-ITEM:   ration tile:food_honeycomb
+# flavor: abyss creature wandered into the hive. TODO varied corpse types?
+: dgn.delayed_decay(_G, '1', 'deep elf demonologist corpse')
 KITEM:  O = abyssal rune of Zot
 KFEAT:  a = x
 KFEAT:  A = stone_arch
@@ -1458,7 +1460,7 @@ KMONS:   5 = thrashing horror
 KMONS:   6 = lurking horror
 # Note: if anything in these two item sets becomes useful for more then a tiny
 # fraction of characters finding the abyssal rune, remove or replace them.
-KITEM:   4d = scroll of random uselessness w:15 q:1 / ration w:1 / \
+KITEM:   4d = scroll of random uselessness w:15 q:1 / \
          club w:6 / stone q:1 / dart q:1 ego:atropa / \
          mundane animal skin / mundane ring mail / gold q:1
 KITEM:   5 = wand of random effects / wand of flame / whip not_cursed w:2 / \
@@ -2026,33 +2028,6 @@ n1.O..+......+@
 c.1.1.c.1.cccc
 cc.1.cccccc
  ccncc
-ENDMAP
-
-# This one is really, really weird...
-NAME:  evilmike_abyss_exit_smiterflies
-TAGS:  abyss_exit
-KMONS: O = generate_awake statue spells:summon_butterflies.100.magical \
-           tile:mons_statue_mage col:lightblue
-MONS:  smoke demon, deep elf mage
-: init_abyss_exit(_G, "O")
-MAP
-       ccc
-     ccc1ccc
-   ccc.....ccc
-  cc.........cc
-  c....2......c
- cc...........cc
- c.............c
-cc..2..........cc
-c1......O.......+@
-cc..2..........cc
- c.............c
- cc...........cc
-  c....2......c
-  cc.........cc
-   ccc.....ccc
-     ccc1ccc
-       ccc
 ENDMAP
 
 NAME:    hangedman_abyss_exit_choices

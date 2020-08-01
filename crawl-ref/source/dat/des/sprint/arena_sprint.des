@@ -247,7 +247,7 @@ function arena_sprint_get_monster_set(round, boss)
                 "w:20 merfolk / w:5 merfolk siren / hippogriff w:15 / centaur /\
                     w:1 harpy / w:5 cyclops / w:1 snapping turtle",
                 "w:5 bog body / w:5 tyrant leech / insubstantial wisp / w:5 swamp drake /\
-                    bullfrog / w:2 spiny frog / w:2 hydra / w:2 vampire mosquito",
+                    bullfrog / w:2 cane toad / w:2 hydra / w:2 vampire mosquito",
                 "w:20 scorpion / w:14 jumping spider /\
                     w:5 tarantella / w:5 redback / w:1 wolf spider",
                 "w:15 adder / ball python / water moccasin / naga / w:2 black mamba /\
@@ -271,7 +271,7 @@ function arena_sprint_get_monster_set(round, boss)
                 "kobold / big kobold / w:3 kobold demonologist / w:2 sonja",
                 "jackal w:1 / hound w:5 / wolf w:20 / hell hound w:7 / w:3 grum",
                 "ogre w:35 / two-headed ogre / ogre mage w:5 / w:2 erolcha",
-                "bullfrog w:20 / blink frog w:6 / spiny frog w:6 / prince ribbit w:2",
+                "bullfrog w:20 / blink frog w:6 / cane toad w:6 / prince ribbit w:2",
                 "gnoll / gnoll shaman / gnoll sergeant / hound / wolf",
                 -- Gimmicks
                 "neqoxec", "orc priest", "vampire bat",
@@ -323,8 +323,7 @@ function arena_sprint_get_monster_set(round, boss)
                 -- Gimmicks
                 "neqoxec",
                 "kobold name:kamikaze_kobold n_rpl n_noc n_des perm_ench:inner_flame",
-                "dwarf name:drunken n_adj n_des n_noc perm_ench:confusion",
-                "hungry ghost"
+                "dwarf name:drunken n_adj n_des n_noc perm_ench:confusion"
             }
         elseif round <= 15 then
             mon_set = {
@@ -369,8 +368,7 @@ function arena_sprint_get_monster_set(round, boss)
                 -- Gimmicks
                 "neqoxec",
                 "moth of wrath / w:20 two-headed ogre", "ball lightning",
-                "orb spider", "redback / sea snake w:3",
-                "hungry ghost / w:5 harpy", "shining eye"
+                "orb spider", "redback / sea snake w:3", "shining eye"
             }
         elseif round <= 20 then
             mon_set = {
@@ -435,8 +433,7 @@ function arena_sprint_get_monster_set(round, boss)
                 -- Gimmicks
                 "neqoxec", "smoke demon", "catoblepas",
                 "moth of wrath / w:20 stone giant", "ball lightning",
-                "orb spider", "hungry ghost / harpy", "shining eye",
-                "tormentor",
+                "orb spider", "shining eye", "tormentor",
                 "skeletal warrior / w:5 skeletal warrior ; dart ego:atropa"
             }
         elseif round <= 26 then
@@ -1029,7 +1026,7 @@ KFEAT:  { = {
 
 KFEAT:  C = scroll shop type:Identification suffix:Station count:17 greed:25 ; scroll of identify q:3
 KFEAT:  D = book shop type:Must-Have suffix:Magic greed:7 count:12 use_all ; \
-            book of summonings | book of spatial translocations | book of enchantments |\
+            book of summonings | book of spatial translocations | book of hexes |\
             book of death | book of the sky | book of the warp |\
             book of the earth | book of burglary | book of annihilations |\
             grand grimoire | necronomicon
@@ -1041,7 +1038,7 @@ KFEAT:  EP = scroll shop greed:10 use_all count:14 ; \
             scroll of enchant armour q:4 | scroll of enchant armour q:4
 KFEAT:  FS = distillery shop use_all count:17 greed:7 ; \
              potion of haste q:3 | potion of haste q:4 | potion of haste q:5 |\
-             potion of agility q:6 | potion of might q:6 | potion of brilliance q:6 |\
+             potion of stabbing q:6 | potion of might q:6 | potion of brilliance q:6 |\
              potion of mutation | potion of mutation q:2 | potion of mutation q:3 |\
              potion of resistance q:6 | potion of resistance q:6 | potion of magic q:6 |\
              potion of magic q:6 | potion of berserk rage q:5 | potion of berserk rage q:5
@@ -1066,11 +1063,9 @@ KFEAT:  L = armour shop count:17 greed:12 type:Basic suffix:Armour use_all ; \
             mundane not_cursed steam dragon scales | mundane not_cursed swamp dragon scales |\
             mundane not_cursed pearl dragon scales | mundane not_cursed acid dragon scales |\
             mundane not_cursed troll leather armour | mundane not_cursed crystal plate armour |\
-            mundane not_cursed plate armour | mundane not_cursed naga barding |\
-            mundane not_cursed centaur barding | mundane not_cursed cloak |\
-            mundane not_cursed buckler | mundane not_cursed pair of gloves |\
-            mundane not_cursed helmet
-KFEAT:  M = food shop count:17 type:Delicious suffix:Food greed:4 ; ration q:2
+            mundane not_cursed plate armour | mundane not_cursed barding |\
+            mundane not_cursed cloak | mundane not_cursed buckler |\
+            mundane not_cursed pair of gloves | mundane not_cursed helmet
 KFEAT:  N = weapon shop type:Staff suffix:Store count:9 use_all greed:30 ; \
             staff of summoning | staff of wizardry |\
             staff of fire | staff of air | staff of earth | staff of cold |\
@@ -1093,13 +1088,12 @@ KFEAT:  H = distillery shop type:Bottled suffix:Wisdom count:5 use_all greed:6 ;
 KFEAT:  R = general shop type:Premium suffix:Goods use_all count:11 greed:20 ; \
             quad damage | quad damage | quad damage |\
             potion of heal wounds q:5 | potion of heal wounds q:5 |\
-            potion of haste q:5 | potion of haste q:5 |\
-            crystal ball of energy
+            potion of haste q:5 | potion of haste q:5
 KFEAT:  J = general shop type:Miscellaneous suffix:Merchandise count:14 greed:15 use_all ; \
-            ration q:20 | ring of poison resistance |\
+            ring of poison resistance |\
             ring of protection from fire | ring of protection from cold |\
             ring of protection from magic | amulet of regeneration |\
-            amulet of the gourmand | amulet of harm | amulet of reflection |\
+            amulet of reflection |\
             ring of see invisible
 SUBST:  b : cb
 TILE:   c = wall_marble

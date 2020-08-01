@@ -92,7 +92,7 @@ NAME:   basic_altar
 TAGS:   allow_dup extra no_monster_gen transparent decor
 DEPTH:  5-
 CHANCE: 20% (Orc)
-CHANCE: 10% (Snake, Forest)
+CHANCE: 10% (Snake)
 CHANCE: 8% (D, Elf)
 CHANCE: 5% (Lair, Slime, Vaults, Crypt)
 CHANCE: 1% (Zot)
@@ -157,20 +157,20 @@ ENDMAP
 NAME:  lemuel_tele_altar
 TAGS:  transparent decor
 DEPTH: D:2-, Vaults
-SUBST: Y = X x
-KFEAT: X = known teleport trap
-KMASK: _C = opaque
+SUBST: D = ^ x
+KFEAT: ^ = teleport trap
+KMASK: 'C = opaque
 MAP
 ...........
-.xxxxXxxxx.
-.x_______x.
-.x_______x.
-.x_______x.
-.Y___C___Y.
-.x_______x.
-.x_______x.
-.x_______x.
-.xxxxYxxxx.
+.xxxx^xxxx.
+.x'''''''x.
+.x'''''''x.
+.x'''''''x.
+.D'''C'''D.
+.x'''''''x.
+.x'''''''x.
+.x'''''''x.
+.xxxxDxxxx.
 ...........
 ENDMAP
 
@@ -269,6 +269,29 @@ MAP
  ..xc>cx..
   ..cnc..
    .....
+ENDMAP
+
+NAME:  pf_just_have_faith
+DEPTH: D:4-
+WEIGHT: 1
+TAGS: no_monster_gen
+KMASK: $ = no_trap_gen
+KFEAT: m = lava mimic
+# We use a statue mimic to stop autoexplore before the player reaches the lava.
+KFEAT: G = granite_statue mimic
+# The gold pulls an unspoiled player next to the mimics.
+KITEM: $ = gold q:3
+MAP
+xxxxx
+xl.lx
+x.C.x
+x.$.x
+xlmlx
+xl$lx
+xlmlx
+x.$.x
+x.G.x
+..@..
 ENDMAP
 
 ##############################################################################

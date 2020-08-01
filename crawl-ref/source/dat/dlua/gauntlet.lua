@@ -27,7 +27,7 @@ function gauntlet_arena_custom_extra_items(nsubst)
     gauntlet_arena_extra_items_nsubst = nsubst
 end
 
--- Set the extra item placement in arenas to the default behavior. See
+-- Set the extra item placement in arenas to the default behaviour. See
 -- gauntlet_arena_item_setup() for details on this default.
 function gauntlet_arena_default_extra_items()
     gauntlet_arena_extra_items_nsubst = nil
@@ -297,7 +297,7 @@ end
 --            Exactly one of this item will always place in the arena.
 tier1_gauntlet_arenas = {
   {
-    first  = {mons = "spiny frog simulacrum / wyvern simulacrum " ..
+    first  = {mons = "cane toad simulacrum / wyvern simulacrum " ..
                       "/ hornet simulacrum", min = 1, max = 1},
     second = {mons = "simulacrum place:D:12", min = 2, max = 4},
     liquid = "water",

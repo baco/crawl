@@ -4,10 +4,10 @@ enum daction_type
 {
 #if TAG_MAJOR_VERSION == 34
     DACT_ALLY_HOLY,
-#endif
     DACT_ALLY_UNHOLY_EVIL,
     DACT_ALLY_UNCLEAN_CHAOTIC,
     DACT_ALLY_SPELLCASTER,
+#endif
     DACT_ALLY_YRED_SLAVE,
     DACT_ALLY_BEOGH, // both orcs and demons summoned by high priests
     DACT_ALLY_SLIME,
@@ -29,7 +29,7 @@ enum daction_type
 #endif
     DACT_REAUTOMAP,
     DACT_REMOVE_JIYVA_ALTARS,
-    DACT_PIKEL_SLAVES,
+    DACT_PIKEL_MINIONS,
     DACT_ROT_CORPSES,
 #if TAG_MAJOR_VERSION == 34
     DACT_TOMB_CTELE,

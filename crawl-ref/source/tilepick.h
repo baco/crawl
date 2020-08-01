@@ -9,7 +9,7 @@
 #include "command-type.h"
 #include "game-type.h"
 #include "trap-type.h"
-#include "tiledef_defines.h"
+#include "rltiles/tiledef_defines.h"
 #include "job-type.h"
 #include "species-type.h"
 
@@ -21,9 +21,12 @@ struct coord_def;
 struct item_def;
 class monster;
 struct monster_info;
+struct shop_struct;
 struct show_type;
 
 bool is_door_tile(tileidx_t tile);
+
+TextureID get_tile_texture(tileidx_t idx);
 
 // Tile index lookup from Crawl data.
 tileidx_t tileidx_feature(const coord_def &gc);
@@ -69,11 +72,7 @@ int enchant_to_int(const item_def &item);
 tileidx_t tileidx_enchant_equ(const item_def &item, tileidx_t tile,
                               bool player = false);
 
-#ifdef USE_TILE
 void bind_item_tile(item_def &item);
-#else
-static inline void bind_item_tile(item_def &/*item*/) {}
-#endif
 
 // For a given fg/bg set of tile indices and a 1 character prefix,
 // return index, flag, and tile name as a printable string.

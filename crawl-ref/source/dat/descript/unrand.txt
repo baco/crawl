@@ -42,8 +42,10 @@ weakness.
 staff of Olgreb
 
 A staff which was once wielded by the mighty wizard Olgreb. It increases the
-power of its wielder's poison magic, and can be evoked to activate its own
-venomous spells. Its touch may poison even resistant creatures.
+power of its wielder's poison magic, grants immunity to poison, and can be
+evoked to radiate toxic energy with strength depending on Evocations skill.
+If the wielder is skilled in Evocations, they can inflict poison damage on
+those struck by it, even piercing through poison resistance.
 %%%%
 staff of Wucad Mu
 
@@ -60,8 +62,7 @@ restores a greater portion of life to its user than other vampiric weapons.
 scythe of Curses
 
 A scythe surrounded by an ominous aura of dread. It carries a terrible and
-highly irritating curse, which it busily inflicts on both the wielder and their
-enemies.
+ancient curse, which it busily inflicts on both the wielder and their enemies.
 %%%%
 sceptre of Torment
 
@@ -96,11 +97,13 @@ An enchanted suit of armour created from the scales of a rare breed of dragon,
 now thought to be extinct. This prized relic is now one of the last proofs that
 the vividly coloured faerie dragons ever existed.
 %%%%
+# TAG_MAJOR_VERSION == 34
 demon blade "Bloodbane"
 
 A blade forged in Hell by the sacrifice of countless tortured souls. It
 inflicts the rage and suffering of those souls upon its wielder.
 %%%%
+# TAG_MAJOR_VERSION == 34
 scimitar of Flaming Death
 
 A scimitar with a mysteriously smoking blade. Occasionally its heat leaks out,
@@ -115,9 +118,12 @@ reveals the machinations of those who would prefer to stay invisible.
 %%%%
 demon blade "Leech"
 
-An unerringly vampiric blade which gorges itself on drained life force every
-time it strikes.
+An unerringly vampiric blade, forged in Hell by the sacrifice of countless
+tortured souls. It fills its wielder with the rage and suffering of those
+souls, and gorges itself further on drained life force every time it strikes,
+leaving behind a mess of blood and gore.
 %%%%
+# TAG_MAJOR_VERSION == 34
 dagger of Chilly Death
 
 A dagger made of one huge shard of sapphire. It covers opponents in ice,
@@ -328,12 +334,12 @@ cloak of Flash
 
 A cloak that twitches and jerks without any intervention.
 %%%%
-boots of the Assassin
+hood of the Assassin
 
-A pair of soft boots, specially designed by the Assassin's Guild, that allow
-the wearer to sense potential victims nearby. They also allow the wearer to
-easily find vulnerabilities when attacking unaware opponents, allowing
-effective stabbing attacks with any weapon.
+A soft hood, enchanted by members of the Assassin's Guild to allow the wearer
+to sense potential victims nearby. It also allows the wearer to easily spot
+vulnerabilities when attacking unaware opponents, allowing effective stabbing
+attacks with any weapon.
 %%%%
 Lear's hauberk
 
@@ -354,7 +360,9 @@ salamander hide armour
 Most salamanders' bodies are consigned to the fiery depths from which they
 sprang. Rarely, though, salamanders instead preserve the skins of those that
 passed. The runes and decorations on this hide suggest it once belonged to a
-respected warrior or priest - perhaps even a king.
+respected warrior or priest - perhaps even a king. The firey spirit remains in
+the skin, enhancing the fire magic of the wearer and surrounding them with a
+continuous ring of flame.
 %%%%
 gauntlets of War
 
@@ -418,12 +426,9 @@ A phosphorescent cloak, woven of pure light beams.
 %%%%
 ratskin cloak
 
-A cloak stitched from the hides of hundreds of hell rats, by an enchantress
-with a magic loom and too much time on her hands. It provides excellent
-protection from rats of all kinds.
-
-It can be evoked to summon rats from the Dungeon to accompany the wearer,
-for a time.
+A cloak stitched from the hides of hundreds of hell rats by an enchantress with
+far too much time on her hands. Blows inflicted on the wearer will occasionally
+provoke rats concealed beneath the cloak to scurry out and assist.
 %%%%
 shield of the Gong
 
@@ -529,7 +534,9 @@ A wooden cudgel, loaded with more than just lead.
 dragonskin cloak
 
 An opalescent cloak gleaming with the colours of all kinds of dragons. It
-protects its wearer from most elemental attacks, although somewhat unreliably.
+imbues the wearer with draconic resistances (although somewhat unreliably),
+providing a chance to resist fire, cold, poison, electricity, acid, and
+negative energy.
 %%%%
 ring of the Octopus King
 
@@ -622,6 +629,7 @@ pair of quick blades "Gyre" and "Gimble"
 Two quick blades joined by a chain. Swinging one compels the wielder to swing
 the other, as if they have minds of their own.
 %%%%
+# TAG_MAJOR_VERSION == 34
 Maxwell's etheric cage
 
 A fine mesh cage designed to capture magical energy. Experimental notes suggest
@@ -678,7 +686,7 @@ Maxwell's thermic engine
 
 A strange sword, one blade blistering hot and the other icy cold. When it hits
 its target the thermal gradient increases. What causes this effect is unknown
-but it is rumored that otherworldly forces are involved.
+but it is rumoured that otherworldly forces are involved.
 %%%%
 demon trident "Rift"
 
@@ -689,9 +697,9 @@ teleports its attack directly to its victim.
 staff of Battle
 
 A staff encased in vividly coloured scales, wrought by a long-forgotten wizard.
-It was the mage Iskenderun's favorite playtoy. The staff increases the power of
+It was the mage Iskenderun's favourite playtoy. The staff increases the power of
 its wielder's conjurations. When danger looms, it conjures a battlesphere, the
-strength of which depends on the wielder's skill with Charms and Conjurations.
+strength of which depends on the wielder's skill with Conjurations.
 %%%%
 Cigotuvi's embrace
 

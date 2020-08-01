@@ -924,7 +924,7 @@ void wizard_polymorph_monster(monster* mon)
         return;
     }
 
-    monster_polymorph(mon, type, PPT_SAME, true);
+    monster_polymorph(mon, type, PPT_SAME);
 
     if (!mon->alive())
     {
@@ -964,9 +964,10 @@ void debug_pathfind(int idx)
 #endif
     coord_def dest;
     level_pos ldest;
-    bool chose = show_map(ldest, false, true, false);
+    bool chose = show_map(ldest, false, false);
     dest = ldest.pos;
     redraw_screen();
+    update_screen();
     if (!chose)
     {
         canned_msg(MSG_OK);
@@ -1011,6 +1012,7 @@ static void _miscast_screen_update()
 
     you.redraw_status_lights = true;
     print_stats();
+    update_screen();
 
 #ifndef USE_TILE_LOCAL
     update_monster_pane();
@@ -1041,8 +1043,8 @@ void debug_miscast(int target_index)
         return;
     }
 
-    spell_type         spell  = spell_by_name(specs, true);
-    spschool school = school_by_name(specs);
+    spell_type spell  = spell_by_name(specs, true);
+    spschool school   = school_by_name(specs);
 
     // Prefer exact matches for school name over partial matches for
     // spell name.
@@ -1083,9 +1085,9 @@ void debug_miscast(int target_index)
         mprf("Miscasting school %s.", spelltype_long_name(school));
 
     if (spell != SPELL_NO_SPELL)
-        mprf(MSGCH_PROMPT, "Enter spell_power,raw_spell_failure: ");
+        mprf(MSGCH_PROMPT, "Enter fail: ");
     else
-        mprf(MSGCH_PROMPT, "Enter miscast_level or spell_power,raw_spell_failure: ");
+        mprf(MSGCH_PROMPT, "Enter level, fail: ");
 
     if (cancellable_get_line_autohist(specs, sizeof specs) || !*specs)
     {
@@ -1093,15 +1095,15 @@ void debug_miscast(int target_index)
         return;
     }
 
-    int level = -1, pow = -1, fail = -1;
+    int level = -1, fail = -1;
 
     if (strchr(specs, ','))
     {
         vector<string> nums = split_string(",", specs);
-        pow  = atoi(nums[0].c_str());
+        level  = atoi(nums[0].c_str());
         fail = atoi(nums[1].c_str());
 
-        if (pow <= 0 || fail <= 0)
+        if (level <= 0 || fail <= 0)
         {
             canned_msg(MSG_OK);
             return;
@@ -1111,7 +1113,7 @@ void debug_miscast(int target_index)
     {
         if (spell != SPELL_NO_SPELL)
         {
-            mpr("Can only enter fixed miscast level for schools, not spells.");
+            mpr("Can only enter spell level for schools, not spells.");
             return;
         }
 
@@ -1121,9 +1123,9 @@ void debug_miscast(int target_index)
             canned_msg(MSG_OK);
             return;
         }
-        else if (level > 3)
+        else if (level > 9)
         {
-            mpr("Miscast level can be at most 3.");
+            mpr("Spell level can be at most 9.");
             return;
         }
     }
@@ -1137,42 +1139,6 @@ void debug_miscast(int target_index)
         return;
     }
 
-    // Suppress "nothing happens" message for monster miscasts which are
-    // only harmless messages, since a large number of those are missing
-    // monster messages.
-    nothing_happens nothing = nothing_happens::DEFAULT;
-    if (target_index != NON_MONSTER && level == 0)
-        nothing = nothing_happens::NEVER;
-
-    MiscastEffect *miscast;
-
-    if (spell != SPELL_NO_SPELL)
-    {
-        miscast = new MiscastEffect(target, target, {miscast_source::wizard},
-                                    spell, pow, fail, "", nothing);
-    }
-    else
-    {
-        if (level != -1)
-        {
-            miscast = new MiscastEffect(target, target,
-                                        {miscast_source::wizard}, school, level,
-                                        "wizard testing miscast", nothing);
-        }
-        else
-        {
-            miscast = new MiscastEffect(target, target,
-                                        {miscast_source::wizard}, school, pow,
-                                        fail, "wizard testing miscast",
-                                        nothing);
-        }
-    }
-    // Merely creating the miscast object causes one miscast effect to
-    // happen.
-    repeats--;
-    if (level != 0)
-        _miscast_screen_update();
-
     while (target->alive() && repeats-- > 0)
     {
         if (kbhit())
@@ -1182,12 +1148,16 @@ void debug_miscast(int target_index)
             break;
         }
 
-        miscast->do_miscast();
-        if (level != 0)
-            _miscast_screen_update();
-    }
+        if (spell != SPELL_NO_SPELL)
+            miscast_effect(spell, fail);
+        else
+        {
+            miscast_effect(*target, target, {miscast_source::wizard}, school,
+                           level, fail, "testing miscast");
+        }
 
-    delete miscast;
+        _miscast_screen_update();
+    }
 }
 
 #ifdef DEBUG_BONES

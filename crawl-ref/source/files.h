@@ -67,6 +67,8 @@ bool check_mkdir(const string &what, string *dir, bool silent = false);
 // Find saved games for all game types.
 vector<player_save_info> find_all_saved_characters();
 
+NORETURN void print_save_json(const char *name);
+
 string get_save_filename(const string &name);
 string get_savedir_filename(const string &name);
 string savedir_versioned_path(const string &subdirs = "");
@@ -94,6 +96,7 @@ void save_game(bool leave_game, const char *bye = nullptr);
 // Save game without exiting (used when changing levels).
 void save_game_state();
 
+void write_save_version(writer &file, save_version version);
 save_version get_save_version(reader &file);
 
 bool save_exists(const string& filename);

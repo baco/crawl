@@ -431,12 +431,6 @@ Crazy Yiuf
  Have all built their nests in my beard!’”
     -Edward Lear, _A Book of Nonsense [No. 1]_. 1846.
 %%%%
-Darkness spell
-
-“If I must die, I will encounter darkness as a bride,
-     And hug it in my arms.”
-    -William Shakespeare, “Measure for Measure”
-%%%%
 Dispater
 
 “Hoc idem magis ostendit antiquius Iovis nomen: nam olim Diovis et Diespiter
@@ -804,10 +798,6 @@ will hurt you.’”
     -Victor Marie Hugo, _Notre Dame de Paris_, Book II, chapter VII “A Wedding
      Night”. 1831.
 %%%%
-amulet of harm
-
-<amulet>
-%%%%
 amulet of faith
 
 <amulet>
@@ -824,19 +814,6 @@ amulet of magic regeneration
 
 <amulet>
 %%%%
-amulet of rage
-
-“We there, in strife bewild’ring,
- Split blood enough to swim in:
- We orphaned many children,
- And widowed many women.
- The eagles and the ravens
- We glutted with our foemen;
- The heroes and the cravens,
- The spearmen and the bowmen.”
-    -Thomas Love Peacock, “The War Song of Dinas Vawr”. 1829.
-
-%%%%
 amulet of regeneration
 
 <amulet>
@@ -844,11 +821,6 @@ amulet of regeneration
 amulet of nothing
 
 <amulet>
-%%%%
-amulet of the gourmand
-
-“put a knife to thy throat, if thou be a man given to appetite.”
-    -KJV Bible, Proverbs 23:2.
 %%%%
 animal skin
 
@@ -1947,6 +1919,15 @@ naga warrior
 
 <naga>
 %%%%
+nameless horror
+
+“Then the sallow oval between Ged's arms grew bright. It widened and spread, a
+rent in the darkness of the earth and night, a ripping open of the fabric of
+the world. Through it blazed a terrible brightness. And through that bright
+misshapen breach clambered something like a clot of black shadow, quick and
+hideous, and it leaped straight out at Ged's face.”
+    -Ursula K. Le Guin, _A Wizard Of Earthsea_. 1968.
+%%%%
 needle
 
 “I pray that, risen from the dead,
@@ -2214,16 +2195,6 @@ rapier
  Of rugged steel his savage soul was made...”
     -Albius Tibullus, _Elegies_ I, xi. ca. 25 B.C.
      trans. James Grainger, 1822.
-%%%%
-ration
-
-“It is further reported that in the provinces [Caesar] gave banquets constantly
-in two dining halls, in one of which his officers or Greek companions, in the
-other Roman civilians and the more distinguished of the provincials reclined at
-table. He was so punctilious and strict in the management of his household, in
-small matters as well as in those of greater importance, that he put his baker
-in irons for serving him with one kind of bread and his guests with another...”
-    -Suetonius, _De Vita Caesarum, Divus Iulius_. 110 CE.
 %%%%
 reaper
 
@@ -2842,10 +2813,6 @@ another man's dreams—what an incomparable humiliation, what madness!”
     trans. Anthony Bonner, 1962.
 %%%%
 staff of poison
-
-<staff>
-%%%%
-staff of power
 
 <staff>
 %%%%

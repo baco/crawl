@@ -21,10 +21,10 @@
 #include "acquire.h"
 #include "artefact.h"
 #include "branch.h"
-#include "butcher.h"
 #include "chardump.h"
 #include "cloud.h"
 #include "coordit.h"
+#include "corpse.h"
 #include "describe.h"
 #include "directn.h"
 #include "dbg-maps.h"
@@ -57,13 +57,12 @@
 #include "randbook.h"
 #include "random.h"
 #include "religion.h"
-#include "rot.h"
 #include "show.h"
 #include "spl-transloc.h"
 #include "stairs.h"
 #include "state.h"
 #include "stringutil.h"
-#include "tiledef-dngn.h"
+#include "rltiles/tiledef-dngn.h"
 #include "tilepick.h"
 #include "tileview.h"
 #include "timed-effects.h"
@@ -247,6 +246,12 @@ set<string> &get_uniq_map_names()
  *********************************************************************/
 bool builder(bool enable_random_maps)
 {
+#ifndef DEBUG_FULL_DUNGEON_SPAM
+    // hide builder debug spam by default -- this is still collected by a tee
+    // and accessible via &ctrl-l without this #define.
+    msg::suppress quiet(MSGCH_DIAGNOSTICS);
+#endif
+
     // Re-check whether we're in a valid place, it leads to obscure errors
     // otherwise.
     ASSERT_RANGE(you.where_are_you, 0, NUM_BRANCHES);
@@ -275,7 +280,7 @@ bool builder(bool enable_random_maps)
 #ifdef DEBUG_DIAGNOSTICS // no point in enabling unless dprf works
     CrawlHashTable &debug_logs = you.props["debug_builder_logs"].get_table();
     string &cur_level_log = debug_logs[level_id::current().describe()].get_string();
-    message_tee debug_messages(cur_level_log);
+    msg::tee debug_messages(cur_level_log);
     debug_messages.append_line(make_stringf("Builder log for %s:",
         level_id::current().describe().c_str()));
 #endif
@@ -620,7 +625,6 @@ void dgn_flush_map_memory()
     you.uniq_map_names_abyss.clear();
     you.vault_list.clear();
     you.branches_left.reset();
-    you.branch_stairs.init(0);
     you.zigs_completed = 0;
     you.zig_max = 0;
     you.exploration = 0;
@@ -1456,8 +1460,7 @@ void fixup_misplaced_items()
 
             mprf(MSGCH_ERROR, "Item %s buggily placed in feature %s at (%d, %d).",
                  item.name(DESC_PLAIN).c_str(),
-                 feature_description_at(item.pos, false, DESC_PLAIN,
-                                        false).c_str(),
+                 feature_description_at(item.pos, false, DESC_PLAIN).c_str(),
                  item.pos.x, item.pos.y);
         }
         else
@@ -3262,7 +3265,10 @@ static void _place_traps()
             break;
         }
 
-        const trap_type type = random_trap_for_place();
+        // Don't place dispersal traps in opaque vaults, they won't
+        // be later checked for connectivity and we might break them.
+        const trap_type type = random_trap_for_place(
+                                   !map_masked(ts.pos, MMT_OPAQUE));
         if (type == NUM_TRAPS)
         {
             dprf("failed to find a trap type to place");
@@ -3270,7 +3276,7 @@ static void _place_traps()
         }
 
         ts.type = type;
-        grd(ts.pos) = ts.category();
+        grd(ts.pos) = ts.feature();
         ts.prepare_ammo();
         env.trap[ts.pos] = ts;
         dprf("placed a %s trap", trap_name(type).c_str());
@@ -3798,18 +3804,29 @@ static void _builder_monsters()
     {
         mgen_data mg;
 
-        // Chance to generate the monster awake, but away from level stairs.
-        // D:1 is excluded from this chance since the player can't escape
-        // upwards and is especially vulnerable.
-        if (player_in_connected_branch()
-            && env.absdepth0 > 0
-            && one_chance_in(8))
+        // On D:1, we want monsters out of LOS distance from the player's
+        // starting position, and we don't generate them awake.
+        if (env.absdepth0 == 0)
         {
+            mg.behaviour = BEH_SLEEP;
+            mg.proximity = PROX_AWAY_FROM_ENTRANCE;
+        }
+        else if (player_in_connected_branch() && one_chance_in(8))
+        {
+            // Chance to generate the monster awake, but away from all level
+            // stairs (including the delver start stairs).
             mg.proximity = PROX_AWAY_FROM_STAIRS;
         }
-        // Pan monsters always generate awake.
         else if (!player_in_branch(BRANCH_PANDEMONIUM))
+        {
+            // Pan monsters always generate awake.
+
+            // For delvers, waking monsters can generate on D:5, but they can't
+            // be near the entrance.
+            if (env.absdepth0 == starting_absdepth())
+                mg.proximity = PROX_AWAY_FROM_ENTRANCE;
             mg.behaviour = BEH_SLEEP;
+        }
 
         mg.flags    |= MG_PERMIT_BANDS;
         mg.map_mask |= MMT_NO_MONS;
@@ -4330,6 +4347,8 @@ static object_class_type _acquirement_object_class()
 
 static int _dgn_item_corpse(const item_spec &ispec, const coord_def where)
 {
+    rng::subgenerator corpse_rng;
+
     mons_spec mspec(ispec.corpse_monster_spec());
     item_def* corpse = nullptr;
 
@@ -4341,7 +4360,7 @@ static int _dgn_item_corpse(const item_spec &ispec, const coord_def where)
         if (!mon)
             continue;
         mon->position = where;
-        corpse = place_monster_corpse(*mon, true, true);
+        corpse = place_monster_corpse(*mon, true);
         // Dismiss the monster we used to place the corpse.
         mon->flags |= MF_HARD_RESET;
         monster_die(*mon, KILL_DISMISSED, NON_MONSTER, false, true);
@@ -4355,19 +4374,11 @@ static int _dgn_item_corpse(const item_spec &ispec, const coord_def where)
 
     if (ispec.base_type == OBJ_CORPSES && ispec.sub_type == CORPSE_SKELETON)
         turn_corpse_into_skeleton(*corpse);
-    else if (ispec.base_type == OBJ_FOOD && ispec.sub_type == FOOD_CHUNK)
-        turn_corpse_into_chunks(*corpse, false);
 
     if (ispec.props.exists(MONSTER_HIT_DICE))
     {
         corpse->props[MONSTER_HIT_DICE].get_short() =
             ispec.props[MONSTER_HIT_DICE].get_short();
-    }
-
-    if (ispec.qty && ispec.base_type == OBJ_FOOD)
-    {
-        corpse->quantity = ispec.qty;
-        init_perishable_stack(*corpse);
     }
 
     return corpse->index();
@@ -4593,7 +4604,7 @@ int dgn_place_item(const item_spec &spec,
             if (_apply_item_props(item, spec, (useless_tries >= 10), false))
             {
                 dprf(DIAG_DNGN, "vault spec: placing %s at %d,%d",
-                    mitm[item_made].name(DESC_PLAIN, false, true).c_str(),
+                    mitm[item_made].name(DESC_INVENTORY, false, true).c_str(),
                     where.x, where.y);
                 env.level_map_mask(where) |= MMT_NO_TRAP;
                 return item_made;
@@ -5047,7 +5058,7 @@ dungeon_feature_type map_feature_at(map_def *map, const coord_def &c,
             if (f.trap->tr_type >= NUM_TRAPS)
                 return DNGN_FLOOR;
             else
-                return trap_category(static_cast<trap_type>(f.trap->tr_type));
+                return trap_feature(f.trap->tr_type);
         }
         else if (f.feat >= 0)
             return static_cast<dungeon_feature_type>(f.feat);
@@ -5516,8 +5527,6 @@ void place_spec_shop(const coord_def& where, shop_type force_type)
 
 int greed_for_shop_type(shop_type shop, int level_number)
 {
-    if (shop == SHOP_FOOD)
-        return 10 + random2(5);
     if (_shop_sells_antiques(shop))
     {
         const int rand = random2avg(19, 2);
@@ -5530,7 +5539,7 @@ int greed_for_shop_type(shop_type shop, int level_number)
 /**
  * How greedy should a given shop be? (Applies a multiplier to prices.)
  *
- * @param type              The type of the shop. (E.g. SHOP_FOOD.)
+ * @param type              The type of the shop. (E.g. SHOP_WEAPON_ANTIQUE.)
  * @param level_number      The depth in which the shop is placed.
  * @param spec_greed        An override for the greed, based on a vault
  *                          specification; if not -1, will override other
@@ -5635,40 +5644,15 @@ static bool _valid_item_for_shop(int item_index, shop_type shop_type_,
     if (item.base_type == OBJ_GOLD)
         return false;
 
-    // Don't place missiles or food in general antique shops...
+    // Don't place missiles in general antique shops...
     if (shop_type_ == SHOP_GENERAL_ANTIQUE
-            && (item.base_type == OBJ_MISSILES
-                || item.base_type == OBJ_FOOD))
+            && item.base_type == OBJ_MISSILES)
     {
         // ...unless they're specified by the item spec.
         return !spec.items.empty();
     }
 
     return true;
-}
-
-/**
- * Attempt to make a corpse to be placed in a gozag ghoul corpse shop.
- *
- * @return  The mitm index of the corpse.
- *          If we couldn't make one, returns NON_ITEM instead.
- */
-static int _make_delicious_corpse()
-{
-    // Choose corpses from D:<XL>
-    const level_id lev(BRANCH_DUNGEON, you.get_experience_level());
-    const monster_type mon_type = pick_local_corpsey_monster(lev);
-
-    // Create corpse object.
-    monster dummy;
-    dummy.type = mon_type;
-    define_monster(dummy);
-
-    item_def* corpse = place_monster_corpse(dummy, true, true);
-    if (!corpse)
-        return NON_ITEM;
-
-    return corpse->index();
 }
 
 /**
@@ -5679,7 +5663,7 @@ static int _make_delicious_corpse()
  *
  * @param j                 The index of the item being created in the shop's
  *                          inventory.
- * @param shop_type_        The type of shop. (E.g. SHOP_FOOD.)
+ * @param shop_type_        The type of shop. (E.g. SHOP_WEAPON_ANTIQUE.)
  * @param stocked[in,out]   An array mapping book types to the # in the shop.
  * @param spec              The specification of the shop.
  * @param shop              The shop.
@@ -5716,11 +5700,6 @@ static void _stock_shop_item(int j, shop_type shop_type_,
             // shop lists ordered items; take the one at the right index
             item_index = dgn_place_item(spec.items.get_item(j), coord_def(),
                                         item_level);
-        }
-        else if (spec.gozag && shop_type_ == SHOP_FOOD
-                 && you.species == SP_GHOUL)
-        {
-            item_index = _make_delicious_corpse();
         }
         else
         {
@@ -5772,6 +5751,15 @@ static void _stock_shop_item(int j, shop_type shop_type_,
                     item.name(DESC_PLAIN, false, true).c_str());
 }
 
+static shop_type _random_shop()
+{
+    return random_choose(SHOP_WEAPON, SHOP_ARMOUR, SHOP_WEAPON_ANTIQUE,
+                         SHOP_ARMOUR_ANTIQUE, SHOP_GENERAL_ANTIQUE,
+                         SHOP_JEWELLERY, SHOP_EVOKABLES, SHOP_BOOK,
+                         SHOP_DISTILLERY, SHOP_SCROLL, SHOP_GENERAL);
+}
+
+
 /**
  * Attempt to place a shop in a given location.
  *
@@ -5798,7 +5786,7 @@ void place_spec_shop(const coord_def& where, shop_spec &spec, int shop_level)
     shop.level = level_number * 2;
     shop.type = spec.sh_type;
     if (shop.type == SHOP_RANDOM)
-        shop.type = static_cast<shop_type>(random2(NUM_SHOPS));
+        shop.type = _random_shop();
     shop.greed = _shop_greed(shop.type, level_number, spec.greed);
     shop.pos = where;
 
@@ -5842,9 +5830,6 @@ object_class_type item_in_shop(shop_type shop_type)
 
     case SHOP_BOOK:
         return OBJ_BOOKS;
-
-    case SHOP_FOOD:
-        return OBJ_FOOD;
 
     case SHOP_DISTILLERY:
         return OBJ_POTIONS;
@@ -5989,7 +5974,7 @@ static void _place_specific_trap(const coord_def& where, trap_spec* spec,
     trap_def t;
     t.type = spec_type;
     t.pos = where;
-    grd(where) = trap_category(spec_type);
+    grd(where) = trap_feature(spec_type);
     t.prepare_ammo(charges);
     env.trap[where] = t;
     dprf("placed a %s trap", trap_name(spec_type).c_str());
@@ -6951,7 +6936,7 @@ static dungeon_feature_type _vault_inspect_mapspec(vault_placement &place,
     dungeon_feature_type found = NUM_FEATURES;
     const feature_spec f = mapsp.get_feat();
     if (f.trap)
-        found = trap_category(f.trap->tr_type);
+        found = trap_feature(f.trap->tr_type);
     else if (f.feat >= 0)
         found = static_cast<dungeon_feature_type>(f.feat);
     else if (f.glyph >= 0)
@@ -7137,4 +7122,12 @@ static void _mark_solid_squares()
     for (rectangle_iterator ri(0); ri; ++ri)
         if (feat_is_solid(grd(*ri)))
             env.pgrid(*ri) |= FPROP_NO_TELE_INTO;
+}
+
+// Based on their starting class, where does the player start?
+int starting_absdepth()
+{
+    if (you.char_class == JOB_DELVER)
+        return 4;
+    return 0; // (absdepth is 0-indexed)
 }

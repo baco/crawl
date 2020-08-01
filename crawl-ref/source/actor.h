@@ -144,10 +144,6 @@ public:
                              bool ignore_transform = false,
                              bool quiet = true) const = 0;
 
-    virtual void make_hungry(int /*nutrition*/, bool /*silent*/ = true)
-    {
-    }
-
     virtual void lose_energy(energy_use_type, int /*div*/ = 1, int /*mult*/ = 1)
     {
     }
@@ -275,8 +271,10 @@ public:
     virtual int shield_block_penalty() const = 0;
     virtual int shield_bypass_ability(int tohit) const = 0;
     virtual void shield_block_succeeded(actor *foe);
-    virtual int missile_deflection() const = 0; // 1 = RMsl, 2 = DMsl
-    virtual void ablate_deflection() = 0;
+    virtual bool missile_repulsion() const = 0;
+    virtual void ablate_repulsion()
+    {
+    }
 
     // Combat-related virtual class methods
     virtual int unadjusted_body_armour_penalty() const = 0;
@@ -319,7 +317,7 @@ public:
     virtual int inaccuracy() const;
     virtual bool antimagic_susceptible() const = 0;
 
-    virtual bool gourmand(bool calc_unid = true, bool items = true) const;
+    virtual bool gourmand(bool, bool) const { return false; }
 
     virtual bool res_corr(bool calc_unid = true, bool items = true) const;
     bool has_notele_item(bool calc_unid = true,
@@ -343,6 +341,7 @@ public:
     // Return an int so we know whether an item is the sole source.
     virtual int evokable_flight(bool calc_unid = true) const;
     virtual int spirit_shield(bool calc_unid = true, bool items = true) const;
+    virtual bool rampaging(bool calc_unid = true, bool items = true) const;
 
     virtual bool is_banished() const = 0;
     virtual bool is_web_immune() const = 0;

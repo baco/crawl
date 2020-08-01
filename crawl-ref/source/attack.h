@@ -13,6 +13,9 @@ const int HIT_WEAK   = 7;
 const int HIT_MED    = 18;
 const int HIT_STRONG = 36;
 
+const int BACKLIGHT_TO_HIT_BONUS = 5;
+const int UMBRA_TO_HIT_MALUS = -3;
+
 class attack
 {
 // Public Properties
@@ -84,12 +87,6 @@ public:
 
     item_def        *defender_shield;
 
-    // Miscast to cause after special damage is done. If miscast_level == 0
-    // the miscast is discarded if special_damage_message isn't empty.
-    int       miscast_level;
-    spschool  miscast_type;
-    actor*    miscast_target;
-
     bool      fake_chaos_attack;
 
     bool simu;
@@ -100,6 +97,8 @@ public:
 
     // To-hit is a function of attacker/defender, defined in sub-classes
     virtual int calc_to_hit(bool random);
+    int calc_pre_roll_to_hit(bool random);
+    virtual int post_roll_to_hit_modifiers(int mhit, bool random);
 
     // Exact copies of their melee_attack predecessors
     string actor_name(const actor *a, description_level_type desc,
@@ -138,6 +137,8 @@ protected:
     virtual int calc_mon_to_hit_base() = 0;
     virtual int apply_damage_modifiers(int damage) = 0;
     virtual int calc_damage();
+    void calc_encumbrance_penalties(bool random);
+    int lighting_effects();
     int test_hit(int to_hit, int ev, bool randomise_ev);
     int apply_defender_ac(int damage, int damage_max = 0) const;
     // Determine if we're blocking (partially or entirely)
@@ -163,7 +164,6 @@ protected:
     void pain_affects_defender();
     void chaos_affects_defender();
     brand_type random_chaos_brand();
-    void do_miscast();
     void drain_defender();
     void drain_defender_speed();
 

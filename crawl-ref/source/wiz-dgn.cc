@@ -146,6 +146,7 @@ static void _wizard_go_to_level(const level_pos &pos)
     new_level();
     seen_monsters_react();
     viewwindow();
+    update_screen();
 
     // Tell stash-tracker and travel that we've changed levels.
     trackers_init_new_level();
@@ -358,8 +359,13 @@ void wizard_map_level()
     {
         update_item_at(*ri, false, true);
         show_update_at(*ri, LAYER_ITEMS);
+
 #ifdef USE_TILE
         tiles.update_minimap(*ri);
+        tile_draw_map_cell(*ri, true);
+#endif
+#ifdef USE_TILE_WEB
+        tiles.mark_for_redraw(*ri);
 #endif
     }
 }
@@ -641,6 +647,7 @@ static void _debug_kill_traps()
 static int _debug_time_explore()
 {
     viewwindow();
+    update_screen();
     start_explore(false);
 
     unwind_var<int> es(Options.explore_stop, 0);
@@ -782,6 +789,7 @@ void wizard_recreate_level()
     new_level();
     seen_monsters_react();
     viewwindow();
+    update_screen();
 
     trackers_init_new_level();
 }

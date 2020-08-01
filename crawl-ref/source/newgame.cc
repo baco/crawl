@@ -31,13 +31,13 @@
 #include "species-groups.h"
 #include "state.h"
 #include "stringutil.h"
+#include "tilepick.h"
 #ifdef USE_TILE
 #include "tilereg-crt.h"
-#include "tilepick.h"
 #include "tilepick-p.h"
 #include "tilefont.h"
-#include "tiledef-main.h"
-#include "tiledef-feat.h"
+#include "rltiles/tiledef-main.h"
+#include "rltiles/tiledef-feat.h"
 #endif
 #include "version.h"
 #include "ui.h"
@@ -133,6 +133,12 @@ static bool _is_random_viable_choice(const newgame_def& choice)
 static bool _char_defined(const newgame_def& ng)
 {
     return ng.species != SP_UNKNOWN && ng.job != JOB_UNKNOWN;
+}
+
+static char_choice_restriction _job_allowed(species_type sp, job_type job) {
+    if (job == JOB_DELVER && crawl_state.game_is_sprint())
+        return CC_BANNED;
+    return job_allowed(sp, job);
 }
 
 string newgame_char_description(const newgame_def& ng)
@@ -319,7 +325,7 @@ static void _choose_species_job(newgame_def& ng, newgame_def& ng_choice,
         _resolve_species_job(ng, ng_choice);
     }
 
-    if (!job_allowed(ng.species, ng.job))
+    if (!_job_allowed(ng.species, ng.job))
     {
         // Either an invalid combination was passed in through options,
         // or we messed up.
@@ -868,6 +874,11 @@ static void _choose_seed(newgame_def& ng, newgame_def& choice,
     seed_hbox->add_child(move(daily_seed_btn));
 
     const string footer_text =
+#ifdef USE_TILE_LOCAL
+        "\n"
+        "Press [p] or [ctrl-v] to paste a seed from the clipboard\n"
+        "(overwriting the current value).\n"
+#endif
         "\n"
         "The seed will determine the dungeon layout, monsters, and items\n"
         "that you discover, relative to this version of crawl. Upgrading\n"
@@ -1001,7 +1012,7 @@ bool choose_game(newgame_def& ng, newgame_def& choice,
         end(1, false, "No player name specified.");
 
     ASSERT(is_good_name(ng.name, false)
-           && job_allowed(ng.species, ng.job)
+           && _job_allowed(ng.species, ng.job)
            && ng.type != NUM_GAME_TYPE);
 
     write_newgame_options_file(choice);
@@ -1070,12 +1081,12 @@ static job_group jobs_order[] =
     {
         "Warrior",
         coord_def(0, 0), 20,
-        { JOB_FIGHTER, JOB_GLADIATOR, JOB_MONK, JOB_HUNTER, JOB_ASSASSIN }
+        { JOB_FIGHTER, JOB_GLADIATOR, JOB_MONK, JOB_HUNTER, JOB_BRIGAND }
     },
     {
         "Adventurer",
         coord_def(0, 7), 20,
-        { JOB_ARTIFICER, JOB_WANDERER }
+        { JOB_ARTIFICER, JOB_WANDERER, JOB_DELVER, }
     },
     {
         "Zealot",
@@ -1085,7 +1096,7 @@ static job_group jobs_order[] =
     {
         "Warrior-mage",
         coord_def(1, 5), 26,
-        { JOB_SKALD, JOB_TRANSMUTER, JOB_WARPER, JOB_ARCANE_MARKSMAN,
+        { JOB_TRANSMUTER, JOB_WARPER, JOB_ARCANE_MARKSMAN,
           JOB_ENCHANTER }
     },
     {
@@ -1111,7 +1122,7 @@ static void _construct_backgrounds_menu(const newgame_def& ng,
     {
         if (ng.species == SP_UNKNOWN
             || any_of(begin(group.jobs), end(group.jobs), [&ng](job_type job)
-                      { return job_allowed(ng.species, job) != CC_BANNED; }))
+                      { return _job_allowed(ng.species, job) != CC_BANNED; }))
         {
             group.attach(ng, defaults, ng_menu, letter);
         }
@@ -1225,9 +1236,7 @@ protected:
                                 int id,
                                 int item_status,
                                 string item_name,
-#ifdef USE_TILE
                                 tile_def item_tile,
-#endif
                                 bool is_active_item,
                                 coord_def position)
 
@@ -1244,6 +1253,8 @@ protected:
         tile->flex_grow = 0;
         hbox->add_child(move(tile));
         hbox->add_child(label);
+#else
+        UNUSED(item_tile);
 #endif
 
         COLOURS fg, hl;
@@ -1255,7 +1266,11 @@ protected:
         }
         else if (item_status == ITEM_STATUS_RESTRICTED)
         {
+#ifdef USE_TILE_LOCAL
+            fg = LIGHTGRAY;
+#else
             fg = DARKGRAY;
+#endif
             hl = STARTUP_HIGHLIGHT_BAD;
         }
         else
@@ -1467,7 +1482,7 @@ void UINewGameMenu::menu_item_activated(int id)
         {
             job_type job = static_cast<job_type> (id);
             if (m_ng.species == SP_UNKNOWN
-                || job_allowed(m_ng.species, job) != CC_BANNED)
+                || _job_allowed(m_ng.species, job) != CC_BANNED)
             {
                 m_ng_choice.job = job;
                 done = true;
@@ -1500,7 +1515,7 @@ void job_group::attach(const newgame_def& ng, const newgame_def& defaults,
             break;
 
         if (ng.species != SP_UNKNOWN
-            && job_allowed(ng.species, job) == CC_BANNED)
+            && _job_allowed(ng.species, job) == CC_BANNED)
         {
             continue;
         }
@@ -1508,12 +1523,13 @@ void job_group::attach(const newgame_def& ng, const newgame_def& defaults,
         int item_status;
         if (ng.species == SP_UNKNOWN)
             item_status = ITEM_STATUS_UNKNOWN;
-        else if (job_allowed(ng.species, job) == CC_RESTRICTED)
+        else if (_job_allowed(ng.species, job) == CC_RESTRICTED)
             item_status = ITEM_STATUS_RESTRICTED;
         else
             item_status = ITEM_STATUS_ALLOWED;
 
         const bool is_active_item = defaults.job == job;
+        const bool recommended = item_status != ITEM_STATUS_RESTRICTED;
 
         ++pos.y;
 
@@ -1522,10 +1538,7 @@ void job_group::attach(const newgame_def& ng, const newgame_def& defaults,
             job,
             item_status,
             get_job_name(job),
-#ifdef USE_TILE
-            tile_def(tileidx_player_job(job,
-                    item_status != ITEM_STATUS_RESTRICTED), TEX_GUI),
-#endif
+            tile_def(tileidx_player_job(job, recommended)),
             is_active_item,
             pos
         );
@@ -1564,6 +1577,7 @@ void species_group::attach(const newgame_def& ng, const newgame_def& defaults,
             item_status = ITEM_STATUS_ALLOWED;
 
         const bool is_active_item = defaults.species == this_species;
+        const bool recommended = item_status != ITEM_STATUS_RESTRICTED;
 
         ++pos.y;
 
@@ -1572,10 +1586,7 @@ void species_group::attach(const newgame_def& ng, const newgame_def& defaults,
             this_species,
             item_status,
             species_name(this_species),
-#ifdef USE_TILE
-            tile_def(tileidx_player_species(this_species,
-                    item_status != ITEM_STATUS_RESTRICTED), TEX_GUI),
-#endif
+            tile_def(tileidx_player_species(this_species, recommended)),
             is_active_item,
             pos
         );
@@ -1725,7 +1736,7 @@ static void _construct_weapon_menu(const newgame_def& ng,
         if (choice.skill == SK_THROWING)
         {
             tile_stack->add_child(make_shared<Image>(
-                    tile_def(TILE_MI_THROWING_NET, TEX_DEFAULT)));
+                    tile_def(TILE_MI_THROWING_NET)));
         }
         if (choice.skill == SK_UNARMED_COMBAT)
         {
@@ -1736,7 +1747,7 @@ static void _construct_weapon_menu(const newgame_def& ng,
         else
         {
             tile_stack->add_child(make_shared<Image>(
-                    tile_def(choice.tile, TEX_DEFAULT)));
+                    tile_def(choice.tile)));
         }
 #endif
 
@@ -2077,28 +2088,28 @@ static tile_def tile_for_map_name(string name)
             TILEG_CMD_CAST_SPELL,
             TILEG_CMD_USE_ABILITY,
         };
-        return tile_def(tutorial_tiles[i], TEX_GUI);
+        return tile_def(tutorial_tiles[i]);
     }
 
     if (name == "Sprint I: \"Red Sonja\"")
-        return tile_def(TILEP_MONS_SONJA, TEX_PLAYER);
+        return tile_def(TILEP_MONS_SONJA);
     if (name == "Sprint II: \"The Violet Keep of Menkaure\"")
-        return tile_def(TILEP_MONS_MENKAURE, TEX_PLAYER);
+        return tile_def(TILEP_MONS_MENKAURE);
     if (name == "Sprint III: \"The Ten Rune Challenge\"")
-        return tile_def(TILE_MISC_RUNE_OF_ZOT, TEX_DEFAULT);
+        return tile_def(TILE_MISC_RUNE_OF_ZOT);
     if (name == "Sprint IV: \"Fedhas' Mad Dash\"")
-        return tile_def(TILE_DNGN_ALTAR_FEDHAS, TEX_FEAT);
+        return tile_def(TILE_DNGN_ALTAR_FEDHAS);
     if (name == "Sprint V: \"Ziggurat Sprint\"")
-        return tile_def(TILE_DNGN_PORTAL_ZIGGURAT, TEX_FEAT);
+        return tile_def(TILE_DNGN_PORTAL_ZIGGURAT);
     if (name == "Sprint VI: \"Thunderdome\"")
-        return tile_def(TILE_GOLD16, TEX_DEFAULT);
+        return tile_def(TILE_GOLD16);
     if (name == "Sprint VII: \"The Pits\"")
-        return tile_def(TILE_WALL_CRYPT_METAL + 2, TEX_WALL);
+        return tile_def(TILE_WALL_CRYPT_METAL + 2);
     if (name == "Sprint VIII: \"Arena of Blood\"")
-        return tile_def(TILE_UNRAND_WOE, TEX_DEFAULT);
+        return tile_def(TILE_UNRAND_WOE);
     if (name == "Sprint IX: \"|||||||||||||||||||||||||||||\"")
-        return tile_def(TILE_WALL_LAB_METAL + 2, TEX_WALL);
-    return tile_def(0, TEX_GUI);
+        return tile_def(TILE_WALL_LAB_METAL + 2);
+    return tile_def(0);
 }
 #endif
 

@@ -152,7 +152,7 @@ struct monsterentry
     int8_t AC; // armour class
     int8_t ev; // evasion
     int sec;   // actually mon_spellbook_type
-    corpse_effect_type corpse_thingy;
+    bool leaves_corpse;
     shout_type         shouts;
     mon_intel_type     intel;
     habitat_type     habitat;
@@ -247,10 +247,9 @@ bool mons_immune_magic(const monster& mon);
 
 mon_attack_def mons_attack_spec(const monster& mon, int attk_number, bool base_flavour = true);
 string mon_attack_name(attack_type attack, bool with_object = true);
+bool is_plain_attack_type(attack_type attack);
 bool flavour_triggers_damageless(attack_flavour flavour);
 int flavour_damage(attack_flavour flavour, int HD, bool random = true);
-
-corpse_effect_type mons_corpse_effect(monster_type mc);
 
 bool mons_class_flag(monster_type mc, monclass_flags_t bits);
 
@@ -281,7 +280,10 @@ mon_intel_type mons_intel(const monster& mon);
 
 // Use mons_habitat() and mons_primary_habitat() wherever possible,
 // since the class variants do not handle zombies correctly.
+habitat_type mons_habitat_type(monster_type t, monster_type base_t,
+                               bool real_amphibious = false);
 habitat_type mons_habitat(const monster& mon, bool real_amphibious = false);
+
 habitat_type mons_class_primary_habitat(monster_type mc);
 habitat_type mons_primary_habitat(const monster& mon);
 habitat_type mons_class_secondary_habitat(monster_type mc);
@@ -533,7 +535,8 @@ monster *choose_random_monster_on_level(
 
 void update_monster_symbol(monster_type mtype, cglyph_t md);
 
-void normalize_spell_freq(monster_spells &spells, int hd);
+int spell_freq_for_hd(int hd);
+void normalize_spell_freq(monster_spells &spells, int total_freq);
 
 enum mon_dam_level_type
 {

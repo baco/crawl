@@ -48,7 +48,7 @@
 #include "stringutil.h"
 #include "terrain.h"
 #ifdef USE_TILE
- #include "tiledef-player.h"
+ #include "rltiles/tiledef-player.h"
 #endif
 #include "tilepick.h"
 #include "traps.h"
@@ -332,6 +332,7 @@ void spawn_random_monsters()
         mg.xp_tracking = XP_UNTRACKED;
         mons_place(mg);
         viewwindow();
+        update_screen();
         return;
     }
 
@@ -346,6 +347,7 @@ void spawn_random_monsters()
 
     mons_place(mg);
     viewwindow();
+    update_screen();
 }
 
 static bool _is_random_monster(monster_type mt)
@@ -364,7 +366,7 @@ static bool _has_big_aura(monster_type mt)
 static bool _is_incompatible_monster(monster_type mt)
 {
     return mons_class_is_stationary(mt)
-        || player_will_anger_monster(mt);
+        || god_hates_monster(mt);
 }
 
 static bool _is_banded_monster(monster_type mt)
@@ -409,18 +411,6 @@ monster_type pick_random_monster(level_id place,
         return pick_monster(place, _has_big_aura);
     else
         return pick_monster(place);
-}
-
-bool can_place_on_trap(monster_type mon_type)
-{
-    if (mons_is_tentacle_segment(mon_type))
-        return true;
-
-    // Things summoned by the player to a specific spot shouldn't protest.
-    if (mon_type == MONS_FULMINANT_PRISM || mon_type == MONS_LIGHTNING_SPIRE)
-        return true;
-
-    return false;
 }
 
 bool drac_colour_incompatible(int drac, int colour)
@@ -606,12 +596,31 @@ static bool _valid_monster_generation_location(const mgen_data &mg,
             if (feat_is_stone_stair(grd(*di)))
                 return false;
     }
-
-    // Don't generate monsters on top of teleport traps.
-    // (How did they get there?)
-    const trap_def* ptrap = trap_at(mg_pos);
-    if (ptrap && !can_place_on_trap(mg.cls))
-        return false;
+    // Check that the location is not proximal to an area where the player
+    // begins the game.
+    else if (mg.proximity == PROX_AWAY_FROM_ENTRANCE)
+    {
+        for (distance_iterator di(mg_pos, false, false, LOS_RADIUS); di; ++di)
+        {
+            // for consistency, this should happen regardless of whether the
+            // player is starting on D:1
+            if (env.absdepth0 == 0)
+            {
+                if (feat_is_branch_exit(grd(*di))
+                    // We may be checking before branch exit cleanup.
+                    || feat_is_stone_stair_up(grd(*di)))
+                {
+                    return false;
+                }
+            }
+            else if (env.absdepth0 == starting_absdepth())
+            {
+                // Delvers start on a (specific) D:5 downstairs.
+                if (grd(*di) == DNGN_STONE_STAIRS_DOWN_I)
+                    return false;
+            }
+        }
+    }
 
     return true;
 }
@@ -1197,8 +1206,6 @@ static monster* _place_monster_aux(const mgen_data &mg, const monster *leader,
         // simultaneous die-offs of mushroom rings.
         mon->add_ench(ENCH_SLOWLY_DYING);
     }
-    else if (mg.cls == MONS_HYPERACTIVE_BALLISTOMYCETE)
-        mon->add_ench(ENCH_EXPLODING);
     else if (mons_is_demonspawn(mon->type)
              && draco_or_demonspawn_subspecies(*mon) == MONS_GELID_DEMONSPAWN)
     {
@@ -1234,21 +1241,15 @@ static monster* _place_monster_aux(const mgen_data &mg, const monster *leader,
         mon->add_ench(mon_enchant(ENCH_OZOCUBUS_ARMOUR, 20 + rnd_power, mon));
     }
 
-    if (mon->has_spell(SPELL_SHROUD_OF_GOLUBRIA))
-        mon->add_ench(ENCH_SHROUD);
-
     if (mon->has_spell(SPELL_REPEL_MISSILES))
         mon->add_ench(ENCH_REPEL_MISSILES);
-
-    if (mon->has_spell(SPELL_DEFLECT_MISSILES))
-        mon->add_ench(ENCH_DEFLECT_MISSILES);
 
     mon->flags |= MF_JUST_SUMMONED;
 
     // Don't leave shifters in their starting shape.
     if (mg.cls == MONS_SHAPESHIFTER || mg.cls == MONS_GLOWING_SHAPESHIFTER)
     {
-        no_messages nm;
+        msg::suppress nm;
         monster_polymorph(mon, RANDOM_MONSTER);
 
         // It's not actually a known shapeshifter if it happened to be
@@ -1386,8 +1387,6 @@ static monster* _place_monster_aux(const mgen_data &mg, const monster *leader,
     }
     else if (mons_class_is_zombified(mg.cls))
         blame_prefix = "animated by ";
-    else if (mg.summon_type == SPELL_STICKS_TO_SNAKES)
-        blame_prefix = "transmuted by ";
     else if (mg.cls == MONS_ELDRITCH_TENTACLE
              || mg.cls == MONS_ELDRITCH_TENTACLE_SEGMENT)
     {
@@ -1441,10 +1440,6 @@ static monster* _place_monster_aux(const mgen_data &mg, const monster *leader,
         mon->set_ghost(ghost);
         mon->uglything_init();
     }
-#if TAG_MAJOR_VERSION == 34
-    else if (mon->type == MONS_LABORATORY_RAT)
-        mon->type = MONS_RAT;
-#endif
     else if (mons_class_is_animated_weapon(mon->type))
     {
         ghost_demon ghost;
@@ -2089,10 +2084,10 @@ static const map<band_type, vector<member_possibilites>> band_membership = {
     { BAND_GNOLLS,              {{{MONS_GNOLL, 1}}}},
     { BAND_HARPIES,             {{{MONS_HARPY, 1}}}},
     { BAND_RAIJU,               {{{MONS_RAIJU, 1}}}},
-    { BAND_PIKEL,               {{{MONS_SLAVE, 1}}}},
     { BAND_WIGHTS,              {{{MONS_WIGHT, 1}}}},
     { BAND_JACKALS,             {{{MONS_JACKAL, 1}}}},
     { BAND_KOBOLDS,             {{{MONS_KOBOLD, 1}}}},
+    { BAND_PIKEL,               {{{MONS_LEMURE, 1}}}},
     { BAND_JOSEPHINE,           {{{MONS_WRAITH, 1}}}},
     { BAND_MELIAI,              {{{MONS_MELIAI, 1}}}},
     { BAND_BOGGARTS,            {{{MONS_BOGGART, 1}}}},
@@ -2188,7 +2183,7 @@ static const map<band_type, vector<member_possibilites>> band_membership = {
     { BAND_KOBOLD_DEMONOLOGIST, {{{MONS_KOBOLD, 4},
                                   {MONS_BIG_KOBOLD, 2},
                                   {MONS_KOBOLD_DEMONOLOGIST, 1}}}},
-    // Favor tougher naga suited to melee, compared to normal naga bands
+    // Favour tougher naga suited to melee, compared to normal naga bands
     { BAND_GUARDIAN_SERPENT,    {{{MONS_NAGA_MAGE, 5}, {MONS_NAGA_WARRIOR, 10}},
 
                                  {{MONS_NAGA_MAGE, 5}, {MONS_NAGA_WARRIOR, 10},
@@ -2646,7 +2641,7 @@ monster* mons_place(mgen_data mg)
         }
 
         if (!(mg.flags & MG_FORCE_BEH) && !crawl_state.game_is_arena())
-            player_angers_monster(creation);
+            check_lovelessness(*creation);
 
         behaviour_event(creation, ME_EVAL);
     }
@@ -2803,7 +2798,7 @@ bool can_spawn_mushrooms(coord_def where)
     return actor_cloud_immune(dummy, *cloud);
 }
 
-conduct_type player_will_anger_monster(monster_type type)
+conduct_type god_hates_monster(monster_type type)
 {
     monster dummy;
     dummy.type = type;
@@ -2814,7 +2809,26 @@ conduct_type player_will_anger_monster(monster_type type)
     else
         define_monster(dummy);
 
-    return player_will_anger_monster(dummy);
+    return god_hates_monster(dummy);
+}
+
+/**
+ * Is the player hated by all? If so, does this monster care?
+ */
+bool mons_hates_your_lovelessness(monster_type type)
+{
+    return you.get_mutation_level(MUT_NO_LOVE) && !mons_is_conjured(type);
+}
+
+void check_lovelessness(monster &mons)
+{
+    if (!mons_hates_your_lovelessness(mons.type))
+        return;
+
+    mons.attitude = ATT_HOSTILE;
+    mons.del_ench(ENCH_CHARM);
+    behaviour_event(&mons, ME_ALERT, &you);
+    mprf("%s feels only hate for you!", mons.name(DESC_THE).c_str());
 }
 
 /**
@@ -2828,13 +2842,11 @@ conduct_type player_will_anger_monster(monster_type type)
  * @return      The reason the player's religion conflicts with the monster
  *              (e.g. DID_EVIL for evil monsters), or DID_NOTHING.
  */
-conduct_type player_will_anger_monster(const monster &mon)
+conduct_type god_hates_monster(const monster &mon)
 {
-    if (you.get_mutation_level(MUT_NO_LOVE) && !mons_is_conjured(mon.type))
-    {
-        // Player angers all real monsters
+    // Player angers all real monsters
+    if (mons_hates_your_lovelessness(mon.type))
         return DID_SACRIFICE_LOVE;
-    }
 
     if (is_good_god(you.religion) && mon.evil())
         return DID_EVIL;
@@ -2853,68 +2865,6 @@ conduct_type player_will_anger_monster(const monster &mon)
         return DID_SPELL_CASTING;
 
     return DID_NOTHING;
-}
-
-bool player_angers_monster(monster* mon, bool real)
-{
-    ASSERT(mon); // XXX: change to monster &mon
-
-    // Get the drawbacks, not the benefits... (to prevent e.g. demon-scumming).
-    conduct_type why = player_will_anger_monster(*mon);
-    if (why && (!real || mon->wont_attack()))
-    {
-        if (real)
-        {
-            mon->attitude = ATT_HOSTILE;
-            mon->del_ench(ENCH_CHARM);
-            behaviour_event(mon, ME_ALERT, &you);
-        }
-        const string modal = real
-                             ? ((why == DID_SACRIFICE_LOVE) ? "can " : "")
-                             : "would ";
-        const string verb = (why == DID_SACRIFICE_LOVE)
-                             ? "feel"
-                             : real ? "is" : "be";
-        const string vcomplex = modal + verb;
-
-        if (you.can_see(*mon))
-        {
-            const string mname = mon->name(DESC_THE);
-
-            switch (why)
-            {
-            case DID_EVIL:
-                mprf("%s %s enraged by your holy aura!",
-                    mname.c_str(), vcomplex.c_str());
-                break;
-            case DID_HOLY:
-                mprf("%s %s enraged by your evilness!",
-                    mname.c_str(), vcomplex.c_str());
-                break;
-            case DID_UNCLEAN:
-            case DID_CHAOS:
-                mprf("%s %s enraged by your lawfulness!",
-                    mname.c_str(), vcomplex.c_str());
-                break;
-            case DID_SPELL_CASTING:
-                mprf("%s %s enraged by your magic-hating god!",
-                    mname.c_str(), vcomplex.c_str());
-                break;
-            case DID_SACRIFICE_LOVE:
-                mprf("%s %s only hate for you!",
-                    mname.c_str(), vcomplex.c_str());
-                break;
-            default:
-                mprf("%s %s enraged by a buggy thing about you!",
-                    mname.c_str(), vcomplex.c_str());
-                break;
-            }
-        }
-
-        return true;
-    }
-
-    return false;
 }
 
 monster* create_monster(mgen_data mg, bool fail_msg)

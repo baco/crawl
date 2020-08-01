@@ -136,8 +136,7 @@ MONS: rust devil / nothing, iron imp / nothing
     lua_marker(']', trap_marker)
     lua_marker(')', trap_marker)
     lua_marker('G', props_marker {trap_statue=1,
-                                  veto_dig="veto",
-                                  veto_shatter="veto"})
+                                  veto_destroy="veto"})
     set_feature_name("granite_statue", "iron statue")
 }}
 SUBST: d = 3
@@ -625,7 +624,7 @@ MONS:    reaper / hellion / tormentor / executioner w:2      / \
          bone dragon / lich / ancient champion               / \
          balrug w:2 / blizzard demon w:2 / shadow demon w:2  / \
          iron dragon w:2 / quicksilver dragon w:2
-KFEAT:   Z = known zot trap
+KFEAT:   Z = zot trap
 # Standard floor spawn equipment drops, not real loot.
 KITEM:   d = battleaxe no_pickup / great mace no_pickup      / \
              great sword no_pickup / glaive no_pickup        / \
@@ -783,8 +782,7 @@ MARKER:  o = lua:monster_on_death { \
             message_seen="The iron statue comes to life!", \
             message_unseen="You hear a grinding sound.", \
             monster_place_feature=dgn.fnum("granite_statue"), \
-            veto_dig="veto", \
-            veto_shatter="veto" \
+            veto_destroy="veto" \
          }
 KITEM:   | = superb_item no_pickup
 : dis_castle(_G)

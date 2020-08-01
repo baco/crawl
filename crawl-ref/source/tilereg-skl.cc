@@ -12,7 +12,7 @@
 #include "skills.h"
 #include "stringutil.h"
 #include "tile-inventory-flags.h"
-#include "tiledef-icons.h"
+#include "rltiles/tiledef-icons.h"
 #include "tilepick.h"
 #include "tiles-build-specific.h"
 #ifdef WIZARD
@@ -95,6 +95,7 @@ int SkillRegion::handle_mouse(wm_mouse_event &event)
     {
         describe_skill(skill);
         redraw_screen();
+        update_screen();
         return CK_MOUSE_CMD;
     }
     return 0;
@@ -233,8 +234,6 @@ void SkillRegion::update()
     {
         const skill_type skill = (skill_type) idx;
 
-        if (skill > SK_UNARMED_COMBAT && skill < SK_SPELLCASTING)
-            continue;
         if (is_useless_skill(skill))
             continue;
         InventoryTile desc;

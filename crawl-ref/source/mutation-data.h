@@ -73,6 +73,8 @@ static const mutation_def mut_data[] =
   {"You feel less resistant to poisons.", "", ""},
 },
 
+
+#if TAG_MAJOR_VERSION == 34
 { MUT_CARNIVOROUS, 0, 1, mutflag::good, false,
   "carnivore",
 
@@ -82,16 +84,16 @@ static const mutation_def mut_data[] =
 
   {"You feel able to eat a more balanced diet.", "", ""},
 },
-
 { MUT_HERBIVOROUS, 0, 1, mutflag::bad, false,
   "herbivore",
 
   {"You are a herbivore.", "", ""},
 
-  {"You hunger for vegetation.", "", ""},
+  {"", "", ""},
 
-  {"You feel able to eat a more balanced diet."},
+  {""},
 },
+#endif
 
 { MUT_HEAT_RESISTANCE, 4, 3, mutflag::good, true,
   "fire resistance",
@@ -218,6 +220,7 @@ static const mutation_def mut_data[] =
   {"You begin to regenerate regardless of the presence of monsters.", "", ""},
 },
 
+#if TAG_MAJOR_VERSION == 34
 { MUT_FAST_METABOLISM, 0, 3, mutflag::bad, false,
   "fast metabolism",
 
@@ -249,6 +252,7 @@ static const mutation_def mut_data[] =
    "You feel a little hungry.",
    ""},
 },
+#endif
 
 { MUT_WEAK, 8, 2, mutflag::bad | mutflag::xom, false,
   "weak",
@@ -881,6 +885,22 @@ static const mutation_def mut_data[] =
 
   {"", "Your legs feel stronger.", ""},
 
+  {"", "", ""},
+},
+
+{ MUT_ROLL, 0, 1, mutflag::good, true,
+  "roll",
+
+  {"You can roll at foes to attack.", "", ""},
+  {"", "", ""},
+  {"", "", ""},
+},
+
+{ MUT_ARMOURED_TAIL, 0, 1, mutflag::good, true,
+  "armoured tail",
+
+  {"You have a long armoured tail.", "", ""},
+  {"", "", ""},
   {"", "", ""},
 },
 
@@ -1685,13 +1705,15 @@ static const mutation_def mut_data[] =
   {"You can once more study and cast Air magic.", "", ""},
 },
 
+#if TAG_MAJOR_VERSION == 34
 { MUT_NO_CHARM_MAGIC, 0, 1, mutflag::bad, false,
   "no charms magic",
 
-  {"You cannot study or cast Charms magic.", "", ""},
+  {"You cannot study or cast removed Charms magic.", "", ""},
   {"You can no longer study or cast Charms magic.", "", ""},
   {"You can once more study and cast Charms magic.", "", ""},
 },
+#endif
 
 { MUT_NO_CONJURATION_MAGIC, 0, 1, mutflag::bad, false,
   "no conjurations magic",

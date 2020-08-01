@@ -59,7 +59,6 @@ enum monster_info_flags
 #if TAG_MAJOR_VERSION == 34
     MB_BLEEDING,
 #endif
-    MB_DEFLECT_MSL,
 #if TAG_MAJOR_VERSION == 34
     MB_PREP_RESURRECT,
 #endif
@@ -176,9 +175,11 @@ enum monster_info_flags
     MB_NO_REWARD,
     MB_STILL_WINDS,
     MB_SLOWLY_DYING,
+#if TAG_MAJOR_VERSION == 34
     MB_PINNED,
+#endif
     MB_VILE_CLUTCH,
-    MB_HIGHLIGHTED_SUMMONER,
+    MB_WATERLOGGED,
     NUM_MB_FLAGS
 };
 
@@ -222,6 +223,7 @@ struct monster_info_base
     vector<string> constricting_name;
     monster_spells spells;
     mon_attack_def attack[MAX_NUM_ATTACKS];
+    bool can_go_frenzy;
 
     uint32_t client_id;
 };
@@ -266,7 +268,8 @@ struct monster_info : public monster_info_base
     }
 
     void to_string(int count, string& desc, int& desc_colour,
-                   bool fullname = true, const char *adjective = nullptr) const;
+                   bool fullname = true, const char *adjective = nullptr,
+                   bool verbose = true) const;
 
     /* only real equipment is visible, miscellany is for mimic items */
     unique_ptr<item_def> inv[MSLOT_LAST_VISIBLE_SLOT + 1];
@@ -390,5 +393,11 @@ bool set_monster_list_colour(string key, int colour);
 void clear_monster_list_colours();
 
 void get_monster_info(vector<monster_info>& mons);
+
+void mons_to_string_pane(string& desc, int& desc_colour, bool fullname,
+                           const vector<monster_info>& mi, int start,
+                           int count);
+void mons_conditions_string(string& desc, const vector<monster_info>& mi,
+                            int start, int count, bool equipment);
 
 typedef function<vector<string> (const monster_info& mi)> (desc_filter);

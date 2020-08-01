@@ -9,8 +9,8 @@
 #include "level-state-type.h"
 #include "terrain.h"
 #include "tile-flags.h"
-#include "tiledef-dngn.h"
-#include "tiledef-main.h"
+#include "rltiles/tiledef-dngn.h"
+#include "rltiles/tiledef-main.h"
 #include "viewgeom.h"
 
 void packed_cell::clear()
@@ -497,8 +497,6 @@ static bool _is_seen_icy_wall(const coord_def& gc, crawl_view_buffer &vbuf)
 void pack_cell_overlays(const coord_def &gc, crawl_view_buffer &vbuf)
 {
     auto& cell = vbuf(gc).tile;
-
-    cell.num_dngn_overlay = 0;
 
     if (cell.map_knowledge.feat() == DNGN_UNSEEN)
         return; // Don't put overlays on unseen tiles

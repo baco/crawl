@@ -195,24 +195,19 @@ int actor::inaccuracy() const
     return wearing(EQ_AMULET, AMU_INACCURACY);
 }
 
-bool actor::gourmand(bool calc_unid, bool items) const
-{
-    return items && wearing(EQ_AMULET, AMU_THE_GOURMAND, calc_unid);
-}
-
 bool actor::res_corr(bool calc_unid, bool items) const
 {
     return items && (wearing(EQ_RINGS, RING_RESIST_CORROSION, calc_unid)
                      || wearing(EQ_BODY_ARMOUR, ARM_ACID_DRAGON_ARMOUR, calc_unid)
-                     || scan_artefacts(ARTP_RCORR, calc_unid));
+                     || scan_artefacts(ARTP_RCORR, calc_unid)
+                     || wearing_ego(EQ_ALL_ARMOUR, SPARM_PRESERVATION, calc_unid));
 }
 
-bool actor::cloud_immune(bool calc_unid, bool items) const
+bool actor::cloud_immune(bool /*calc_unid*/, bool items) const
 {
     const item_def *body_armour = slot_item(EQ_BODY_ARMOUR);
-    return items && (wearing_ego(EQ_CLOAK, SPARM_CLOUD_IMMUNE, calc_unid)
-                     || (body_armour
-                        && is_unrandom_artefact(*body_armour, UNRAND_RCLOUDS)));
+    return items && body_armour
+           && is_unrandom_artefact(*body_armour, UNRAND_RCLOUDS);
 }
 
 bool actor::holy_wrath_susceptible() const
@@ -285,7 +280,7 @@ bool actor::reflection(bool calc_unid, bool items) const
 bool actor::extra_harm(bool calc_unid, bool items) const
 {
     return items &&
-           (wearing(EQ_AMULET, AMU_HARM, calc_unid)
+           (wearing_ego(EQ_CLOAK, SPARM_HARM, calc_unid)
             || scan_artefacts(ARTP_HARM, calc_unid));
 }
 
@@ -296,8 +291,7 @@ bool actor::rmut_from_item(bool calc_unid) const
 
 bool actor::evokable_berserk(bool calc_unid) const
 {
-    return wearing(EQ_AMULET, AMU_RAGE, calc_unid)
-           || scan_artefacts(ARTP_BERSERK, calc_unid);
+    return scan_artefacts(ARTP_BERSERK, calc_unid);
 }
 
 int actor::evokable_invis(bool calc_unid) const
@@ -331,6 +325,11 @@ int actor::spirit_shield(bool calc_unid, bool items) const
         ss += you.get_mutation_level(MUT_MANA_SHIELD);
 
     return ss;
+}
+
+bool actor::rampaging(bool calc_unid, bool items) const
+{
+    return items && wearing_ego(EQ_ALL_ARMOUR, SPARM_RAMPAGING, calc_unid);
 }
 
 int actor::apply_ac(int damage, int max_damage, ac_type ac_rule,
@@ -922,9 +921,9 @@ string actor::resist_margin_phrase(int margin) const
 void actor::collide(coord_def newpos, const actor *agent, int pow)
 {
     actor *other = actor_at(newpos);
-    const bool fedhas_prot = agent->deity() == GOD_FEDHAS
+    const bool fedhas_prot = agent && agent->deity() == GOD_FEDHAS
                              && is_monster() && fedhas_protects(as_monster());
-    const bool fedhas_prot_other = agent->deity() == GOD_FEDHAS
+    const bool fedhas_prot_other = agent && agent->deity() == GOD_FEDHAS
                                    && other && other->is_monster()
                                    && fedhas_protects(other->as_monster());
     ASSERT(this != other);
@@ -987,7 +986,7 @@ void actor::collide(coord_def newpos, const actor *agent, int pow)
             mprf("%s %s into %s!",
                  name(DESC_THE).c_str(), conj_verb("slam").c_str(),
                  env.map_knowledge(newpos).known()
-                 ? feature_description_at(newpos, false, DESC_THE, false)
+                 ? feature_description_at(newpos, false, DESC_THE)
                        .c_str()
                  : "something");
         }
@@ -1008,8 +1007,7 @@ void actor::collide(coord_def newpos, const actor *agent, int pow)
     if (!fedhas_prot)
     {
         hurt(agent, apply_ac(damage.roll()), BEAM_MISSILE,
-             KILLED_BY_COLLISION, "",
-             feature_description_at(newpos, false, DESC_A, false));
+             KILLED_BY_COLLISION, "", feature_description_at(newpos));
     }
 }
 

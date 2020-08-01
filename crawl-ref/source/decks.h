@@ -26,7 +26,9 @@ enum card_type
     CARD_VELOCITY,            // remove slow, alter others' speeds
     CARD_TOMB,                // a ring of rock walls
     CARD_EXILE,               // banish others, maybe self
-    CARD_SHAFT,               // under the user, maybe others
+#if TAG_MAJOR_VERSION == 34
+    CARD_SHAFT_REMOVED,       // removed
+#endif
     CARD_VITRIOL,             // acid damage
     CARD_CLOUD,               // encage enemies in rings of clouds
     CARD_STORM,               // wind and rain
@@ -41,7 +43,9 @@ enum card_type
     CARD_STAIRS,              // moves stairs around
     CARD_WRATH,               // random godly wrath
     CARD_WRAITH,              // drain XP
-    CARD_FAMINE,              // starving
+#if TAG_MAJOR_VERSION == 34
+    CARD_FAMINE_REMOVED,      // starving
+#endif
     CARD_SWINE,               // *oink*
     CARD_ILLUSION,            // a copy of the player
     CARD_DEGEN,               // polymorph hostiles down hd, malmutate

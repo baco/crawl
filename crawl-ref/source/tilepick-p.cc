@@ -12,8 +12,8 @@
 #include "player.h"
 #include "tile-flags.h"
 #include "tile-player-flag-cut.h"
-#include "tiledef-player.h"
-#include "tiledef-unrand.h"
+#include "rltiles/tiledef-player.h"
+#include "rltiles/tiledef-unrand.h"
 #include "tiledoll.h"
 #include "tilepick.h"
 #include "transform.h"
@@ -24,11 +24,13 @@ static tileidx_t _modrng(int mod, tileidx_t first, tileidx_t last)
     return first + mod % (last - first + 1);
 }
 
+#if TAG_MAJOR_VERSION == 34
 static tileidx_t _mon_mod(tileidx_t tile, int offset)
 {
     int count = tile_player_count(tile);
     return tile + offset % count;
 }
+#endif
 
 tileidx_t tilep_equ_weapon(const item_def &item)
 {
@@ -53,17 +55,14 @@ tileidx_t tilep_equ_weapon(const item_def &item)
         {
 #if TAG_MAJOR_VERSION == 34
         case MISC_BOTTLED_EFREET:             return TILEP_HAND1_BOTTLE;
-#endif
         case MISC_FAN_OF_GALES:               return TILEP_HAND1_FAN;
-#if TAG_MAJOR_VERSION == 34
         case MISC_STONE_OF_TREMORS:           return TILEP_HAND1_STONE;
 #endif
         case MISC_LIGHTNING_ROD:              return 0;
 
-        case MISC_CRYSTAL_BALL_OF_ENERGY:     return TILEP_HAND1_CRYSTAL;
-
-        case MISC_LAMP_OF_FIRE:               return TILEP_HAND1_LANTERN;
 #if TAG_MAJOR_VERSION == 34
+        case MISC_CRYSTAL_BALL_OF_ENERGY:     return TILEP_HAND1_CRYSTAL;
+        case MISC_LAMP_OF_FIRE:               return TILEP_HAND1_LANTERN;
         case MISC_BUGGY_LANTERN_OF_SHADOWS:   return TILEP_HAND1_BONE_LANTERN;
 #endif
         case MISC_HORN_OF_GERYON:             return TILEP_HAND1_HORN;
@@ -443,11 +442,13 @@ tileidx_t tilep_equ_boots(const item_def &item)
             return tile;
     }
 
-    if (item.sub_type == ARM_NAGA_BARDING)
-        return TILEP_BOOTS_NAGA_BARDING + min(etype, 3);
-
-    if (item.sub_type == ARM_CENTAUR_BARDING)
+    if (item.sub_type == ARM_BARDING)
+    {
+        if (you.species == SP_NAGA)
+            return TILEP_BOOTS_NAGA_BARDING + min(etype, 3);
+        // placeholder for palentonga
         return TILEP_BOOTS_CENTAUR_BARDING + min(etype, 3);
+    }
 
     if (item.sub_type != ARM_BOOTS)
         return 0;
@@ -614,6 +615,7 @@ tileidx_t tilep_species_to_base_tile(int sp, int level)
         const int colour_offset = _draconian_colour(sp, level);
         return TILEP_BASE_DRACONIAN + colour_offset * 2;
     }
+    case SP_PALENTONGA: // placeholder
     case SP_CENTAUR:
         return TILEP_BASE_CENTAUR;
     case SP_DEMIGOD:
@@ -780,6 +782,7 @@ void tilep_job_default(int job, dolls_data *doll)
             parts[TILEP_PART_LEG]   = TILEP_LEG_METAL_SILVER;
             break;
 
+#if TAG_MAJOR_VERSION == 34
         case JOB_SKALD:
             parts[TILEP_PART_BODY]  = TILEP_BODY_SHIRT_WHITE3;
             parts[TILEP_PART_LEG]   = TILEP_LEG_SKIRT_OFS;
@@ -788,6 +791,7 @@ void tilep_job_default(int job, dolls_data *doll)
             parts[TILEP_PART_BOOTS] = TILEP_BOOTS_MIDDLE_GRAY;
             parts[TILEP_PART_CLOAK] = TILEP_CLOAK_BLUE;
             break;
+#endif
 
         case JOB_CHAOS_KNIGHT:
             parts[TILEP_PART_BODY]  = TILEP_BODY_MESH_BLACK;
@@ -819,7 +823,7 @@ void tilep_job_default(int job, dolls_data *doll)
             break;
 #endif
 
-        case JOB_ASSASSIN:
+        case JOB_BRIGAND:
             parts[TILEP_PART_HELM]  = TILEP_HELM_MASK_NINJA_BLACK;
             parts[TILEP_PART_BODY]  = TILEP_BODY_SHIRT_BLACK3;
             parts[TILEP_PART_LEG]   = TILEP_LEG_PANTS_BLACK;
@@ -972,6 +976,17 @@ void tilep_job_default(int job, dolls_data *doll)
             parts[TILEP_PART_HAND1] = TILEP_HAND1_SCEPTRE;
             parts[TILEP_PART_BODY]  = TILEP_BODY_LEATHER_ARMOUR;
             parts[TILEP_PART_LEG]   = TILEP_LEG_PANTS_BLACK;
+            break;
+
+        case JOB_DELVER: // stolen from JOB_STALKER
+            parts[TILEP_PART_HELM]  = TILEP_HELM_HOOD_GREEN;
+            parts[TILEP_PART_BODY]  = TILEP_BODY_LEATHER_JACKET;
+            parts[TILEP_PART_LEG]   = TILEP_LEG_PANTS_SHORT_GRAY;
+            parts[TILEP_PART_HAND1] = TILEP_HAND1_SWORD_THIEF;
+            parts[TILEP_PART_HAND2] = TILEP_HAND2_BOOK_GREEN_DIM;
+            parts[TILEP_PART_ARM]   = TILEP_ARM_GLOVE_WRIST_PURPLE;
+            parts[TILEP_PART_CLOAK] = TILEP_CLOAK_GREEN;
+            parts[TILEP_PART_BOOTS] = TILEP_BOOTS_MIDDLE_BROWN2;
             break;
     }
 }
@@ -1156,7 +1171,7 @@ void tilep_scan_parts(char *fbuf, dolls_data &doll, int species, int level)
         else
         {
             const tileidx_t idx2 = tile_player_part_start[p] + idx - 1;
-            if (idx2 < TILE_MAIN_MAX || idx2 >= TILEP_PLAYER_MAX)
+            if (get_tile_texture(idx2) != TEX_PLAYER)
                 doll.parts[p] = TILEP_SHOW_EQUIP;
             else
                 doll.parts[p] = idx2;

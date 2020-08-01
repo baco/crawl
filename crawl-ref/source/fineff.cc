@@ -11,6 +11,7 @@
 #include "bloodspatter.h"
 #include "coordit.h"
 #include "dactions.h"
+#include "death-curse.h"
 #include "directn.h"
 #include "english.h"
 #include "env.h"
@@ -25,7 +26,6 @@
 #include "mon-place.h"
 #include "ouch.h"
 #include "religion.h"
-#include "spl-miscast.h"
 #include "state.h"
 #include "stringutil.h"
 #include "terrain.h"
@@ -211,9 +211,6 @@ void mirror_damage_fineff::fire()
     else if (def == MID_PLAYER)
     {
         simple_god_message(" mirrors your injury!");
-#ifndef USE_TILE_LOCAL
-        flash_monster_colour(monster_by_mid(att), RED, 200);
-#endif
 
         attack->hurt(&you, damage);
 
@@ -553,7 +550,7 @@ void infestation_death_fineff::fire()
                                                        SPELL_INFESTATION),
                                          false))
     {
-        scarab->add_ench(mon_enchant(ENCH_FAKE_ABJURATION, 6));
+        scarab->add_ench(mon_enchant(ENCH_FAKE_ABJURATION, 5));
 
         if (you.see_cell(posn) || you.can_see(*scarab))
         {
@@ -583,7 +580,7 @@ void make_derived_undead_fineff::fire()
         if (!mg.mname.empty())
             name_zombie(*undead, mg.base_type, mg.mname);
 
-        undead->add_ench(mon_enchant(ENCH_FAKE_ABJURATION, 6));
+        undead->add_ench(mon_enchant(ENCH_FAKE_ABJURATION, 5));
         if (!agent.empty())
         {
             mons_add_blame(undead,
@@ -623,7 +620,7 @@ void mummy_death_curse_fineff::fire()
             break;
     }
 
-    actor * victim;
+    actor* victim;
 
     if (YOU_KILL(killer))
         victim = &you;
@@ -650,8 +647,9 @@ void mummy_death_curse_fineff::fire()
     }
     const string cause = make_stringf("%s death curse",
                             apostrophise(name).c_str());
-    MiscastEffect(victim, nullptr, {miscast_source::mummy}, spschool::necromancy,
-                  pow, random2avg(88, 3), cause.c_str());
+    // source is used as a melee source and must be alive
+    // since the mummy is dead now we pass nullptr
+    death_curse(*victim, nullptr, cause, pow);
 }
 
 void summon_dismissal_fineff::fire()

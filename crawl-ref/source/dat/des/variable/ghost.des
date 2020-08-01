@@ -19,6 +19,7 @@
 ###############################################################################
 
 : crawl_require("dlua/ghost.lua")
+: crawl_require("dlua/vault.lua")
 
 {{
 -- Set up the non-flaming edged weapon "left" by the ghost in
@@ -51,7 +52,7 @@ function wrathful_weapon(class, quality)
                 ["electrocution"] = 5, ["vampirism"] = 5, ["holy_wrath"] = 5,
                 ["draining"] = 5, ["distortion"] = 5, ["speed"] = 2}
     elseif quality == "randart" then
-        -- Allow chaos and make weights more favorable for better brands.
+        -- Allow chaos and make weights more favourable for better brands.
         egos = {["antimagic"] = 25, ["vorpal"] = 10, ["freezing"] = 10,
                 ["flaming"] = 10, ["vampirism"] = 10, ["draining"] = 10,
                 ["electrocution"] = 10, ["protection"] = 5, ["venom"] = 5,
@@ -269,11 +270,10 @@ WEIGHT: 5 (D:3-7)
 KPROP:  cn'O = w:5 bloody / nothing
 KMONS:  O = player_ghost
 KITEM:  O = scroll of immolation ident:all
-NSUBST: ' = |* / |*$ / 998 / dF / 3=d. / F. / .
+NSUBST: ' = |* / |*$ / 998 / 2=F. / .
 MARKER: F = lua:fog_machine { cloud_type = "black smoke", \
             pow_min = 10000, pow_max = 10000, delay = 1, \
             size = 1, walk_dist = 0, start_clouds = 1 }
-: dgn.delayed_decay(_G, "d", "chunk")
 : ghost_setup(_G)
 MAP
  ccccc
@@ -389,7 +389,7 @@ ENDMAP
 NAME:   hellmonk_ghost_happy_afterlife
 DEPTH:  D:3-, Lair
 ORIENT: float
-ITEM:   ration, any potion
+ITEM:   any potion
 : item(dgn.loot_potions)
 KMONS:  O = player ghost
 : if you.absdepth() < 6 then
@@ -437,6 +437,31 @@ c''P'c''cc
 cc'''''''c
 ccnn==nncc
   ..@@..
+ENDMAP
+
+NAME:   gammafunk_ghost_door_vault
+DEPTH:  D:13-, Depths, Elf, Crypt, Zot
+WEIGHT: 2
+ORIENT: float
+: ghost_good_loot(_G, "45")
+KMONS:  1 = 9
+KMONS:  2 = 8
+KMONS:  345 = player_ghost
+# Ghosts on 4 and 5 will get upgraded loot.
+NSUBST: 3 = 4 / 5 / 3, 1 = 5=23 / 3 / 1
+: door_vault_setup(_G)
+: ghost_setup(_G)
+MAP
+aaaaaaaaaa
+a++++++++a
+a++++++++a
+a++1111++a
+a++1331++a
+a++1331++a
+a++1111++a
+a++++++++a
+a++++++++a
+aaaaaaaaaa
 ENDMAP
 
 ###############################################################################
@@ -627,19 +652,19 @@ KMONS:  O = player ghost
 : if you.in_branch("D") then
 :     if you.depth() < 6 then
 MONS:   skeleton place:D:6 / zombie place:D:6
-MONS:   mummy / shadow imp / wight / necrophage / phantom / hungry ghost
+MONS:   mummy / shadow imp / wight / necrophage / phantom
 SUBST:  d = *%, e = %$, f = %$--, ghij = -
 NSUBST: D = 2=1 / 2=1- / 2- / -
 :     elseif you.depth() < 9 then
 MONS:   skeleton place:D:9 / zombie place:D:9 / spectre place:D:9 / \
         simulacrum place:D:9 / mummy / shadow imp / wight / necrophage / \
-        phantom / hungry ghost
+        phantom
 MONS:   wraith / vampire
 SUBST:  d = *, e = *%, f = %$,  ghi = -
 NSUBST: D = 2=1 / 3=1- / 2- / 2--- / -
 :     elseif you.depth() < 12 then
 MONS:   mummy / wight / zombie place:D:12 / spectre place:D:12 / \
-        simulacrum place:D:12 / phantom / hungry ghost / wraith / vampire
+        simulacrum place:D:12 / phantom / wraith / vampire
 MONS:   vampire mosquito band / shadow / death knight / skeletal warrior / \
         freezing wraith w:5
 SUBST:  e = *, f = *%,  g = %$--, hi = -
@@ -1035,6 +1060,8 @@ SUBST:  - = pt., S : GV A:1
 COLOUR: .pO012345689de|*$ = green
 FTILE:  tGVA.pO012345689de|*$ = floor_moss
 : end
+# Don't burn down or tornado down these sacred trees
+MARKER: t = lua:props_marker { veto_destroy="veto" }
 : ghost_setup(_G)
 MAP
   ttttttt
@@ -1056,7 +1083,7 @@ ITEM:   any armour, any armour good_item, any weapon, any weapon good_item
 ITEM:   any jewellery, any jewellery good_item
 KMONS:  O = player ghost
 MONS:   orc, orc ; any weapon good_item | any weapon randart . \
-            leather armour good_item | leather_armour randart | \
+            leather armour good_item | leather armour randart | \
             ring mail good_item | ring mail randart | scale mail good_item | \
             scale mail randart | chain mail good_item | chain mail randart
 MONS:   orc priest, warg, orc warrior, orc knight, orc high priest
@@ -1580,10 +1607,10 @@ ENDMAP
 
 NAME:   gammafunk_ghost_hive
 DEPTH:  D:5-, Lair
-KITEM:  ' = ration
+KITEM:  ' = potion of ambrosia
 KMONS:  O = player ghost
 MONS:   killer bee, queen bee, hornet, meliai
-# Chance to make a partial wall in each of the full cells. Add 0-4 rations.
+# Chance to make a partial wall in each of the full cells. Add 0-4 ambrosias.
 NSUBST: p = x- / -, q = x- / -, r = x- / -, s = x- / -, - = 4='- / -
 : ghost_good_loot(_G)
 : if you.in_branch("D") then
@@ -1780,8 +1807,7 @@ cccnn===nnccc
 ENDMAP
 
 NAME:    gammafunk_ghost_crypt
-DEPTH:   D:15, Crypt, Depths, Zot
-WEIGHT:  5 (D:15)
+DEPTH:   D:13-, Crypt, Depths, Zot
 : item(dgn.loot_scrolls .. " / " .. dgn.loot_potions)
 # Always place one randart aux, one randart jewel, and one nice book, each
 # using the possible ghost locations.
@@ -1888,7 +1914,7 @@ MONS:   torpor snail / ghost moth
 SUBST:  D = FH, fg = |*, h = *%, i = $%--, j= -
 NSUBST: - = 1 / 1. / 3=2 / 5=2. / 3 / 3=3. / 4. / .
 : elseif you.in_branch("Swamp") then
-MONS:   spiny frog / komodo dragon / hornet / ugly thing
+MONS:   cane toad / komodo dragon / hornet / ugly thing
 MONS:   hydra / alligator / swamp dragon
 MONS:   very ugly thing
 SUBST:  D = FH, fg = |*, h = *%, i = $%--, j= -
@@ -2039,7 +2065,7 @@ NSUBST: - = 1 / 1. / 3=2. / q / r / 3=3. / .
 : elseif you.in_branch("Snake") then
 {{
 kmons("q = naga warrior; " .. wrathful_weapon("warrior", "randart") ..
-      "    . nothing w:95 | robe good_item w:95 | naga barding good_item" ..
+      "    . nothing w:95 | robe good_item w:95 | barding good_item" ..
       "    . nothing w:40 | kite shield good_item | tower shield good_item")
 }}
 MONS:   naga / salamander
@@ -2254,10 +2280,10 @@ NSUBST: - = q / -
 :     elseif you.in_branch("Snake") then
 {{
 kmons("q = naga warrior ; " .. disto_weapon("warrior", "randart") ..
-      "    . nothing w:95 | robe good_item w:95 | naga barding good_item" ..
+      "    . nothing w:95 | robe good_item w:95 | barding good_item" ..
       "    . nothing w:40 | kite shield good_item | tower shield good_item")
 kmons("r = nagaraja ; " .. disto_weapon("warrior", "randart") ..
-      "    . robe good_item w:40 | naga barding good_item")
+      "    . robe good_item w:40 | barding good_item")
 }}
 NSUBST: - = qr / -
 :     elseif you.in_branch("Swamp") then

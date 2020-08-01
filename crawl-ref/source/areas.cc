@@ -15,6 +15,7 @@
 #include "coordit.h"
 #include "env.h"
 #include "fprop.h"
+#include "god-abil.h"
 #include "god-conduct.h"
 #include "god-passive.h" // passive_t::umbra
 #include "libutil.h"
@@ -545,8 +546,8 @@ int player::halo_radius() const
 
     if (player_equip_unrand(UNRAND_EOS))
         size = max(size, 3);
-    else if (you.attribute[ATTR_HEAVENLY_STORM] > 0)
-        size = max(size, 1);
+    else if (you.props.exists(WU_JIAN_HEAVENLY_STORM_KEY))
+        size = max(size, 2);
 
     return size;
 }
@@ -619,7 +620,7 @@ bool liquefied(const coord_def& p, bool check_actual)
     if (!_agrid_valid)
         _update_agrid();
 
-    if (feat_is_water(grd(p)))
+    if (feat_is_water(grd(p)) || feat_is_lava(grd(p)))
         return false;
 
     // "actually" liquefied (ie, check for movement)

@@ -186,7 +186,7 @@ static skill_type _wanderer_role_weapon_select(stat_type role)
     const skill_type casting_schools[] =
         { SK_SUMMONINGS, SK_NECROMANCY, SK_TRANSLOCATIONS,
           SK_TRANSMUTATIONS, SK_POISON_MAGIC, SK_CONJURATIONS,
-          SK_HEXES, SK_CHARMS, SK_FIRE_MAGIC, SK_ICE_MAGIC,
+          SK_HEXES, SK_FIRE_MAGIC, SK_ICE_MAGIC,
           SK_AIR_MAGIC, SK_EARTH_MAGIC };
 
     int casting_size = ARRAYSZ(casting_schools);
@@ -301,10 +301,6 @@ static void _give_wanderer_book(skill_type skill)
 
     case SK_HEXES:
         book = BOOK_MALEDICT;
-        break;
-
-    case SK_CHARMS:
-        book = BOOK_BATTLE;
         break;
     }
 
@@ -448,8 +444,7 @@ static void _wanderer_random_evokable()
     if (one_chance_in(3))
     {
         int selected_evoker =
-              random_choose(MISC_BOX_OF_BEASTS, MISC_LAMP_OF_FIRE,
-                            MISC_FAN_OF_GALES, MISC_PHIAL_OF_FLOODS);
+              random_choose(MISC_BOX_OF_BEASTS, MISC_PHIAL_OF_FLOODS);
 
         newgame_make_item(OBJ_MISCELLANY, selected_evoker, 1);
     }
@@ -540,7 +535,6 @@ static void _wanderer_good_equipment(skill_type & skill)
     case SK_EARTH_MAGIC:
     case SK_POISON_MAGIC:
     case SK_HEXES:
-    case SK_CHARMS:
         _give_wanderer_book(skill);
         break;
 

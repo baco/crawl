@@ -15,6 +15,7 @@
 #include <cstring>
 
 #include "areas.h"
+#include "art-enum.h"
 #include "coordit.h"
 #include "directn.h"
 #include "env.h"
@@ -32,12 +33,13 @@
 #include "religion.h"
 #include "spl-book.h"
 #include "spl-damage.h"
+#include "spl-other.h"
 #include "spl-summoning.h"
 #include "spl-zap.h"
 #include "stringutil.h"
 #include "target.h"
 #include "terrain.h"
-#include "tiledef-gui.h"    // spell tiles
+#include "rltiles/tiledef-gui.h"    // spell tiles
 #include "tiles-build-specific.h"
 #include "transform.h"
 
@@ -113,8 +115,16 @@ void init_spell_descs()
                 || (data.min_range >= 0 && data.max_range > 0),
                 "targeted/directed spell '%s' has invalid range", data.title);
 
-        ASSERTM(!(data.flags & spflag::monster && is_player_spell(data.id)),
+        if (!spell_removed(data.id)
+            && data.id != SPELL_NO_SPELL
+            && data.id != SPELL_DEBUGGING_RAY)
+        {
+            ASSERTM(!(data.flags & spflag::monster && is_player_spell(data.id)),
                 "spell '%s' is declared as a monster spell but is a player spell", data.title);
+
+            ASSERTM(!(!(data.flags & spflag::monster) && !is_player_spell(data.id)),
+                "spell '%s' is not declared as a monster spell but is not a player spell", data.title);
+        }
 
         spell_list[data.id] = i;
     }
@@ -250,6 +260,9 @@ spell_type get_spell_by_letter(char letter)
 
 bool add_spell_to_memory(spell_type spell)
 {
+    if (vehumet_is_offering(spell))
+        library_add_spells({ spell });
+
     int slot_i;
     int letter_j = -1;
     string sname = spell_title(spell);
@@ -336,30 +349,10 @@ bool add_spell_to_memory(spell_type spell)
 #ifdef USE_TILE_LOCAL
     tiles.layout_statcol();
     redraw_screen();
+    update_screen();
 #endif
 
     return true;
-}
-
-static void _remove_spell_attributes(spell_type spell)
-{
-    switch (spell)
-    {
-    case SPELL_DEFLECT_MISSILES:
-        if (you.attribute[ATTR_DEFLECT_MISSILES])
-        {
-            const int orig_defl = you.missile_deflection();
-            you.attribute[ATTR_DEFLECT_MISSILES] = 0;
-            mprf(MSGCH_DURATION, "You feel %s from missiles.",
-                                 you.missile_deflection() < orig_defl
-                                 ? "less protected"
-                                 : "your spell is no longer protecting you");
-        }
-        break;
-    default:
-        break;
-    }
-    return;
 }
 
 bool del_spell_from_memory_by_slot(int slot)
@@ -372,7 +365,6 @@ bool del_spell_from_memory_by_slot(int slot)
     spell_skills(you.spells[slot], you.stop_train);
 
     mprf("Your memory of %s unravels.", spell_title(you.spells[slot]));
-    _remove_spell_attributes(you.spells[slot]);
 
     you.spells[slot] = SPELL_NO_SPELL;
 
@@ -385,6 +377,7 @@ bool del_spell_from_memory_by_slot(int slot)
 #ifdef USE_TILE_LOCAL
     tiles.layout_statcol();
     redraw_screen();
+    update_screen();
 #endif
 
     return true;
@@ -397,30 +390,6 @@ bool del_spell_from_memory(spell_type spell)
         return false;
     else
         return del_spell_from_memory_by_slot(i);
-}
-
-int spell_hunger(spell_type which_spell)
-{
-    if (player_energy())
-        return 0;
-
-    const int level = spell_difficulty(which_spell);
-
-    const int basehunger[] = { 50, 100, 150, 250, 400, 550, 700, 850, 1000 };
-
-    int hunger;
-
-    if (level < 10 && level > 0)
-        hunger = basehunger[level-1];
-    else
-        hunger = (basehunger[0] * level * level) / 4;
-
-    hunger -= you.skill(SK_SPELLCASTING, you.intel());
-
-    if (hunger < 0)
-        hunger = 0;
-
-    return hunger;
 }
 
 // Checks if the spell is an explosion that can be placed anywhere even without
@@ -473,21 +442,7 @@ int spell_difficulty(spell_type which_spell)
 
 int spell_levels_required(spell_type which_spell)
 {
-    int levels = spell_difficulty(which_spell);
-#if TAG_MAJOR_VERSION == 34
-    if (which_spell == SPELL_DELAYED_FIREBALL
-        && you.has_spell(SPELL_FIREBALL))
-    {
-        levels -= spell_difficulty(SPELL_FIREBALL);
-    }
-    else if (which_spell == SPELL_FIREBALL
-            && you.has_spell(SPELL_DELAYED_FIREBALL))
-    {
-        levels = 0;
-    }
-#endif
-
-    return levels;
+    return spell_difficulty(which_spell);
 }
 
 spell_flags get_spell_flags(spell_type which_spell)
@@ -799,8 +754,6 @@ const char* spelltype_short_name(spschool which_spelltype)
         return "Conj";
     case spschool::hexes:
         return "Hex";
-    case spschool::charms:
-        return "Chrm";
     case spschool::fire:
         return "Fire";
     case spschool::ice:
@@ -834,8 +787,6 @@ const char* spelltype_long_name(spschool which_spelltype)
         return "Conjuration";
     case spschool::hexes:
         return "Hexes";
-    case spschool::charms:
-        return "Charms";
     case spschool::fire:
         return "Fire";
     case spschool::ice:
@@ -867,7 +818,6 @@ skill_type spell_type2skill(spschool spelltype)
     {
     case spschool::conjuration:    return SK_CONJURATIONS;
     case spschool::hexes:          return SK_HEXES;
-    case spschool::charms:         return SK_CHARMS;
     case spschool::fire:           return SK_FIRE_MAGIC;
     case spschool::ice:            return SK_ICE_MAGIC;
     case spschool::transmutation:  return SK_TRANSMUTATIONS;
@@ -892,7 +842,6 @@ spschool skill2spell_type(skill_type spell_skill)
     {
     case SK_CONJURATIONS:    return spschool::conjuration;
     case SK_HEXES:           return spschool::hexes;
-    case SK_CHARMS:          return spschool::charms;
     case SK_FIRE_MAGIC:      return spschool::fire;
     case SK_ICE_MAGIC:       return spschool::ice;
     case SK_TRANSMUTATIONS:  return spschool::transmutation;
@@ -974,7 +923,6 @@ int spell_range(spell_type spell, int pow, bool allow_bonus)
         && vehumet_supports_spell(spell)
         && have_passive(passive_t::spells_range)
         && maxrange > 1
-        && spell != SPELL_GLACIATE
         && spell != SPELL_THUNDERBOLT) // lightning rod only
     {
         maxrange++;
@@ -1014,8 +962,20 @@ int spell_noise(spell_type spell)
  * @param spell  The spell being casted.
  * @return       The amount of noise generated by the effects of the spell.
  */
-int spell_effect_noise(spell_type spell)
+int spell_effect_noise(spell_type spell, bool random)
 {
+    const int noise = _seekspell(spell)->effect_noise;
+
+    if (spell == SPELL_ABSOLUTE_ZERO)
+    {
+        const int pow = calc_spell_power(spell, true, false, true);
+        if (random)
+            return noise - div_rand_round(noise * pow, 200);
+        // For spell noise display, we assume worst case.
+        else
+            return noise - (noise * pow) / 200;
+    }
+
     int expl_size;
     switch (spell)
     {
@@ -1043,7 +1003,7 @@ int spell_effect_noise(spell_type spell)
     if (expl_size)
         return explosion_noise(expl_size);
 
-    return _seekspell(spell)->effect_noise;
+    return noise;
 }
 
 /**
@@ -1139,6 +1099,9 @@ string spell_uselessness_reason(spell_type spell, bool temp, bool prevent,
         break;
 
     case SPELL_SWIFTNESS:
+        if (you.species == SP_FORMICID)
+            return "your stasis precludes magical swiftness.";
+
         if (temp)
         {
             if (you.duration[DUR_SWIFTNESS])
@@ -1153,17 +1116,6 @@ string spell_uselessness_reason(spell_type spell, bool temp, bool prevent,
     case SPELL_INVISIBILITY:
         if (!prevent && temp && you.backlit())
             return "invisibility won't help you when you glow in the dark.";
-        break;
-
-    case SPELL_DARKNESS:
-        // mere corona is not enough, but divine light blocks it completely
-        if (temp && (you.haloed() || !prevent && have_passive(passive_t::halo)))
-            return "darkness is useless against divine light.";
-        break;
-
-    case SPELL_DEFLECT_MISSILES:
-        if (temp && you.attribute[ATTR_DEFLECT_MISSILES])
-            return "you're already deflecting missiles.";
         break;
 
     case SPELL_STATUE_FORM:
@@ -1196,7 +1148,6 @@ string spell_uselessness_reason(spell_type spell, bool temp, bool prevent,
         }
         // intentional fallthrough
     case SPELL_PORTAL_PROJECTILE:
-    case SPELL_SPECTRAL_WEAPON:
         if (you.species == SP_FELID)
             return "this spell is useless without hands.";
         break;
@@ -1231,11 +1182,9 @@ string spell_uselessness_reason(spell_type spell, bool temp, bool prevent,
         break;
 
     case SPELL_OZOCUBUS_ARMOUR:
-        if (temp && !player_effectively_in_light_armour())
-            return "your body armour is too heavy.";
         if (temp && you.form == transformation::statue)
             return "the film of ice won't work on stone.";
-        if (temp && you.duration[DUR_FIRE_SHIELD])
+        if (temp && player_equip_unrand(UNRAND_SALAMANDER))
             return "your ring of flames would instantly melt the ice.";
         break;
 
@@ -1283,7 +1232,7 @@ string spell_uselessness_reason(spell_type spell, bool temp, bool prevent,
     case SPELL_DEATH_CHANNEL:
     case SPELL_SIMULACRUM:
     case SPELL_INFESTATION:
-    case SPELL_STICKS_TO_SNAKES:
+    case SPELL_TUKIMAS_DANCE:
         if (you.get_mutation_level(MUT_NO_LOVE))
             return "you cannot coerce anything to obey you.";
         break;
@@ -1306,13 +1255,35 @@ string spell_uselessness_reason(spell_type spell, bool temp, bool prevent,
             return "a magic seal in the Gauntlet prevents this spell "
                 "from working.";
         }
+        break;
+
+    case  SPELL_DRAGON_CALL:
+        if (temp && (you.duration[DUR_DRAGON_CALL]
+                     || you.duration[DUR_DRAGON_CALL_COOLDOWN]))
+        {
+            return "you cannot issue another dragon's call so soon.";
+        }
+        break;
+
+    case SPELL_FROZEN_RAMPARTS:
+        if (temp && you.duration[DUR_FROZEN_RAMPARTS])
+            return "you cannot sustain more frozen ramparts right now.";
+        break;
+
+    case SPELL_WEREBLOOD:
+        if (you.undead_state(temp) == US_UNDEAD
+            || you.undead_state(temp) == US_HUNGRY_DEAD
+            || temp && you.is_lifeless_undead())
+        {
+            return "you lack blood to transform.";
+        }
+        break;
 
     default:
         break;
     }
 
     if (get_spell_disciplines(spell) & spschool::summoning
-        && spell != SPELL_AURA_OF_ABJURATION
         && you.get_mutation_level(MUT_NO_LOVE))
     {
         return "you cannot coerce anything to answer your summons.";
@@ -1356,6 +1327,7 @@ bool spell_no_hostile_in_range(spell_type spell)
 {
     const int range = calc_spell_range(spell, 0);
     const int minRange = get_dist_to_nearest_monster();
+    const int pow = calc_spell_power(spell, true, false, true);
 
     switch (spell)
     {
@@ -1375,7 +1347,6 @@ bool spell_no_hostile_in_range(spell_type spell)
     case SPELL_CHAIN_LIGHTNING:
     case SPELL_OZOCUBUS_REFRIGERATION:
     case SPELL_OLGREBS_TOXIC_RADIANCE:
-    case SPELL_INTOXICATE:
     case SPELL_IGNITION:
     case SPELL_FROZEN_RAMPARTS:
         return minRange > you.current_vision;
@@ -1420,8 +1391,13 @@ bool spell_no_hostile_in_range(spell_type spell)
         return cast_hailstorm(-1, false, true) == spret::abort;
 
     case SPELL_DAZZLING_FLASH:
-        return cast_dazzling_flash(calc_spell_power(spell, true, false, true),
-                                   false, true) == spret::abort;
+        return cast_dazzling_flash(pow, false, true) == spret::abort;
+
+     case SPELL_ABSOLUTE_ZERO:
+         return cast_absolute_zero(pow, false, true) == spret::abort;
+
+     case SPELL_INTOXICATE:
+         return cast_intoxicate(-1, false, true) == spret::abort;
 
     default:
         break;
@@ -1526,7 +1502,6 @@ bool spell_no_hostile_in_range(spell_type spell)
 static const mutation_type arcana_sacrifice_map[] = {
     MUT_NO_CONJURATION_MAGIC,
     MUT_NO_HEXES_MAGIC,
-    MUT_NO_CHARM_MAGIC,
     MUT_NO_FIRE_MAGIC,
     MUT_NO_ICE_MAGIC,
     MUT_NO_TRANSMUTATION_MAGIC,
@@ -1612,4 +1587,96 @@ const vector<spell_type> *soh_breath_spells(spell_type spell)
     };
 
     return map_find(soh_breaths, spell);
+}
+
+/* How to regenerate this:
+   comm -2 -3 \
+    <(clang -P -E -nostdinc -nobuiltininc spell-type.h -DTAG_MAJOR_VERSION=34 | sort) \
+    <(clang -P -E -nostdinc -nobuiltininc spell-type.h -DTAG_MAJOR_VERSION=35 | sort) \
+    | grep SPELL
+*/
+const set<spell_type> removed_spells =
+{
+#if TAG_MAJOR_VERSION == 34
+    SPELL_AURA_OF_ABJURATION,
+    SPELL_BOLT_OF_INACCURACY,
+    SPELL_CHANT_FIRE_STORM,
+    SPELL_CIGOTUVIS_DEGENERATION,
+    SPELL_CIGOTUVIS_EMBRACE,
+    SPELL_CONDENSATION_SHIELD,
+    SPELL_CONTROL_TELEPORT,
+    SPELL_CONTROL_UNDEAD,
+    SPELL_CONTROL_WINDS,
+    SPELL_CORRUPT_BODY,
+    SPELL_CURE_POISON,
+    SPELL_DEFLECT_MISSILES,
+    SPELL_DELAYED_FIREBALL,
+    SPELL_DEMONIC_HORDE,
+    SPELL_DRACONIAN_BREATH,
+    SPELL_EPHEMERAL_INFUSION,
+    SPELL_EVAPORATE,
+    SPELL_EXPLOSIVE_BOLT,
+    SPELL_FAKE_RAKSHASA_SUMMON,
+    SPELL_FIRE_BRAND,
+    SPELL_FIRE_CLOUD,
+    SPELL_FLY,
+    SPELL_FORCEFUL_DISMISSAL,
+    SPELL_FREEZING_AURA,
+    SPELL_FRENZY,
+    SPELL_FULSOME_DISTILLATION,
+    SPELL_GRAND_AVATAR,
+    SPELL_HASTE_PLANTS,
+    SPELL_HOLY_LIGHT,
+    SPELL_HOLY_WORD,
+    SPELL_HOMUNCULUS,
+    SPELL_HUNTING_CRY,
+    SPELL_IGNITE_POISON_SINGLE,
+    SPELL_INFUSION,
+    SPELL_INSULATION,
+    SPELL_IRON_ELEMENTALS,
+    SPELL_LETHAL_INFUSION,
+    SPELL_MELEE,
+    SPELL_MIASMA_CLOUD,
+    SPELL_MISLEAD,
+    SPELL_PHASE_SHIFT,
+    SPELL_POISON_CLOUD,
+    SPELL_POISON_WEAPON,
+    SPELL_REARRANGE_PIECES,
+    SPELL_RECALL,
+    SPELL_REGENERATION,
+    SPELL_RESURRECT,
+    SPELL_RING_OF_FLAMES,
+    SPELL_SACRIFICE,
+    SPELL_SCATTERSHOT,
+    SPELL_SEE_INVISIBLE,
+    SPELL_SERPENT_OF_HELL_BREATH_REMOVED,
+    SPELL_SHAFT_SELF,
+    SPELL_SHROUD_OF_GOLUBRIA,
+    SPELL_SILVER_BLAST,
+    SPELL_SINGULARITY,
+    SPELL_SONG_OF_SHIELDING,
+    SPELL_SPECTRAL_WEAPON,
+    SPELL_STEAM_CLOUD,
+    SPELL_STICKS_TO_SNAKES,
+    SPELL_STONESKIN,
+    SPELL_STRIKING,
+    SPELL_SUMMON_BUTTERFLIES,
+    SPELL_SUMMON_ELEMENTAL,
+    SPELL_SUMMON_RAKSHASA,
+    SPELL_SUMMON_SCORPIONS,
+    SPELL_SUMMON_SWARM,
+    SPELL_SUMMON_TWISTER,
+    SPELL_SUNRAY,
+    SPELL_SURE_BLADE,
+    SPELL_THROW,
+    SPELL_VAMPIRE_SUMMON,
+    SPELL_WARP_BRAND,
+    SPELL_WEAVE_SHADOWS,
+    SPELL_DARKNESS,
+#endif
+};
+
+bool spell_removed(spell_type spell)
+{
+    return removed_spells.count(spell) != 0;
 }

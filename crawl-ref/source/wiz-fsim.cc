@@ -255,6 +255,7 @@ static bool _fsim_kit_equip(const string &kit, string &error)
     }
 
     redraw_screen();
+    update_screen();
     return true;
 }
 
@@ -334,6 +335,7 @@ static monster* _init_fsim()
     mon->behaviour = BEH_SEEK;
 
     redraw_screen();
+    update_screen();
 
     return mon;
 }
@@ -360,7 +362,6 @@ static void _do_one_fsim_round(monster &mon, fight_data &fd, bool defend)
     // 999 is arbitrary
     unwind_var<int> max_hp_override(you.hp_max, 999);
     unwind_var<int> hp_override(you.hp, you.hp_max);
-    unwind_var<int> hunger(you.hunger, you.hunger);
     bool did_hit = false;
 
     const int weapon = you.equip[EQ_WEAPON];
@@ -446,7 +447,7 @@ static fight_data _get_fight_data(monster &mon, int iter_limit, bool defend)
     crawl_state.disables.set(DIS_AFFLICTIONS);
 
     {
-        no_messages mx;
+        msg::suppress mx;
 
         for (int i = 0; i < iter_limit; i++)
             _do_one_fsim_round(mon, fdata, defend);

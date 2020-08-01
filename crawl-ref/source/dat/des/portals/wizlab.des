@@ -1072,7 +1072,7 @@ nsubst("G = " .. graves .. ":G / *:.")
 lua_marker("G", portal_desc { grave = 1 })
 lua_marker("Z", portal_desc { wizard_grave = 1})
 lua_marker("W", portal_desc { desc="Zonguldrok's gravestone",
-        veto_dig="veto", veto_shatter="veto" })
+                              veto_destroy="veto" })
 
 local zombies_appear_marker = TriggerableFunction:new {
     func = "wizlab_zonguldrok_spawn_zombies",
@@ -1197,7 +1197,7 @@ LROCKCOL:   darkgrey
 ITEM:       potion of experience q:1
 ITEM:       manual of fighting / manual of armour / manual of spellcasting / \
             manual of staves / manual of fighting / manual of dodging
-ITEM:       book of enchantments
+ITEM:       book of hexes
 SHUFFLE:    defg
 LFLOORCOL:  white
 
@@ -1238,20 +1238,14 @@ lua_marker('A', summon_marker)
 lua_marker('A', wucad_marker)
 
 }}
-MARKER:     G = lua:props_marker {veto_dig="veto", \
-                                  veto_shatter="veto" }
-MARKER:     + = lua:props_marker {veto_dig="veto", \
-                                  veto_shatter="veto" }
-MARKER:     ' = lua:props_marker {veto_dig="veto", \
-                                  veto_shatter="veto" }
-MARKER:     c = lua:props_marker {veto_dig="veto", \
-                                  veto_shatter="veto" }
-MARKER:     t = lua:props_marker {veto_dig="veto", \
-                                  veto_shatter="veto", \
-                                  veto_fire="veto" }
+MARKER:     G = lua:props_marker { veto_destroy="veto" }
+MARKER:     + = lua:props_marker { veto_destroy="veto" }
+MARKER:     ' = lua:props_marker { veto_destroy="veto" }
+MARKER:     c = lua:props_marker { veto_destroy="veto" }
+MARKER:     t = lua:props_marker { veto_destroy="veto" }
 :           wizlab_setup(_G)
 :           set_border_fill_type("tree")
-:           set_random_mon_list([[shadow w:6 / flayed ghost w:2 / hungry ghost w:2 / ]]
+:           set_random_mon_list([[shadow w:6 / flayed ghost w:2 / wraith w:2 / ]]
 :                            .. [[monstrous demonspawn / deep troll / ]]
 :                            .. [[grey draconian monk w:6 / ]])
 :           set_feature_name("tree", "autumnal tree")
@@ -1349,10 +1343,10 @@ KITEM:   f = book of spatial translocations w:5 / book of the warp w:5 / \
              manual of translocations w:5 / \
              randbook disc:translocation numspells:5 / \
              randbook disc:translocation owner:Golubria numspells:7 \
-             spells:shroud_of_golubria&passage_of_golubria
+             spells:passage_of_golubria
 KITEM:   g = ring of flight / potion of flight q:2 / \
              potion of haste w:5 / \
-             scroll of fog / ration / \
+             scroll of fog / \
              any potion w:1 / any scroll w:1
 KITEM:   h = pair of boots ego:flying w:8 / pair of boots ego:running w:1 / \
              pair of boots ego:stealth w:8 / pair of boots w:3
@@ -1363,7 +1357,7 @@ KITEM:   | = cloak good_item w:75 / randart cloak w:95 / \
              cloak_of_starlight w:20 / cloak_of_the_thief
 KFEAT:   m = iron_grate
 KFEAT:   ~ = deep_water
-KFEAT:   ^ = known permanent teleport trap / dispersal trap
+KFEAT:   ^ = permanent teleport trap / dispersal trap
 KFEAT:   8_ = altar_lugonu
 KFEAT:   opqsrtuvw@}) = floor
 KPROP:   a"_~ = no_tele_into
@@ -1509,7 +1503,7 @@ MARKER:     ! = lua:fog_machine { \
 # player complete the rest of the map.
 ITEM:       potion of haste / potion of resistance w:5 / any potion w:20 \
             / scroll of silence w:5 / scroll of fog w:5 / any scroll w:20
-ITEM:       scarf ego:cloud_immunity / book of clouds / fan of gales \
+ITEM:       scarf ego:repulsion / book of clouds / wand of clouds \
             / staff of air
 # Main loot, including some thematic items that are good even if you don't care
 # about flight.
@@ -1673,7 +1667,7 @@ KITEM:      d = scroll of summoning / scroll of holy word \
                 / w:5 scroll of torment / any scroll w:20 / potion of haste \
                 / potion of heal wounds / any potion w:20
 KITEM:      e = wand of acid / wand of iceblast / ring of fire / ring of ice \
-                / randbook disc:summoning spells:aura_of_abjuration
+                / randbook disc:summoning
 KITEM:      f = demon blade w:1 / demon whip w:1 / demon trident w:1 \
                 / staff of summoning w:1 / manual of summonings w:1 \
                 / any randart jewellery w:5 / cloak good_item w:5 \

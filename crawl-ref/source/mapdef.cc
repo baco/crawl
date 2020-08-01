@@ -43,8 +43,8 @@
 #include "spl-util.h"
 #include "stringutil.h"
 #include "terrain.h"
-#include "tiledef-dngn.h"
-#include "tiledef-player.h"
+#include "rltiles/tiledef-dngn.h"
+#include "rltiles/tiledef-player.h"
 
 #ifdef DEBUG_TAG_PROFILING
 static map<string,int> _tag_profile;
@@ -2264,6 +2264,31 @@ void map_def::reinit()
     update_cached_tags();
 }
 
+void map_def::reload_epilogue()
+{
+    if (!epilogue.empty())
+        return;
+    // reload the epilogue from the current .des cache; this is because it
+    // isn't serialized but with pregen orderings could need to be run after
+    // vaults have been generated, saved, and reloaded. This can be a tricky
+    // situation in save-compat terms, but is exactly the same as how lua code
+    // triggered by markers is currently handled.
+    const map_def *cache_version = find_map_by_name(name);
+    if (cache_version)
+    {
+        map_def tmp = *cache_version;
+        // TODO: I couldn't reliably get the epilogue to be in vdefs, is there
+        // a way to cache it and not do a full load here? The original idea
+        // was to not clear it out in strip(), but this fails under some
+        // circumstances.
+        tmp.load();
+        epilogue = tmp.epilogue;
+    }
+    // for save compat reasons, fail silently if the map is no longer around.
+    // Probably shouldn't do anything really crucial in the epilogue that you
+    // aren't prepared to deal with save compat for somehow...
+}
+
 bool map_def::map_already_used() const
 {
     return get_uniq_map_names().count(name)
@@ -2340,8 +2365,7 @@ string map_def::desc_or_name() const
 void map_def::write_full(writer& outf) const
 {
     cache_offset = outf.tell();
-    marshallUByte(outf, TAG_MAJOR_VERSION);
-    marshallUByte(outf, TAG_MINOR_VERSION);
+    write_save_version(outf, save_version::current());
     marshallString4(outf, name);
     prelude.write(outf);
     mapchunk.write(outf);
@@ -2361,8 +2385,8 @@ void map_def::read_full(reader& inf)
     // reloading the index), but it's easier to save the game at this
     // point and let the player reload.
 
-    const uint8_t major = unmarshallUByte(inf);
-    const uint8_t minor = unmarshallUByte(inf);
+    const auto version = get_save_version(inf);
+    const auto major = version.major, minor = version.minor;
 
     if (major != TAG_MAJOR_VERSION || minor > TAG_MINOR_VERSION)
     {
@@ -4205,6 +4229,7 @@ mons_list::mons_spec_slot mons_list::parse_mons_spec(string spec)
                          || mons_class_itemuse(mspec.monbase)
                             < MONUSE_STARTING_EQUIPMENT))
             {
+                // TODO: skip this error if the monspec is `nothing`
                 error = make_stringf("Monster '%s' can't use items.",
                     mon_str.c_str());
             }
@@ -4786,9 +4811,7 @@ void item_spec::release_corpse_monster_spec()
 
 bool item_spec::corpselike() const
 {
-    return base_type == OBJ_CORPSES && (sub_type == CORPSE_BODY
-                                        || sub_type == CORPSE_SKELETON)
-           || base_type == OBJ_FOOD && sub_type == FOOD_CHUNK;
+    return base_type == OBJ_CORPSES;
 }
 
 const mons_spec &item_spec::corpse_monster_spec() const
@@ -4949,9 +4972,7 @@ int str_to_ego(object_class_type item_type, string ego_str)
         "resistance",
         "positive_energy",
         "archmagi",
-#if TAG_MAJOR_VERSION == 34
         "preservation",
-#endif
         "reflection",
         "spirit_shield",
         "archery",
@@ -4959,7 +4980,12 @@ int str_to_ego(object_class_type item_type, string ego_str)
         "jumping",
 #endif
         "repulsion",
+#if TAG_MAJOR_VERSION == 34
         "cloud_immunity",
+#endif
+        "harm",
+        "shadows",
+        "rampaging",
         nullptr
     };
     COMPILE_CHECK(ARRAYSZ(armour_egos) == NUM_REAL_SPECIAL_ARMOURS);
@@ -4998,6 +5024,7 @@ int str_to_ego(object_class_type item_type, string ego_str)
 #endif
         "penetration",
         "reaping",
+        "spectral",
         nullptr
     };
     COMPILE_CHECK(ARRAYSZ(weapon_brands) == NUM_REAL_SPECIAL_WEAPONS);
@@ -5016,8 +5043,8 @@ int str_to_ego(object_class_type item_type, string ego_str)
         "penetration",
 #endif
         "dispersal",
-#if TAG_MAJOR_VERSION == 34
         "exploding",
+#if TAG_MAJOR_VERSION == 34
         "steel",
 #endif
         "silver",
@@ -5140,12 +5167,10 @@ bool item_list::parse_corpse_spec(item_spec &result, string s)
 
     const bool corpse = strip_suffix(s, "corpse");
     const bool skeleton = !corpse && strip_suffix(s, "skeleton");
-    const bool chunk = !corpse && !skeleton && strip_suffix(s, "chunk");
 
-    result.base_type = chunk ? OBJ_FOOD : OBJ_CORPSES;
-    result.sub_type  = (chunk ? static_cast<int>(FOOD_CHUNK) :
-                        static_cast<int>(corpse ? CORPSE_BODY :
-                                         CORPSE_SKELETON));
+    result.base_type = OBJ_CORPSES;
+    result.sub_type  = static_cast<int>(corpse ? CORPSE_BODY :
+                                         CORPSE_SKELETON);
 
     // The caller wants a specific monster, no doubt with the best of
     // motives. Let's indulge them:
@@ -5510,12 +5535,9 @@ bool item_list::parse_single_spec(item_spec& result, string s)
 
     error.clear();
 
-    // Look for corpses, chunks, skeletons:
-    if (ends_with(s, "corpse") || ends_with(s, "chunk")
-        || ends_with(s, "skeleton"))
-    {
+    // Look for corpses, skeletons:
+    if (ends_with(s, "corpse") || ends_with(s, "skeleton"))
         return parse_corpse_spec(result, s);
-    }
 
     const int unrand_id = get_unrandart_num(s.c_str());
     if (unrand_id)
@@ -5946,8 +5968,6 @@ void keyed_mapspec::parse_features(const string &s)
 feature_spec keyed_mapspec::parse_trap(string s, int weight)
 {
     strip_tag(s, "trap");
-    // All traps are known, strip this tag for compatibility
-    strip_tag(s, "known");
 
     trim_string(s);
     lowercase(s);

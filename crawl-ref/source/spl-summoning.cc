@@ -13,10 +13,10 @@
 #include "act-iter.h"
 #include "areas.h"
 #include "artefact.h"
-#include "butcher.h"
 #include "cloud.h"
 #include "colour.h"
 #include "coordit.h"
+#include "corpse.h"
 #include "database.h"
 #include "delay.h"
 #include "directn.h"
@@ -87,31 +87,6 @@ static mgen_data _pal_data(monster_type pal, int dur, god_type god,
     return _summon_data(you, pal, dur, god, spell);
 }
 
-spret cast_summon_butterflies(int pow, god_type god, bool fail)
-{
-    if (otr_stop_summoning_prompt())
-        return spret::abort;
-
-    fail_check();
-    bool success = false;
-
-    const int how_many = min(8, 3 + random2(3) + random2(pow) / 10);
-
-    for (int i = 0; i < how_many; ++i)
-    {
-        if (create_monster(_pal_data(MONS_BUTTERFLY, 3, god,
-                                     SPELL_SUMMON_BUTTERFLIES)))
-        {
-            success = true;
-        }
-    }
-
-    if (!success)
-        canned_msg(MSG_NOTHING_HAPPENS);
-
-    return spret::success;
-}
-
 spret cast_summon_small_mammal(int pow, god_type god, bool fail)
 {
     if (otr_stop_summoning_prompt())
@@ -128,106 +103,6 @@ spret cast_summon_small_mammal(int pow, god_type god, bool fail)
 
     if (!create_monster(_pal_data(mon, 3, god, SPELL_SUMMON_SMALL_MAMMAL)))
         canned_msg(MSG_NOTHING_HAPPENS);
-
-    return spret::success;
-}
-
-spret cast_sticks_to_snakes(int pow, god_type god, bool fail)
-{
-    // The first items placed into this list will be the first
-    // to be converted; for players with bow skill we prefer
-    // plain arrows.
-    // For players without bow skill, we prefer arrows with the
-    // smallest quantity, in order to free up inventory sooner
-    list<item_def*> valid_sticks;
-    int num_sticks = 0;
-    for (item_def& i : you.inv)
-        if (i.is_type(OBJ_MISSILES, MI_ARROW)
-            && check_warning_inscriptions(i, OPER_DESTROY))
-        {
-            // If the player has bow skill, assume that they
-            // would prefer that their regular ammo would be
-            // used first
-            if (get_ammo_brand(i) == SPMSL_NORMAL)
-                valid_sticks.push_front(&i);
-            else
-                valid_sticks.push_back(&i);
-            num_sticks += i.quantity;
-        }
-
-    if (valid_sticks.empty())
-    {
-        mpr("You don't have anything to turn into a snake.");
-        return spret::abort;
-    }
-
-    if (otr_stop_summoning_prompt("create snakes"))
-        return spret::abort;
-
-    // Sort by the quantity if the player has no bow skill; this will
-    // put arrows with the smallest quantity first in line
-    // If the player has bow skill, we will already have plain arrows
-    // in the first element, so skip this
-    if (you.skills[SK_BOWS] < 1)
-    {
-        valid_sticks.sort([](const item_def* a, const item_def* b) -> bool
-                             {
-                                 return a->quantity < b->quantity;
-                             }
-                         );
-    }
-    const int dur = min(3 + random2(pow) / 20, 5);
-    int how_many_max = 1 + min(6, random2(pow) / 15);
-
-    int count = 0;
-
-    fail_check();
-    if (num_sticks < how_many_max)
-        how_many_max = num_sticks;
-    item_def *stick = nullptr;
-    for (int i = 0; i < how_many_max; i++)
-    {
-        monster_type mon;
-        if (!stick || stick->quantity == 0)
-        {
-            stick = valid_sticks.front();
-            valid_sticks.pop_front();
-        }
-        if (one_chance_in(5 - min(4, div_rand_round(pow * 2, 25))))
-        {
-            mon = x_chance_in_y(pow / 3, 100) ? MONS_WATER_MOCCASIN
-                                              : MONS_ADDER;
-        }
-        else
-            mon = MONS_BALL_PYTHON;
-        if (monster *snake = create_monster(_pal_data(mon, 0, god,
-                                                      SPELL_STICKS_TO_SNAKES),
-                                            false))
-        {
-            count++;
-            dec_inv_item_quantity(letter_to_index(stick->slot), 1);
-            snake->add_ench(mon_enchant(ENCH_FAKE_ABJURATION, dur));
-        }
-    }
-    if (count)
-    {
-        int sticks_left = num_sticks - count;
-
-        if (count > 1)
-            mprf("You create %d snakes!", count);
-        else
-            mpr("You create a snake!");
-
-        if (sticks_left)
-        {
-            mprf("You now have %d arrow%s.", sticks_left,
-                                             sticks_left > 1 ? "s" : "");
-        }
-        else
-            mpr("You now have no arrows remaining.");
-    }
-    else
-        mpr("You fail to create any snakes.");
 
     return spret::success;
 }
@@ -286,9 +161,6 @@ spret cast_monstrous_menagerie(actor* caster, int pow, god_type god, bool fail)
         type = MONS_SPHINX;
     else
         type = random_choose(MONS_HARPY, MONS_MANTICORE, MONS_LINDWURM);
-
-    if (player_will_anger_monster(type))
-        type = MONS_MANTICORE;
 
     int num = (type == MONS_HARPY ? 1 + x_chance_in_y(pow, 80)
                                       + x_chance_in_y(pow - 75, 100)
@@ -380,7 +252,7 @@ static monster_type _choose_dragon_type(int pow, god_type /*god*/, bool player)
         mon = random_choose(MONS_FIRE_DRAGON, MONS_ICE_DRAGON);
 
     // For good gods, switch away from shadow dragons to storm/iron dragons.
-    if (player && player_will_anger_monster(mon))
+    if (player && god_hates_monster(mon))
         mon = random_choose(MONS_STORM_DRAGON, MONS_IRON_DRAGON);
 
     return mon;
@@ -388,13 +260,6 @@ static monster_type _choose_dragon_type(int pow, god_type /*god*/, bool player)
 
 spret cast_dragon_call(int pow, bool fail)
 {
-    if (you.duration[DUR_DRAGON_CALL]
-        || you.duration[DUR_DRAGON_CALL_COOLDOWN])
-    {
-        mpr("You cannot issue another dragon's call so soon.");
-        return spret::abort;
-    }
-
     if (otr_stop_summoning_prompt("call dragons"))
         return spret::abort;
 
@@ -410,7 +275,6 @@ spret cast_dragon_call(int pow, bool fail)
 
 static void _place_dragon()
 {
-
     const int pow = calc_spell_power(SPELL_DRAGON_CALL, true);
     monster_type mon = _choose_dragon_type(pow, you.religion, true);
     int mp_cost = random_range(2, 3);
@@ -706,7 +570,6 @@ bool summon_holy_warrior(int pow, bool punish)
     if (!punish)
         mpr("You are momentarily dazzled by a brilliant light.");
 
-    player_angers_monster(summon);
     return true;
 }
 
@@ -908,13 +771,11 @@ spret cast_conjure_ball_lightning(int pow, god_type god, bool fail)
     fail_check();
     bool success = false;
 
-    const int how_many = min(5, 2 + pow / 100 + random2(pow / 50 + 1));
+    mgen_data cbl =_pal_data(MONS_BALL_LIGHTNING, 0, god,
+                             SPELL_CONJURE_BALL_LIGHTNING);
+    cbl.hd = max(1, div_rand_round(pow, 6) - 6);
 
-    mgen_data cbl(MONS_BALL_LIGHTNING, BEH_FRIENDLY, you.pos());
-    cbl.set_summoned(&you, 0, SPELL_CONJURE_BALL_LIGHTNING, god);
-    cbl.hd = 5 + div_rand_round(pow, 20);
-
-    for (int i = 0; i < how_many; ++i)
+    for (int i = 0; i < 3; ++i)
     {
         if (monster *ball = create_monster(cbl))
         {
@@ -922,7 +783,8 @@ spret cast_conjure_ball_lightning(int pow, god_type god, bool fail)
             ball->add_ench(ENCH_SHORT_LIVED);
 
             // Avoid ball lightnings without targets always moving towards (0,0)
-            set_random_target(ball);
+            if (!(ball->get_foe() && ball->get_foe()->is_monster()))
+                set_random_target(ball);
         }
     }
 
@@ -934,57 +796,22 @@ spret cast_conjure_ball_lightning(int pow, god_type god, bool fail)
     return spret::success;
 }
 
-spret cast_summon_lightning_spire(int pow, const coord_def& where, god_type god, bool fail)
+spret cast_summon_lightning_spire(int pow, god_type god, bool fail)
 {
-    const int dur = 2;
-
-    if (grid_distance(where, you.pos()) > spell_range(SPELL_SUMMON_LIGHTNING_SPIRE,
-                                                      pow)
-        || !in_bounds(where))
-    {
-        mpr("That's too far away.");
-        return spret::abort;
-    }
-
-    if (!monster_habitable_grid(MONS_HUMAN, grd(where)))
-    {
-        mpr("You can't construct there.");
-        return spret::abort;
-    }
-
-    monster* mons = monster_at(where);
-    if (mons)
-    {
-        if (you.can_see(*mons))
-        {
-            mpr("That space is already occupied.");
-            return spret::abort;
-        }
-
-        fail_check();
-
-        // invisible monster
-        mpr("Something you can't see is blocking your construction!");
-        return spret::success;
-    }
-
     fail_check();
 
-    mgen_data spire(MONS_LIGHTNING_SPIRE, BEH_FRIENDLY, where, MHITYOU,
-                    MG_FORCE_BEH | MG_FORCE_PLACE | MG_AUTOFOE);
-    spire.set_summoned(&you, dur, SPELL_SUMMON_LIGHTNING_SPIRE,  god);
+    mgen_data spire = _pal_data(MONS_LIGHTNING_SPIRE, 2, god,
+                                SPELL_SUMMON_LIGHTNING_SPIRE);
     spire.hd = max(1, div_rand_round(pow, 10));
 
-    if (create_monster(spire))
-    {
-        if (!silenced(where))
-            mpr("An electric hum fills the air.");
-    }
+    monster* mons = create_monster(spire);
+
+    if (mons && !silenced(mons->pos()))
+        mpr("An electric hum fills the air.");
     else
         canned_msg(MSG_NOTHING_HAPPENS);
 
     return spret::success;
-
 }
 
 spret cast_summon_guardian_golem(int pow, god_type god, bool fail)
@@ -1014,21 +841,18 @@ spret cast_summon_guardian_golem(int pow, god_type god, bool fail)
 /**
  * Choose a type of imp to summon with Call Imp.
  *
- * @param pow   The power with which the spell is being cast.
  * @return      An appropriate imp type.
  */
-static monster_type _get_imp_type(int pow)
+static monster_type _get_imp_type()
 {
-    // Proportion of white imps is independent of spellpower.
     if (x_chance_in_y(5, 18))
         return MONS_WHITE_IMP;
 
-    // 3/13 * 13/18 = 1/6 chance of one of these two at 0-46 spellpower,
-    // increasing up to about 4/9 at max spellpower.
-    if (random2(pow) >= 46 || x_chance_in_y(3, 13))
+    // 3/13 * 13/18 = 1/6 chance of one of these two.
+    if (x_chance_in_y(3, 13))
         return one_chance_in(3) ? MONS_IRON_IMP : MONS_SHADOW_IMP;
 
-    // 5/9 crimson at 0-46 spellpower, about half that at max power.
+    // 5/9 chance of getting, regrettably, a crimson imp.
     return MONS_CRIMSON_IMP;
 }
 
@@ -1052,18 +876,15 @@ spret cast_call_imp(int pow, god_type god, bool fail)
 {
     fail_check();
 
-    const monster_type imp_type = _get_imp_type(pow);
+    const monster_type imp_type = _get_imp_type();
 
     const int dur = min(2 + (random2(pow) / 4), 6);
 
     mgen_data imp_data = _pal_data(imp_type, dur, god, SPELL_CALL_IMP);
-    imp_data.flags |= MG_FORCE_BEH; // disable player_angers_monster()
     if (monster *imp = create_monster(imp_data))
     {
         mpr(_imp_summon_messages[imp_type]);
-
-        if (!player_angers_monster(imp))
-            _monster_greeting(imp, "_friendly_imp_greeting");
+        _monster_greeting(imp, "_friendly_imp_greeting");
     }
     else
         canned_msg(MSG_NOTHING_HAPPENS);
@@ -1089,18 +910,15 @@ static bool _summon_demon_wrapper(int pow, god_type god, int spell,
 
         mpr("A demon appears!");
 
-        if (!player_angers_monster(demon) && !friendly)
+        if (!friendly)
         {
             mpr(charmed ? "You don't feel so good about this..."
                         : "It doesn't seem very happy.");
         }
-        else if (friendly)
-        {
-            if (mon == MONS_CRIMSON_IMP || mon == MONS_WHITE_IMP
+        else if (mon == MONS_CRIMSON_IMP || mon == MONS_WHITE_IMP
                 || mon == MONS_IRON_IMP || mon == MONS_SHADOW_IMP)
-            {
-                _monster_greeting(demon, "_friendly_imp_greeting");
-            }
+        {
+            _monster_greeting(demon, "_friendly_imp_greeting");
         }
 
         if (charmed && !friendly)
@@ -1147,11 +965,11 @@ static bool _summon_greater_demon(int pow, god_type god, int spell)
 {
     monster_type mon = summon_any_demon(RANDOM_DEMON_GREATER);
 
-    const bool charmed = (random2(pow) > 5);
-    const bool friendly = (charmed && mons_demon_tier(mon) == 2);
+    const bool high_tier = mons_demon_tier(mon) == 1;
+    const bool friendly = (random2(pow) > (high_tier ? 15 : 10));
 
     return _summon_demon_wrapper(pow, god, spell, mon,
-                                 4, friendly, charmed);
+                                 4, friendly, !friendly);
 }
 
 bool summon_demon_type(monster_type mon, int pow, god_type god,
@@ -1217,7 +1035,7 @@ spret cast_shadow_creatures(int st, god_type god, level_id place,
             // In the rare cases that a specific spell set of a monster will
             // cause anger, even if others do not, try rerolling
             int tries = 0;
-            while (player_will_anger_monster(*mons) && ++tries <= 20)
+            while (god_hates_monster(*mons) && ++tries <= 20)
             {
                 // Save the enchantments, particularly ENCH_SUMMON etc.
                 mon_enchant_list ench = mons->enchantments;
@@ -1259,7 +1077,7 @@ spret cast_shadow_creatures(int st, god_type god, level_id place,
                 if (testbits(mi->flags, MF_BAND_MEMBER)
                     && (mid_t) mi->props["band_leader"].get_int() == mons->mid)
                 {
-                    if (player_will_anger_monster(**mi))
+                    if (god_hates_monster(**mi))
                         monster_die(**mi, KILL_RESET, NON_MONSTER);
 
                     mi->props["summon_id"].get_int() = mons->mid;
@@ -1317,38 +1135,51 @@ coord_def find_gateway_location(actor* caster)
     return points[random2(points.size())];
 }
 
+void create_malign_gateway(coord_def point, beh_type beh, string cause,
+                           int pow, god_type god, bool is_player)
+{
+    const int malign_gateway_duration = BASELINE_DELAY * (random2(2) + 1);
+    env.markers.add(new map_malign_gateway_marker(point,
+                            malign_gateway_duration,
+                            is_player,
+                            is_player ? "" : cause,
+                            beh,
+                            god,
+                            pow));
+    env.markers.clear_need_activate();
+    env.grid(point) = DNGN_MALIGN_GATEWAY;
+    set_terrain_changed(point);
+
+    noisy(spell_effect_noise(SPELL_MALIGN_GATEWAY), point);
+    mprf(MSGCH_WARN, "The dungeon shakes, a horrible noise fills the air, "
+                     "and a portal to some otherworldly place is opened!");
+}
+
 spret cast_malign_gateway(actor * caster, int pow, god_type god, bool fail)
 {
     coord_def point = find_gateway_location(caster);
-    bool success = (point != coord_def(0, 0));
+    bool success = point != coord_def(0, 0);
 
-    bool is_player = (caster->is_player());
+    bool is_player = caster->is_player();
 
     if (success)
     {
         fail_check();
 
-        const int malign_gateway_duration = BASELINE_DELAY * (random2(3) + 2);
-        env.markers.add(new map_malign_gateway_marker(point,
-                                malign_gateway_duration,
-                                is_player,
-                                is_player ? ""
-                                    : caster->as_monster()->full_name(DESC_A),
-                                is_player ? BEH_FRIENDLY
-                                    : attitude_creation_behavior(
-                                      caster->as_monster()->attitude),
-                                god,
-                                pow));
-        env.markers.clear_need_activate();
-        env.grid(point) = DNGN_MALIGN_GATEWAY;
-        set_terrain_changed(point);
-
-        noisy(spell_effect_noise(SPELL_MALIGN_GATEWAY), point);
-        mprf(MSGCH_WARN, "The dungeon shakes, a horrible noise fills the air, "
-                         "and a portal to some otherworldly place is opened!");
+        create_malign_gateway(
+            point,
+            is_player ? BEH_FRIENDLY
+                      : attitude_creation_behavior(
+                          caster->as_monster()->attitude),
+            is_player ? ""
+                      : caster->as_monster()->full_name(DESC_A),
+            pow,
+            god,
+            is_player);
 
         return spret::success;
     }
+
     // We don't care if monsters fail to cast it.
     if (is_player)
         mpr("A gateway cannot be opened in this cramped space!");
@@ -1592,8 +1423,9 @@ static void _display_undead_motions(int motions)
 }
 
 static bool _raise_remains(const coord_def &pos, int corps, beh_type beha,
+                           int pow,
                            unsigned short hitting, actor *as, string nas,
-                           god_type god, bool actual, bool force_beh,
+                           god_type god, bool actual, bool apply_lovelessness,
                            monster **raised, int* motions_r)
 {
     if (raised)
@@ -1612,8 +1444,8 @@ static bool _raise_remains(const coord_def &pos, int corps, beh_type beha,
     if (zombie_type == MONS_PRINCE_RIBBIT)
         zombie_type = MONS_HUMAN;
 
-    const int hd = (item.props.exists(MONSTER_HIT_DICE)) ?
-                    item.props[MONSTER_HIT_DICE].get_short() : 0;
+    int hd = (item.props.exists(MONSTER_HIT_DICE)) ?
+              item.props[MONSTER_HIT_DICE].get_short() : 0;
 
     // Save the corpse name before because it can get destroyed if it is
     // being drained and the raising interrupts it.
@@ -1678,10 +1510,12 @@ static bool _raise_remains(const coord_def &pos, int corps, beh_type beha,
         return false;
 
     if (god == GOD_NO_GOD) // only Yred dead-raising lasts forever.
-        mons->add_ench(mon_enchant(ENCH_FAKE_ABJURATION, 6));
+        mons->add_ench(mon_enchant(ENCH_FAKE_ABJURATION, 4));
 
     // If the original monster has been levelled up, its HD might be different
-    // from its class HD, in which case its HP should be rerolled to match.
+    // from its class HD. For player spells the hd is scaled with spellpower.
+    if (nas.empty())
+        hd = div_rand_round(hd * (100 + pow), 300);
     if (mons->get_experience_level() != hd)
     {
         mons->set_hit_dice(max(hd, 1));
@@ -1702,8 +1536,8 @@ static bool _raise_remains(const coord_def &pos, int corps, beh_type beha,
     item_was_destroyed(item);
     destroy_item(corps);
 
-    if (!force_beh)
-        player_angers_monster(mons);
+    if (apply_lovelessness)
+        check_lovelessness(*mons);
 
     // Bitfield for motions - determines text displayed when animating dead.
     // XXX: could this use monster shape in some way?
@@ -1730,9 +1564,6 @@ static bool _raise_remains(const coord_def &pos, int corps, beh_type beha,
         *motions_r |= DEAD_ARE_HOPPING;
     }
     else if (mons_genus(zombie_type)    == MONS_WORKER_ANT
-#if TAG_MAJOR_VERSION == 34
-             || mons_genus(zombie_type) == MONS_BEETLE
-#endif
              || mons_base_char(zombie_type) == 's') // many genera
     {
         *motions_r |= DEAD_ARE_CRAWLING;
@@ -1747,10 +1578,10 @@ static bool _raise_remains(const coord_def &pos, int corps, beh_type beha,
 // you are butchering being animated.
 // This is called for Animate Skeleton and from animate_dead.
 int animate_remains(const coord_def &a, corpse_type class_allowed,
-                    beh_type beha, unsigned short hitting,
+                    beh_type beha, int pow, unsigned short hitting,
                     actor *as, string nas,
                     god_type god, bool actual,
-                    bool quiet, bool force_beh,
+                    bool quiet, bool apply_lovelessness,
                     monster** mon, int* motions_r)
 {
     if (is_sanctuary(a))
@@ -1777,30 +1608,14 @@ int animate_remains(const coord_def &a, corpse_type class_allowed,
         if (!_animatable_remains(*si))
             continue;
 
-        const bool was_draining = is_being_drained(*si);
-        const bool was_butchering = is_being_butchered(*si);
-
-        const bool success = _raise_remains(a, si.index(), beha, hitting,
-                                            as, nas, god, actual,
-                                            force_beh, mon, &motions);
+        const bool success = _raise_remains(a, si.index(), beha, pow,
+                                            hitting, as, nas, god, actual,
+                                            apply_lovelessness, mon, &motions);
 
         if (actual && success)
         {
-            // Ignore quiet.
-            if (was_butchering || was_draining)
-            {
-                mprf("The corpse you are %s rises to %s!",
-                     was_draining ? "drinking from"
-                                  : "butchering",
-                     beha == BEH_FRIENDLY ? "join your ranks"
-                                          : "attack");
-            }
-
             if (!quiet && you.see_cell(a))
                 _display_undead_motions(motions);
-
-            if (was_butchering)
-                xom_is_stimulated(200);
         }
 
         any_success |= success;
@@ -1820,7 +1635,7 @@ int animate_remains(const coord_def &a, corpse_type class_allowed,
     return 1;
 }
 
-int animate_dead(actor *caster, int /*pow*/, beh_type beha,
+int animate_dead(actor *caster, int pow, beh_type beha,
                  unsigned short hitting, actor *as, string nas, god_type god,
                  bool actual)
 {
@@ -1831,8 +1646,9 @@ int animate_dead(actor *caster, int /*pow*/, beh_type beha,
     for (radius_iterator ri(caster->pos(), LOS_NO_TRANS); ri; ++ri)
     {
         // There may be many corpses on the same spot.
-        while (animate_remains(*ri, CORPSE_BODY, beha, hitting, as, nas, god,
-                               actual, true, 0, 0, &motions) > 0)
+        while (animate_remains(*ri, CORPSE_BODY, beha, pow, hitting,
+                               as, nas, god,
+                               actual, true, true, 0, &motions) > 0)
         {
             number_raised++;
             if (you.see_cell(*ri))
@@ -1851,85 +1667,78 @@ int animate_dead(actor *caster, int /*pow*/, beh_type beha,
     return number_raised;
 }
 
-spret cast_animate_skeleton(god_type god, bool fail)
+spret cast_animate_skeleton(int pow, god_type god, bool fail)
 {
+    fail_check();
     bool found = false;
-
-    for (stack_iterator si(you.pos(), true); si; ++si)
+    for (radius_iterator ri(you.pos(), LOS_NO_TRANS); ri; ++ri)
     {
-        if (si->base_type == OBJ_CORPSES
-            && mons_class_can_be_zombified(si->mon_type)
-            && mons_skeleton(si->mon_type))
+        for (stack_iterator si(*ri, true); si; ++si)
         {
-            found = true;
+            if (si->base_type == OBJ_CORPSES
+                && mons_class_can_be_zombified(si->mon_type)
+                && mons_skeleton(si->mon_type))
+            {
+                found = true;
+                break;
+            }
         }
     }
-
     if (!found)
     {
-        mpr("There is nothing here that can be animated!");
+        mpr("There is nothing nearby to animate!");
         return spret::abort;
     }
 
-    fail_check();
     canned_msg(MSG_ANIMATE_REMAINS);
 
-    const char* no_space = "...but the skeleton had no space to rise!";
-
-    // First, we try to animate a skeleton if there is one.
-    const int animate_skel_result = animate_remains(you.pos(), CORPSE_SKELETON,
-                                                    BEH_FRIENDLY, MHITYOU,
-                                                    &you, "", god);
-    if (animate_skel_result != -1)
+    for (radius_iterator ri(you.pos(), LOS_NO_TRANS); ri; ++ri)
     {
-        if (animate_skel_result == 0)
-            mpr(no_space);
-        return spret::success;
-    }
-
-    // If not, look for a corpse and butcher it.
-    for (stack_iterator si(you.pos(), true); si; ++si)
-    {
-        if (si->is_type(OBJ_CORPSES, CORPSE_BODY)
-            && mons_skeleton(si->mon_type)
-            && mons_class_can_be_zombified(si->mon_type))
+        for (stack_iterator si(*ri, true); si; ++si)
         {
-            butcher_corpse(*si, true);
-            mpr("Before your eyes, flesh is ripped from the corpse!");
-            request_autopickup();
-            // Only convert the top one.
-            break;
+            if (si->base_type == OBJ_CORPSES
+                && mons_class_can_be_zombified(si->mon_type)
+                && mons_skeleton(si->mon_type))
+            {
+                if (si->is_type(OBJ_CORPSES, CORPSE_BODY))
+                {
+                    butcher_corpse(*si);
+                    mpr("Before your eyes, flesh is ripped from the corpse!");
+                    request_autopickup();
+                    // Only convert the top one.
+                }
+
+                const int animate_skel_result =
+                    animate_remains(*ri, CORPSE_SKELETON, BEH_FRIENDLY,
+                                    pow, MHITYOU, &you, "", god);
+
+                if (animate_skel_result != -1)
+                {
+                    if (animate_skel_result == 0)
+                        mpr("...but the skeleton had no space to rise!");
+                    return spret::success;
+                }
+            }
         }
     }
 
-    // Now we try again to animate a skeleton.
-    // this return type is insanely stupid
-    const int animate_result = animate_remains(you.pos(), CORPSE_SKELETON,
-                                               BEH_FRIENDLY, MHITYOU, &you, "",
-                                               god);
-    dprf("result: %d", animate_result);
-    switch (animate_result)
-    {
-        case -1:
-            mpr("There is no skeleton here to animate!");
-            break;
-        case 0:
-            mpr(no_space);
-            break;
-        default:
-            // success, messages already printed
-            break;
-    }
+    canned_msg(MSG_NOTHING_HAPPENS);
 
     return spret::success;
 }
 
 spret cast_animate_dead(int pow, god_type god, bool fail)
 {
+    if (!animate_dead(&you, pow, BEH_FRIENDLY, MHITYOU, &you, "", god, false))
+    {
+        mpr("There is nothing nearby to animate!");
+        return spret::abort;
+    }
+
     fail_check();
     canned_msg(MSG_CALL_DEAD);
 
-    if (!animate_dead(&you, pow + 1, BEH_FRIENDLY, MHITYOU, &you, "", god))
+    if (!animate_dead(&you, pow, BEH_FRIENDLY, MHITYOU, &you, "", god))
         canned_msg(MSG_NOTHING_HAPPENS);
 
     return spret::success;
@@ -1988,7 +1797,7 @@ spret cast_simulacrum(int pow, god_type god, bool fail)
             mprf("The headless hydra simulacr%s immediately collapse%s into snow!",
                  how_many == 1 ? "um" : "a", how_many == 1 ? "s" : "");
             if (!turn_corpse_into_skeleton(corpse))
-                butcher_corpse(corpse, false, false);
+                butcher_corpse(corpse, false);
             return spret::success;
         }
         mg.props[MGEN_NUM_HEADS] = corpse.props[CORPSE_HEADS].get_short();
@@ -2007,101 +1816,9 @@ spret cast_simulacrum(int pow, god_type god, bool fail)
     if (!count)
         canned_msg(MSG_NOTHING_HAPPENS);
     else if (!turn_corpse_into_skeleton(corpse))
-        butcher_corpse(corpse, false, false);
+        butcher_corpse(corpse, false);
 
     return spret::success;
-}
-
-/**
- * Have a monster cast simulacrum.
- *
- * @param mon The monster casting the spell.
- * @param actual If false, return true if the spell would have succeeded on at
- *               least one corpse, but don't cast.
- * @returns True if at least one simulacrum was created, or if actual is true,
- *          if one would have been created.
- */
-bool monster_simulacrum(monster *mon, bool actual)
-{
-    // You can see the spell being cast, not necessarily the caster.
-    const bool cast_visible = you.see_cell(mon->pos());
-    bool did_creation = false;
-    int num_seen = 0;
-
-    dprf("trying to cast simulacrum");
-    for (radius_iterator ri(mon->pos(), LOS_NO_TRANS); ri; ++ri)
-    {
-
-        // Search all the items on the ground for a corpse.
-        for (stack_iterator si(*ri, true); si; ++si)
-        {
-            if (si->base_type != OBJ_CORPSES
-                || si->sub_type != CORPSE_BODY
-                || !mons_class_can_be_zombified(si->mon_type))
-            {
-                continue;
-            }
-
-            mgen_data mg(MONS_SIMULACRUM, SAME_ATTITUDE(mon), *ri, mon->foe,
-                         MG_FORCE_BEH
-                         | (cast_visible ? MG_DONT_COME : MG_NONE));
-            mg.set_base(si->mon_type);
-            mg.set_summoned(mon, 0, SPELL_SIMULACRUM, mon->god);
-            if (si->props.exists(CORPSE_HEADS))
-            {
-                if (si->props[CORPSE_HEADS].get_short() == 0)
-                    continue;
-                else
-                    mg.props[MGEN_NUM_HEADS] = si->props[CORPSE_HEADS].get_short();
-            }
-
-            if (!actual)
-                return true;
-
-            // Create half as many as the player version.
-            int how_many = 1 + random2(
-                                  div_rand_round(
-                                    max_corpse_chunks(si->mon_type), 2));
-            how_many  = stepdown_value(how_many, 2, 2, 6, 6);
-            bool was_draining = is_being_drained(*si);
-            bool was_butchering = is_being_butchered(*si);
-            bool was_successful = false;
-            for (int i = 0; i < how_many; ++i)
-            {
-                // Use the original monster type as the zombified type here,
-                // to get the proper stats from it.
-                if (monster *sim = create_monster(mg))
-                {
-                    was_successful = true;
-                    player_angers_monster(sim);
-                    sim->add_ench(mon_enchant(ENCH_FAKE_ABJURATION, 4));
-                    if (you.can_see(*sim))
-                        num_seen++;
-                }
-            }
-
-            if (was_successful)
-            {
-                did_creation = true;
-                turn_corpse_into_skeleton(*si);
-                // Ignore quiet.
-                if (was_butchering || was_draining)
-                {
-                    mprf("The flesh of the corpse you are %s vaporises!",
-                         was_draining ? "drinking from" : "butchering");
-                    xom_is_stimulated(200);
-                }
-
-            }
-        }
-    }
-
-    if (num_seen > 1)
-        mprf("Some icy apparitions appear!");
-    else if (num_seen == 1)
-        mprf("An icy apparition appears!");
-
-    return did_creation;
 }
 
 // Return a definite/indefinite article for (number) things.
@@ -2263,16 +1980,13 @@ bool twisted_resurrection(actor *caster, int pow, beh_type beha,
 
     if (num_orcs > 0 && caster->is_player())
         did_god_conduct(DID_DESECRATE_ORCISH_REMAINS, 2 * num_orcs);
-    if (num_holy > 0 && caster->is_player())
-        did_god_conduct(DID_DESECRATE_HOLY_REMAINS, 2 * num_holy);
 
     return true;
 }
 
 monster_type pick_random_wraith()
 {
-    return random_choose_weighted(1, MONS_PHANTOM,
-                                  1, MONS_HUNGRY_GHOST,
+    return random_choose_weighted(2, MONS_PHANTOM,
                                   1, MONS_SHADOW_WRAITH,
                                   5, MONS_WRAITH,
                                   2, MONS_FREEZING_WRAITH,
@@ -2317,14 +2031,8 @@ spret cast_haunt(int pow, const coord_def& where, god_type god, bool fail)
                 .set_summoned(&you, 3, SPELL_HAUNT, god)))
         {
             success++;
-
-            if (player_angers_monster(mons))
-                friendly = false;
-            else
-            {
-                mons->add_ench(mon_enchant(ENCH_HAUNTING, 1, m, INFINITE_DURATION));
-                mons->foe = mi;
-            }
+            mons->add_ench(mon_enchant(ENCH_HAUNTING, 1, m, INFINITE_DURATION));
+            mons->foe = mi;
         }
     }
 
@@ -2486,75 +2194,6 @@ spret cast_spellforged_servitor(int /*pow*/, god_type god, bool fail)
     return spret::success;
 }
 
-static int _abjuration(int pow, monster *mon)
-{
-    // Scale power into something comparable to summon lifetime.
-    const int abjdur = pow * 12;
-
-    // XXX: make this a prompt
-    if (mon->wont_attack())
-        return false;
-
-    int duration;
-    if (mon->is_summoned(&duration))
-    {
-        int sockage = max(fuzz_value(abjdur, 60, 30), 40);
-        dprf("%s abj: dur: %d, abj: %d",
-             mon->name(DESC_PLAIN).c_str(), duration, sockage);
-
-        bool shielded = false;
-        // TSO and Trog's abjuration protection.
-        if (mons_is_god_gift(*mon, GOD_SHINING_ONE))
-        {
-            sockage = sockage * (30 - mon->get_hit_dice()) / 45;
-            if (sockage < duration)
-            {
-                simple_god_message(" protects a fellow warrior from your evil magic!",
-                                   GOD_SHINING_ONE);
-                shielded = true;
-            }
-        }
-        else if (mons_is_god_gift(*mon, GOD_TROG))
-        {
-            sockage = sockage * 8 / 15;
-            if (sockage < duration)
-            {
-                simple_god_message(" shields an ally from your puny magic!",
-                                   GOD_TROG);
-                shielded = true;
-            }
-        }
-
-        mon_enchant abj = mon->get_ench(ENCH_ABJ);
-        if (!mon->lose_ench_duration(abj, sockage) && !shielded)
-            simple_monster_message(*mon, " shudders.");
-    }
-
-    return true;
-}
-
-spret cast_aura_of_abjuration(int pow, bool fail)
-{
-    fail_check();
-
-    if (!you.duration[DUR_ABJURATION_AURA])
-        mpr("You begin to abjure the creatures around you!");
-    else
-        mpr("You extend your aura of abjuration.");
-
-    you.increase_duration(DUR_ABJURATION_AURA,  6 + roll_dice(2, pow / 12), 50);
-    you.props["abj_aura_pow"].get_int() = pow;
-
-    return spret::success;
-}
-
-void do_aura_of_abjuration(int delay)
-{
-    const int pow = you.props["abj_aura_pow"].get_int() * delay / 10;
-    for (monster_near_iterator mi(you.pos(), LOS_NO_TRANS); mi; ++mi)
-        _abjuration(pow / 2, *mi);
-}
-
 monster* find_battlesphere(const actor* agent)
 {
     if (agent->props.exists("battlesphere"))
@@ -2678,16 +2317,12 @@ void end_battlesphere(monster* mons, bool killed)
 
 bool battlesphere_can_mirror(spell_type spell)
 {
-    return (spell_typematch(spell, spschool::conjuration)
-           && spell_to_zap(spell) != NUM_ZAPS)
-           || spell == SPELL_FREEZE
-           || spell == SPELL_STICKY_FLAME
-           || spell == SPELL_SANDBLAST
-           || spell == SPELL_AIRSTRIKE
-           || spell == SPELL_SEARING_RAY;
+    return spell_typematch(spell, spschool::conjuration)
+           && spell != SPELL_BATTLESPHERE
+           && spell != SPELL_SPELLFORGED_SERVITOR;
 }
 
-bool aim_battlesphere(actor* agent, spell_type spell, int powc, bolt& beam)
+bool aim_battlesphere(actor* agent, spell_type spell)
 {
     //Is this spell something that will trigger the battlesphere?
     if (battlesphere_can_mirror(spell))
@@ -2706,61 +2341,26 @@ bool aim_battlesphere(actor* agent, spell_type spell, int powc, bolt& beam)
         // target-seeking action, cancel it so that it can focus on a new
         // target
         reset_battlesphere(battlesphere);
+        battlesphere->props.erase("foe");
 
-        // Don't try to fire at ourselves
-        if (beam.target == battlesphere->pos())
+        // Pick a random baddie in LOS
+        vector<actor *> targets;
+        for (radius_iterator ri(agent->pos(), LOS_NO_TRANS); ri; ++ri)
+        {
+            actor * foe = actor_at(*ri);
+            if (foe && battlesphere->can_see(*foe)
+                    && !mons_aligned(agent, foe))
+            {
+                targets.push_back(foe);
+            }
+        }
+
+        if (targets.empty())
             return false;
 
-        // If the player beam is targeted at a creature, aim at this creature.
-        // Otherwise, aim at the furthest creature in the player beam path
-        bolt testbeam = beam;
-
-        if (agent->is_player())
-            testbeam.thrower = KILL_YOU_MISSILE;
-        else
-        {
-            testbeam.thrower = KILL_MON_MISSILE;
-            testbeam.source_id = agent->mid;
-        }
-
-        testbeam.is_tracer = true;
-        zap_type ztype = spell_to_zap(spell);
-
-        // Fallback for non-standard spell zaps
-        if (ztype == NUM_ZAPS)
-            ztype = ZAP_MAGIC_DART;
-
-        // This is so that reflection and pathing rules for the parent beam
-        // will be obeyed when figuring out what is being aimed at
-        zappy(ztype, powc, false, testbeam);
-
-        battlesphere->props["firing_target"] = beam.target;
-        battlesphere->props.erase("foe");
-        if (!actor_at(beam.target))
-        {
-            testbeam.fire();
-
-            for (const coord_def c : testbeam.path_taken)
-            {
-                if (c != battlesphere->pos() && monster_at(c))
-                {
-                    battlesphere->props["firing_target"] = c;
-                    battlesphere->foe = actor_at(c)->mindex();
-                    battlesphere->props["foe"] = battlesphere->foe;
-                    break;
-                }
-            }
-
-            // If we're firing at empty air, lose any prior target lock
-            if (!battlesphere->props.exists("foe"))
-                battlesphere->foe = agent->mindex();
-        }
-        else
-        {
-            battlesphere->foe = actor_at(beam.target)->mindex();
-            battlesphere->props["foe"] = battlesphere->foe;
-        }
-
+        const actor * target = *random_iterator(targets);
+        battlesphere->foe = target->mindex();
+        battlesphere->props["foe"] = battlesphere->foe;
         battlesphere->props["ready"] = true;
 
         return true;
@@ -2769,7 +2369,7 @@ bool aim_battlesphere(actor* agent, spell_type spell, int powc, bolt& beam)
     return false;
 }
 
-bool trigger_battlesphere(actor* agent, bolt& beam)
+bool trigger_battlesphere(actor* agent)
 {
     monster* battlesphere = find_battlesphere(agent);
     if (!battlesphere)
@@ -2777,33 +2377,6 @@ bool trigger_battlesphere(actor* agent, bolt& beam)
 
     if (battlesphere->props.exists("ready"))
     {
-        // If the battlesphere is aiming at empty air but the triggering
-        // conjuration is an explosion, try to find something to shoot within
-        // the blast
-        if (!battlesphere->props.exists("foe") && beam.is_explosion)
-        {
-            explosion_map exp_map;
-            exp_map.init(INT_MAX);
-            beam.determine_affected_cells(exp_map, coord_def(), 0,
-                                          beam.ex_size, true, true);
-
-            for (radius_iterator ri(beam.target, beam.ex_size, C_SQUARE);
-                 ri; ++ri)
-            {
-                if (exp_map(*ri - beam.target + coord_def(9,9)) < INT_MAX)
-                {
-                    const actor *targ = actor_at(*ri);
-                    if (targ && targ != battlesphere)
-                    {
-                        battlesphere->props["firing_target"] = *ri;
-                        battlesphere->foe = targ->mindex();
-                        battlesphere->props["foe"] = battlesphere->foe;
-                        continue;
-                    }
-                }
-            }
-        }
-
         battlesphere->props.erase("ready");
         battlesphere->props["firing"] = true;
 
@@ -2889,15 +2462,12 @@ bool fire_battlesphere(monster* mons)
         // If we are locked onto a foe, use its current position
         if (!invalid_monster_index(mons->foe) && menv[mons->foe].alive())
             beam.target = menv[mons->foe].pos();
-        else
-            beam.target = mons->props["firing_target"].get_coord();
 
         // Sanity check: if we have somehow ended up targeting ourselves, bail
         if (beam.target == mons->pos())
         {
             mprf(MSGCH_ERROR, "Battlesphere targeting itself? Fixing.");
             mons->props.erase("firing");
-            mons->props.erase("firing_target");
             mons->props.erase("foe");
             return false;
         }
@@ -2917,11 +2487,7 @@ bool fire_battlesphere(monster* mons)
         // Never fire if we would hurt the caster, and ensure that the beam
         // would hit at least SOMETHING, unless it was targeted at empty space
         // in the first place
-        if (beam.friend_info.count == 0
-            && (monster_at(beam.target) ? beam.foe_info.count > 0 :
-                find(beam.path_taken.begin(), beam.path_taken.end(),
-                     beam.target)
-                    != beam.path_taken.end()))
+        if (beam.friend_info.count == 0 && beam.foe_info.count > 0)
         {
             beam.thrower = (agent->is_player()) ? KILL_YOU : KILL_MON;
             simple_monster_message(*mons, " fires!");
@@ -3082,32 +2648,13 @@ bool weapon_can_be_spectral(const item_def *wpn)
         && !is_special_unrandom_artefact(*wpn);
 }
 
-spret cast_spectral_weapon(actor *agent, int pow, god_type god, bool fail)
+// Now used for the spectral ego, so it lacks certain parameters
+void cast_spectral_weapon(actor *agent, int pow, god_type god)
 {
     ASSERT(agent);
 
     const int dur = min(2 + random2(1 + div_rand_round(pow, 25)), 4);
     item_def* wpn = agent->weapon();
-
-    // If the wielded weapon should not be cloned, abort
-    if (!weapon_can_be_spectral(wpn))
-    {
-        if (agent->is_player())
-        {
-            if (wpn)
-            {
-                mprf("%s vibrate%s crazily for a second.",
-                     wpn->name(DESC_YOUR).c_str(),
-                     wpn->quantity > 1 ? "" : "s");
-            }
-            else
-                mpr(you.hands_act("twitch", "."));
-        }
-
-        return spret::abort;
-    }
-
-    fail_check();
 
     // Remove any existing spectral weapons. Only one should be alive at any
     // given time.
@@ -3120,18 +2667,13 @@ spret cast_spectral_weapon(actor *agent, int pow, god_type god, bool fail)
                                     : SAME_ATTITUDE(agent->as_monster()),
                  agent->pos(),
                  agent->mindex());
-    mg.set_summoned(agent, dur, SPELL_SPECTRAL_WEAPON, god);
+    mg.set_summoned(agent, dur, 0, god);
     mg.props[TUKIMA_WEAPON] = *wpn;
     mg.props[TUKIMA_POWER] = pow;
 
     monster *mons = create_monster(mg);
     if (!mons)
-    {
-        //if (agent->is_player())
-            canned_msg(MSG_NOTHING_HAPPENS);
-
-        return spret::success;
-    }
+        return;
 
     if (agent->is_player())
         mpr("You draw out your weapon's spirit!");
@@ -3154,8 +2696,6 @@ spret cast_spectral_weapon(actor *agent, int pow, god_type god, bool fail)
 
     mons->summoner = agent->mid;
     agent->props["spectral_weapon"].get_int() = mons->mid;
-
-    return spret::success;
 }
 
 void end_spectral_weapon(monster* mons, bool killed, bool quiet)
@@ -3303,7 +2843,6 @@ struct summon_cap
 static const map<spell_type, summon_cap> summonsdata =
 {
     // Beasts
-    { SPELL_SUMMON_BUTTERFLIES,         { 8, 5 } },
     { SPELL_SUMMON_SMALL_MAMMAL,        { 4, 2 } },
     { SPELL_CALL_CANINE_FAMILIAR,       { 1, 2 } },
     { SPELL_SUMMON_ICE_BEAST,           { 3, 3 } },
@@ -3331,9 +2870,6 @@ static const map<spell_type, summon_cap> summonsdata =
     { SPELL_FIRE_ELEMENTALS,            { 3, 2 } },
     { SPELL_EARTH_ELEMENTALS,           { 3, 2 } },
     { SPELL_AIR_ELEMENTALS,             { 3, 2 } },
-#if TAG_MAJOR_VERSION == 34
-    { SPELL_IRON_ELEMENTALS,            { 3, 2 } },
-#endif
     { SPELL_SUMMON_SPECTRAL_ORCS,       { 3, 2 } },
     { SPELL_FIRE_SUMMON,                { 4, 2 } },
     { SPELL_SUMMON_MINOR_DEMON,         { 3, 3 } },
@@ -3540,8 +3076,7 @@ bool fedhas_wall_of_briars()
 static void _overgrow_wall(const coord_def &pos)
 {
     const dungeon_feature_type feat = grd(pos);
-    const string what = feature_description(feat, NUM_TRAPS, "", DESC_THE,
-            false);
+    const string what = feature_description(feat, NUM_TRAPS, "", DESC_THE);
 
     if (monster_at(pos))
     {
@@ -3715,7 +3250,7 @@ spret cast_foxfire(int pow, god_type god, bool fail)
     for (fair_adjacent_iterator ai(you.pos()); ai; ++ai)
     {
         mgen_data fox(MONS_FOXFIRE, BEH_FRIENDLY,
-                      *ai, MHITNOT, MG_FORCE_PLACE);
+                      *ai, MHITNOT, MG_FORCE_PLACE | MG_AUTOFOE);
         fox.set_summoned(&you, 0, SPELL_FOXFIRE, god);
         fox.hd = pow;
         monster *foxfire;
@@ -3727,7 +3262,9 @@ spret cast_foxfire(int pow, god_type god, bool fail)
             foxfire->add_ench(ENCH_SHORT_LIVED);
             foxfire->steps_remaining = you.current_vision + 2;
 
-            set_random_target(foxfire);
+            // Avoid foxfire without targets always moving towards (0,0)
+            if (!(foxfire->get_foe() && foxfire->get_foe()->is_monster()))
+                set_random_target(foxfire);
         }
 
         if (created == 2)

@@ -2,7 +2,6 @@
 airstrike AIRSTRIKE
 chain_lightning CHAIN_LIGHTNING
 conjure_ball_lightning CONJURE_BALL_LIGHTNING
-deflect_missiles DEFLECT_MISSILES
 lightning_bolt LIGHTNING_BOLT
 repel_missiles REPEL_MISSILES
 shock SHOCK
@@ -40,16 +39,12 @@ cause_fear CAUSE_FEAR
 confuse CONFUSE
 confusing_touch CONFUSING_TOUCH
 corona CORONA
-darkness DARKNESS
 discord DISCORD
 enslavement ENSLAVEMENT
 haste HASTE
-infusion INFUSION
 invisibility INVISIBILITY
 mass_confusion MASS_CONFUSION
 slow SLOW
-song_of_slaying SONG_OF_SLAYING
-spectral_weapon SPECTRAL_WEAPON
 tukimas_dance TUKIMAS_DANCE
 violent_unravelling VIOLENT_UNRAVELLING
 
@@ -61,7 +56,6 @@ fire_storm FIRE_STORM
 fireball FIREBALL
 flame_tongue FLAME_TONGUE
 ignite_poison IGNITE_POISON
-ring_of_flames RING_OF_FLAMES
 sticky_flame STICKY_FLAME
 throw_flame THROW_FLAME
 inner_flame INNER_FLAME
@@ -81,6 +75,7 @@ metabolic_englaciation METABOLIC_ENGLACIATION
 ozocubus_armour OZOCUBUS_ARMOUR
 ozocubus_refrigeration OZOCUBUS_REFRIGERATION
 throw_frost THROW_FROST
+frozen_ramparts FROZEN_RAMPARTS
 hailstorm HAILSTORM
 
 %sdir gui/spells/necromancy
@@ -122,8 +117,6 @@ call_canine_familiar CALL_CANINE_FAMILIAR
 call_imp CALL_IMP
 malign_gateway MALIGN_GATEWAY
 recall RECALL
-sticks_to_snakes STICKS_TO_SNAKES
-summon_butterflies SUMMON_BUTTERFLIES
 summon_demon SUMMON_DEMON
 summon_dragon SUMMON_DRAGON
 summon_greater_demon SUMMON_GREATER_DEMON
@@ -149,7 +142,6 @@ dispersal DISPERSAL
 passage_of_golubria PASSAGE_OF_GOLUBRIA
 portal_projectile PORTAL_PROJECTILE
 teleport_other TELEPORT_OTHER
-shroud_of_golubria SHROUD_OF_GOLUBRIA
 gravitas GRAVITAS
 
 %sdir gui/spells/transmutation
@@ -158,6 +150,7 @@ beastly_appendage BEASTLY_APPENDAGE
 irradiate IRRADIATE
 hydra_form HYDRA_FORM
 dragon_form DRAGON_FORM
+wereblood WEREBLOOD
 
 # item-based spells
 %sdir gui/spells/misc
@@ -165,7 +158,6 @@ paralyse PARALYSE
 bolt_thunder THUNDERBOLT
 cloud_cone CLOUD_CONE
 bolt_random RANDOM_BOLT
-scattershot SCATTERSHOT
 bolt_corrosive CORROSIVE_BOLT
 iceblast ICEBLAST
 bolt_energy ENERGY_BOLT

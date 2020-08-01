@@ -62,7 +62,6 @@
 #include "shopping.h"
 #include "skills.h"
 #include "spl-book.h"
-#include "spl-miscast.h"
 #include "sprint.h"
 #include "state.h"
 #include "stringutil.h"
@@ -267,9 +266,9 @@ const vector<god_power> god_powers[NUM_GODS] =
 
     // Cheibriados
     { { 0, ABIL_CHEIBRIADOS_TIME_BEND, "bend time to slow others" },
-      { 1, "Cheibriados is now slowing and strengthening your metabolism.",
-           "Cheibriados will no longer slow and strengthen your metabolism.",
-           "Cheibriados slows and strengthens your metabolism." },
+      { 1, "Cheibriados is now slowing the effects of poison on you.",
+           "Cheibriados will no longer slow the effects of poison on you.",
+           "Cheibriados slows the effects of poison on you." },
       { 3, ABIL_CHEIBRIADOS_DISTORTION, "warp the flow of time around you" },
       { 4, ABIL_CHEIBRIADOS_SLOUCH, "inflict damage on those overly hasty" },
       { 5, ABIL_CHEIBRIADOS_TIME_STEP, "step out of the flow of time" },
@@ -374,7 +373,7 @@ const vector<god_power> god_powers[NUM_GODS] =
     // Wu Jian
     { { 0, "perform damaging attacks by moving towards foes",
            "perform lunging strikes" },
-      { 1, "lightly attack and pin monsters in place by moving around them",
+      { 1, "lightly attack monsters by moving around them",
            "perform spinning attacks" },
       { 2, ABIL_WU_JIAN_WALLJUMP,
            "perform airborne attacks" },
@@ -628,6 +627,7 @@ void dec_penance(god_type god, int val)
             {
                 simple_god_message(" restores the support of your attributes.");
                 redraw_screen();
+                update_screen();
                 notify_stat_change();
             }
             if (have_passive(passive_t::storm_shield))
@@ -765,6 +765,7 @@ static void _inc_penance(god_type god, int val)
         if (will_have_passive(passive_t::stat_boost))
         {
             redraw_screen();
+            update_screen();
             notify_stat_change();
         }
 
@@ -982,17 +983,16 @@ int yred_random_servants(unsigned int threshold, bool force_hostile)
     return created;
 }
 
-static bool _need_missile_gift(bool forced)
+static bool _want_missile_gift()
 {
     skill_type sk = best_skill(SK_SLINGS, SK_THROWING);
     // Default to throwing if all missile skills are at zero.
     if (you.skills[sk] == 0)
         sk = SK_THROWING;
-    return forced
-           || (you.piety >= piety_breakpoint(2)
-               && random2(you.piety) > 70
-               && one_chance_in(8)
-               && x_chance_in_y(1 + you.skills[sk], 12));
+    return you.piety >= piety_breakpoint(2)
+           && random2(you.piety) > 70
+           && one_chance_in(8)
+           && x_chance_in_y(1 + you.skills[sk], 12);
 }
 
 static bool _give_nemelex_gift(bool forced = false)
@@ -1056,6 +1056,7 @@ static void _delayed_gift_callback(const mgen_data &/*mg*/, monster *&mon,
 
     // Make sure monsters are shown.
     viewwindow();
+    update_screen();
     more();
     _inc_gift_timeout(4 + random2avg(7, 2));
     you.num_current_gifts[you.religion]++;
@@ -1122,8 +1123,8 @@ static set<spell_type> _vehumet_eligible_gift_spells(set<spell_type> excluded_sp
     if (gifts >= NUM_VEHUMET_GIFTS)
         return eligible_spells;
 
-    const int min_lev[] = {1,1,2,3,3,4,4,5,5,6,6,6,8};
-    const int max_lev[] = {1,2,3,4,5,7,7,7,7,7,7,7,9};
+    const int min_lev[] = {1,1,2,3,3,4,4,5,5,5,5,6,8};
+    const int max_lev[] = {1,2,3,4,5,7,7,7,7,7,7,8,9};
     COMPILE_CHECK(ARRAYSZ(min_lev) == NUM_VEHUMET_GIFTS);
     COMPILE_CHECK(ARRAYSZ(max_lev) == NUM_VEHUMET_GIFTS);
     int min_level = min_lev[gifts];
@@ -1145,7 +1146,7 @@ static set<spell_type> _vehumet_eligible_gift_spells(set<spell_type> excluded_sp
         if (vehumet_supports_spell(spell)
             && !you.has_spell(spell)
             && !you.spell_library[spell]
-            && is_player_spell(spell)
+            && is_player_book_spell(spell)
             && spell_difficulty(spell) <= max_level
             && spell_difficulty(spell) >= min_level)
         {
@@ -1244,15 +1245,12 @@ static int _pakellas_low_misc()
 {
     // Limited uses, so any of these are fine even if they've been seen before.
     return random_choose(MISC_BOX_OF_BEASTS,
-                         MISC_SACK_OF_SPIDERS,
                          MISC_PHANTOM_MIRROR);
 }
 
 static int _pakellas_high_misc()
 {
     static const vector<int> high_miscs = {
-        MISC_FAN_OF_GALES,
-        MISC_LAMP_OF_FIRE,
         MISC_PHIAL_OF_FLOODS,
         MISC_LIGHTNING_ROD,
     };
@@ -1363,25 +1361,27 @@ static bool _give_trog_oka_gift(bool forced)
     if (you.species == SP_FELID)
         return false;
 
-    const bool need_missiles = you_worship(GOD_OKAWARU)
-                               && _need_missile_gift(forced);
+    const bool want_equipment = forced
+                                || (you.piety >= piety_breakpoint(4)
+                                    && random2(you.piety) > 120
+                                    && one_chance_in(4));
+    // Oka can gift missiles, but if equipment is successful, we choose
+    // equipment unless the gift was forced by wizard mode. In that case,
+    // missiles, weapons, and armour all get equal weight below.
+    const bool want_missiles = you_worship(GOD_OKAWARU)
+                               && (forced
+                                   || !want_equipment && _want_missile_gift());
     object_class_type gift_type;
 
-    if (you_worship(GOD_TROG) && (forced || you.piety >= piety_breakpoint(4)))
-            gift_type = OBJ_WEAPONS;
-    else if (forced)
-        gift_type = random_choose_weighted(
-            1, OBJ_WEAPONS,
-            1, OBJ_ARMOUR,
-            need_missiles ? 1 : 0, OBJ_MISSILES);
-    else if (you.piety >= piety_breakpoint(4)
-             && random2(you.piety) > 120
-             && one_chance_in(4))
+    if (you_worship(GOD_TROG) && want_equipment)
+        gift_type = OBJ_WEAPONS;
+    else if (you_worship(GOD_OKAWARU) && (want_equipment || want_missiles))
     {
-        gift_type = coinflip() ? OBJ_WEAPONS : OBJ_ARMOUR;
+        gift_type = random_choose_weighted(
+                want_equipment, OBJ_WEAPONS,
+                want_equipment, OBJ_ARMOUR,
+                want_missiles,  OBJ_MISSILES);
     }
-    else if (need_missiles)
-        gift_type = OBJ_MISSILES;
     else
         return false;
 
@@ -2384,6 +2384,7 @@ static void _gain_piety_point()
 #ifdef USE_TILE_LOCAL
                 tiles.layout_statcol();
                 redraw_screen();
+                update_screen();
 #endif
                 learned_something_new(HINT_NEW_ABILITY_GOD);
                 // Preserve the old hotkey
@@ -2573,6 +2574,7 @@ void lose_piety(int pgn)
 #ifdef USE_TILE_LOCAL
         tiles.layout_statcol();
         redraw_screen();
+        update_screen();
 #endif
     }
 
@@ -2783,6 +2785,7 @@ void excommunication(bool voluntary, god_type new_god)
     if (had_stat_boost)
     {
         redraw_screen();
+        update_screen();
         notify_stat_change();
     }
 
@@ -2981,7 +2984,8 @@ void excommunication(bool voluntary, god_type new_god)
 
     case GOD_WU_JIAN:
         you.attribute[ATTR_SERPENTS_LASH] = 0;
-        you.attribute[ATTR_HEAVENLY_STORM] = 0;
+        if (you.props.exists(WU_JIAN_HEAVENLY_STORM_KEY))
+            wu_jian_end_heavenly_storm();
         break;
 
     default:
@@ -2993,6 +2997,7 @@ void excommunication(bool voluntary, god_type new_god)
 #ifdef USE_TILE_LOCAL
     tiles.layout_statcol();
     redraw_screen();
+    update_screen();
 #endif
 
     // Evil hack.
@@ -3454,6 +3459,7 @@ static void _join_gozag()
 #ifdef USE_TILE_LOCAL
         tiles.layout_statcol();
         redraw_screen();
+        update_screen();
 #else
         ;
 #endif
@@ -3529,27 +3535,11 @@ static void _join_trog()
     if (you.species != SP_GNOLL)
         for (int sk = SK_SPELLCASTING; sk <= SK_LAST_MAGIC; ++sk)
             you.train[sk] = you.train_alt[sk] = TRAINING_DISABLED;
-
-    // When you start worshipping Trog, you make all non-hostile magic
-    // users hostile.
-    if (query_daction_counter(DACT_ALLY_SPELLCASTER))
-    {
-        add_daction(DACT_ALLY_SPELLCASTER);
-        mprf(MSGCH_MONSTER_ENCHANT, "Your magic-using allies forsake you.");
-    }
 }
 
 // Setup for joining the orderly ascetics of Zin.
 static void _join_zin()
 {
-    // When you start worshipping Zin, you make all non-hostile unclean and
-    // chaotic beings hostile.
-    if (query_daction_counter(DACT_ALLY_UNCLEAN_CHAOTIC))
-    {
-        add_daction(DACT_ALLY_UNCLEAN_CHAOTIC);
-        mprf(MSGCH_MONSTER_ENCHANT, "Your unclean and chaotic allies forsake you.");
-    }
-
     // Need to pay St. Peters.
     if (you.attribute[ATTR_DONATIONS] * 9 < you.gold)
     {
@@ -3617,6 +3607,7 @@ void join_religion(god_type which_god)
     ASSERT(you.species != SP_DEMIGOD);
 
     redraw_screen();
+    update_screen();
 
     const god_type old_god = you.religion;
     if (you.previous_good_god == GOD_NO_GOD)
@@ -3649,15 +3640,6 @@ void join_religion(god_type which_god)
     set_god_ability_slots();    // remove old god's slots, reserve new god's
 
     _set_initial_god_piety();
-
-    // When you start worshipping a good god, you make all non-hostile
-    // unholy and evil beings hostile.
-    if (is_good_god(you.religion)
-        && query_daction_counter(DACT_ALLY_UNHOLY_EVIL))
-    {
-        add_daction(DACT_ALLY_UNHOLY_EVIL);
-        mprf(MSGCH_MONSTER_ENCHANT, "Your unholy and evil allies forsake you.");
-    }
 
     const function<void ()> *join_effect = map_find(on_join, you.religion);
     if (join_effect != nullptr)
@@ -3694,6 +3676,7 @@ void join_religion(god_type which_god)
 #ifdef USE_TILE_LOCAL
     tiles.layout_statcol();
     redraw_screen();
+    update_screen();
 #endif
 
     learned_something_new(HINT_CONVERT);
@@ -3777,6 +3760,7 @@ void god_pitch(god_type which_god)
     {
         you.turn_is_over = false;
         redraw_screen();
+        update_screen();
     }
 }
 
@@ -3882,10 +3866,6 @@ bool god_hates_killing(god_type god, const monster& mon)
 bool god_hates_eating(god_type god, monster_type mc)
 {
     if (god_hates_cannibalism(god) && is_player_same_genus(mc))
-        return true;
-    if (is_good_god(you.religion) && mons_class_holiness(mc) & MH_HOLY)
-        return true;
-    if (you_worship(GOD_ZIN) && mons_class_intel(mc) >= I_HUMAN)
         return true;
     return false;
 }

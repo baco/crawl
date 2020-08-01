@@ -14,8 +14,7 @@ Randomly translocates the user a short distance.
 Breathe Dispelling Energy ability
 
 Breathes a bolt of dispelling energy at a targeted creature, possibly removing
-some of its enchantments. The range of the bolt is decreased by one for every
-creature it strikes.
+some of its enchantments.
 %%%%
 Breathe Fire ability
 
@@ -52,13 +51,11 @@ for a short time. It may also splash onto other nearby creatures on impact.
 Breathe Steam ability
 
 Breathes a jet of steam at a targeted location, which will scald any creatures
-it hits and will also obscure vision. The range of the jet is decreased by one
-for every creature it strikes.
+it hits and will also obscure vision.
 %%%%
 Breathe Noxious Fumes ability
 
-Breathes a blast of noxious fumes at a targeted creature. The range of the blast
-is decreased by one for every creature it strikes.
+Breathes a blast of noxious fumes at a targeted creature.
 %%%%
 Bat Form ability
 
@@ -104,8 +101,8 @@ Dig ability
 
 Allows making tunnels through soft rock and rusted grates. Activating the
 ability has no cost and simply prepares you to start digging; once active,
-moving into a wall will start tunneling. Doing so makes some noise and causes
-hunger, and is a little slower than walking.
+moving into a wall will start tunneling. Doing so makes some noise and is a
+little slower than walking.
 
 Once active, activating the ability again or making any non-digging movement
 action will cancel the Dig status.
@@ -114,6 +111,13 @@ Shaft Self ability
 
 Sends you to a random position one to two floors down, as if you jumped into a
 shaft trap. It takes some time to dig the shaft.
+%%%%
+Rolling Charge ability
+
+Roll at a foe with a clatter of scales, uncurl, and strike! The further you go,
+the more momentum will be added to the force of your strike. You roll with
+sufficient speed to dodge traps and harmful terrain along the way, but not at
+your destination.
 %%%%
 Evoke Blink ability
 
@@ -261,11 +265,8 @@ skeletons cannot leave the level they were created on.
 %%%%
 Drain Life ability
 
-# Note: part of this description duplicates the Drain Life spell description.
-
-Drains the life force of any nearby creatures, healing the user depending on
-the damage dealt. The amount of life force drained is increased by Invocations
-skill.
+[[Drain Life spell]] The amount of life force drained is increased by
+Invocations skill.
 %%%%
 Enslave Soul ability
 
@@ -303,13 +304,13 @@ demon hostile.
 %%%%
 Major Destruction ability
 
-Shoots a random harmful beam or explosion at the targeted creature. Damage and
-accuracy are increased by Invocations skill.
+[[Major Destruction spell]] Damage and accuracy are increased by Invocations
+skill.
 %%%%
 Greater Servant of Makhleb ability
 
-Summons a major demon. Failing to use this ability correctly will turn the
-demon hostile.
+[[Greater Servant of Makhleb spell]] Failing to use this ability correctly will
+turn the demon hostile.
 %%%%
 # Sif Muna
 %%%%
@@ -379,7 +380,7 @@ Ghosts of dead adventurers and demon lords are too wrathful to be pacified,
 mindless creatures are too unintelligent to be pacified, and no monster can be
 pacified while it is asleep.
 
-Whether the pacification succeeds or not, the invested food, piety and magic
+Whether the pacification succeeds or not, the invested piety and magic
 points are lost. If it does succeed, the monster is healed and you gain half
 the monster's experience value. Otherwise, the monster is unaffected and you
 gain nothing.
@@ -413,7 +414,7 @@ nearby creatures and the damage dealt to those affected.
 Banish ability
 
 Attempts to banish a creature into the Abyss. If the attempt succeeds, you gain
-some piety and half the creature's experience value. Invocations skill makes it
+some piety and the creature's full experience value. Invocations skill makes it
 harder to resist.
 %%%%
 Corrupt ability
@@ -459,8 +460,7 @@ Re-using this ability will discard the current stack.
 # Beogh
 Smiting ability
 
-Smites any targeted enemy within sight, with no direct line of fire required.
-The strength of the smiting is increased by Invocations skill.
+[[Smiting spell]] The strength of the smiting is increased by Invocations skill.
 %%%%
 Recall Orcish Followers ability
 
@@ -489,8 +489,8 @@ be damaged by sharp thorns. Invocations skill increases the briars' health.
 %%%%
 Grow Ballistomycete ability
 
-Grow a short-lived ballistomycete at the location you choose. A Ballistomycete
-occasionally release spores that quickly seek out foes and violently explode,
+Grow a short-lived ballistomycete at the location you choose. A ballistomycete
+occasionally releases spores that quickly seek out foes and violently explode,
 damaging and confusing all living things caught in the blast.
 
 Invocations skill increases the health and duration of the ballistomycete as
@@ -587,23 +587,7 @@ three lists at a time, with varying prices.
 Call Merchant ability
 
 Sends funds to a merchant to help them set up shop at your location. The cost of
-funding a shop increases with the number of shops funded.{{
-    if you.race() == "Mummy" or you.race() == "Vampire" then
-        return
-    end
-
-    local desc = " You will always have the option to fund a shop selling "
-
-    if you.race() == "Ghoul" then
-        desc = desc .. "carrion"
-    else
-        desc = desc .. "food"
-    end
-
-    desc = desc .. "."
-
-    return desc
-}}
+funding a shop increases with the number of shops funded.
 %%%%
 Bribe Branch ability
 
@@ -657,7 +641,7 @@ increases with your piety and experience level.
 Apocalypse ability
 
 Reveals Ru's truth to your enemies, dealing severe damage to all enemies in
-your line of sight. Affected creatures may be paralyzed, slowed or have their
+your line of sight. Affected creatures may be paralysed, slowed or have their
 magic drained. The damage dealt increases with your piety and experience level.
 %%%%
 Sacrifice Purity ability
@@ -855,11 +839,10 @@ Serpent's Lash are more damaging and never miss.
 %%%%
 Heavenly Storm ability
 
-Invokes a storm of heavenly clouds. While the storm rages, striking enemies
-with martial attacks provides an increasing bonus to melee damage and accuracy.
-The bonus fades over time, and the storm lasts until the bonus has faded
-completely. The heavenly clouds prevent invisibility, and obscure the vision of
-those outside the storm.
+Invokes a storm of heavenly clouds. While the storm rages, your combat
+accuracy and damage are substantially increased, and striking enemies with
+martial attacks increases this bonus. The storm weakens over time and fades
+away once the bonus reaches zero. The heavenly clouds prevent invisibility, and obscure the vision of those outside the storm.
 %%%%
 Hop ability
 

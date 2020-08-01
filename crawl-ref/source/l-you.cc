@@ -17,7 +17,6 @@
 #include "delay.h"
 #include "english.h"
 #include "env.h"
-#include "food.h"
 #include "initfile.h"
 #include "item-name.h"
 #include "item-prop.h"
@@ -134,16 +133,6 @@ LUARET1(you_poison_survival, number, poison_survival())
  * @function corrosion
  */
 LUARET1(you_corrosion, number, you.props["corrosion_amount"].get_int())
-/*** Hunger state number.
- * @treturn int
- * @function hunger
- */
-LUARET1(you_hunger, number, you.hunger_state - 1)
-/*** Hunger state string.
- * @treturn string
- * @function hunger_name
- */
-LUARET1(you_hunger_name, string, hunger_level())
 /*** Strength.
  * @treturn int current strength
  * @treturn int max strength
@@ -269,22 +258,11 @@ LUARET1(you_see_invisible, boolean, you.can_see_invisible(false))
  * @function spirit_shield
  */
 LUARET1(you_spirit_shield, number, you.spirit_shield(false) ? 1 : 0)
-/*** Gourmand.
- * @treturn boolean
- * @function gourmond
- */
-LUARET1(you_gourmand, boolean, you.gourmand(false))
 /*** Corrosion resistance (rCorr).
  * @treturn int resistance level
  * @function res_corr
  */
 LUARET1(you_res_corr, boolean, you.res_corr(false))
-/*** Do you like to eat chunks?
- * Returns a number so as not to break existing scripts.
- * @treturn int
- * @function like_chunks
- */
-LUARET1(you_like_chunks, number, player_likes_chunks(true) ? 3 : 0)
 /*** Are you flying?
  * @treturn boolean
  * @function flying
@@ -306,17 +284,25 @@ LUARET1(you_berserk, boolean, you.berserk())
  * @function confused
  */
 LUARET1(you_confused, boolean, you.confused())
-/*** Do you have a Shroud of Golubria?
- * @treturn boolean
- * @function shrouded
- */
-LUARET1(you_shrouded, boolean, you.duration[DUR_SHROUD_OF_GOLUBRIA])
 /*** Are you currently +Swift or -Swift?
  * If you have neither, returns 0. If you are +Swift, +1, and -Swift, -1.
  * @treturn int Swift level
  * @function swift
  */
 LUARET1(you_swift, number, you.duration[DUR_SWIFTNESS] ? ((you.attribute[ATTR_SWIFTNESS] >= 0) ? 1 : -1) : 0)
+/*** What was the loudest noise you heard in the last turn?
+ * Returns a number from [0, 1000], representing the current noise bar.
+ * If the player's coordinates are silenced, return 0.
+ *
+ * Noise bar colour breakpoints, listed here for clua api convenience:
+ * LIGHTGREY <= 333 , YELLOW <= 666 , RED < 1000 , else LIGHTMAGENTA
+ * Each colour breakpoint aims to approximate 1 additional los radius of noise.
+ *
+ * @treturn int noise value
+ * @function noise_perception
+ */
+LUARET1(you_noise_perception, number, silenced(you.pos())
+                                      ? 0 : you.get_noise_perception(true))
 /*** Are you paralysed?
  * @treturn boolean
  * @function paralysed
@@ -830,8 +816,7 @@ static int you_gold(lua_State *ls)
  */
 static int you_can_consume_corpses(lua_State *ls)
 {
-    lua_pushboolean(ls, you.get_mutation_level(MUT_HERBIVOROUS) == 0
-                        && !you_foodless());
+    lua_pushboolean(ls, false);
     return 1;
 }
 
@@ -949,7 +934,7 @@ LUAFN(you_mutation)
     string mutname = luaL_checkstring(ls, 1);
     mutation_type mut = mutation_from_name(mutname, false);
     if (mut != NUM_MUTATIONS)
-        PLUARET(integer, you.get_base_mutation_level(mut, true, true, true)); // includes innate, temp mutations. I'm not sure if this is what was intended but this was the old behavior.
+        PLUARET(integer, you.get_base_mutation_level(mut, true, true, true)); // includes innate, temp mutations. I'm not sure if this is what was intended but this was the old behaviour.
 
     string err = make_stringf("No such mutation: '%s'.", mutname.c_str());
     return luaL_argerror(ls, 1, err.c_str());
@@ -1168,8 +1153,6 @@ static const struct luaL_reg you_clib[] =
     { "mp"          , you_mp },
     { "base_mp"     , you_base_mp },
     { "rot"         , you_rot },
-    { "hunger"      , you_hunger },
-    { "hunger_name" , you_hunger_name },
     { "strength"    , you_strength },
     { "intelligence", you_intelligence },
     { "dexterity"   , you_dexterity },
@@ -1195,15 +1178,13 @@ static const struct luaL_reg you_clib[] =
     { "res_mutation", you_res_mutation },
     { "see_invisible", you_see_invisible },
     { "spirit_shield", you_spirit_shield },
-    { "like_chunks",  you_like_chunks },
-    { "gourmand",     you_gourmand },
     { "res_corr",     you_res_corr },
     { "flying",       you_flying },
     { "transform",    you_transform },
     { "berserk",      you_berserk },
     { "confused",     you_confused },
+    { "noise_perception", you_noise_perception },
     { "paralysed",    you_paralysed },
-    { "shrouded",     you_shrouded },
     { "swift",        you_swift },
     { "caught",       you_caught },
     { "asleep",       you_asleep },

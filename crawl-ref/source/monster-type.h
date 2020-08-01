@@ -40,6 +40,9 @@ enum monster_type                      // menv[].type
 #endif
     MONS_QUOKKA,         // Quokka are a type of wallaby, returned -- bwr 382
     MONS_PORCUPINE,
+#if TAG_MAJOR_VERSION > 34
+    MONS_PALENTONGA,
+#endif
     MONS_JACKAL,
     MONS_HOUND,
 #if TAG_MAJOR_VERSION == 34
@@ -94,13 +97,15 @@ enum monster_type                      // menv[].type
     MONS_FROG,                  // genus
 #endif
     MONS_BULLFROG,
-    MONS_SPINY_FROG,
+    MONS_CANE_TOAD,
     MONS_BLINK_FROG,
 #if TAG_MAJOR_VERSION > 34
     MONS_BARACHI,
     MONS_BEAR,                  // genus
 #endif
+#if TAG_MAJOR_VERSION == 34
     MONS_GRIZZLY_BEAR,
+#endif
     MONS_POLAR_BEAR,
     MONS_BLACK_BEAR,
     MONS_WORM,
@@ -339,7 +344,9 @@ enum monster_type                      // menv[].type
 #endif
     MONS_BALLISTOMYCETE_SPORE,
     MONS_BALLISTOMYCETE,
+#if TAG_MAJOR_VERSION == 34
     MONS_HYPERACTIVE_BALLISTOMYCETE,
+#endif
 
     MONS_GOBLIN,
     MONS_HOBGOBLIN,
@@ -470,7 +477,9 @@ enum monster_type                      // menv[].type
     MONS_IRON_GIANT,
 #endif
     MONS_HUMAN,
+#if TAG_MAJOR_VERSION == 34
     MONS_SLAVE,
+#endif
     MONS_HELL_KNIGHT,
 #if TAG_MAJOR_VERSION > 34
     MONS_DEATH_KNIGHT,
@@ -572,9 +581,7 @@ enum monster_type                      // menv[].type
     MONS_CRIMSON_IMP,
     MONS_QUASIT,
     MONS_WHITE_IMP,
-#if TAG_MAJOR_VERSION == 34
     MONS_LEMURE,
-#endif
     MONS_UFETUBUS,
     MONS_IRON_IMP,
     MONS_SHADOW_IMP,
@@ -674,7 +681,9 @@ enum monster_type                      // menv[].type
     MONS_GHOST,                 // common genus for monster and player ghosts
     MONS_PHANTOM,
     MONS_SHADOW,
+#if TAG_MAJOR_VERSION == 34
     MONS_HUNGRY_GHOST,
+#endif
     MONS_FLAYED_GHOST,
     MONS_WIGHT,
     MONS_WRAITH,
@@ -844,6 +853,7 @@ enum monster_type                      // menv[].type
 #if TAG_MAJOR_VERSION > 34
     MONS_FULMINANT_PRISM,
     MONS_BATTLESPHERE,
+    MONS_FOXFIRE,
 #endif
     MONS_PILLAR_OF_SALT,
 #if TAG_MAJOR_VERSION > 34
@@ -868,6 +878,7 @@ enum monster_type                      // menv[].type
     MONS_TEST_SPAWNER,
 #if TAG_MAJOR_VERSION > 34
     MONS_TEST_STATUE,
+    MONS_NAMELESS,              // summoning miscast
 #endif
 
     // Add new monsters here:
@@ -1051,6 +1062,8 @@ enum monster_type                      // menv[].type
     MONS_TEST_STATUE,
     MONS_FOXFIRE,
     MONS_MAGGIE,
+    MONS_NAMELESS,
+    MONS_PALENTONGA,
 #endif
 
     NUM_MONSTERS,               // used for polymorph
@@ -1087,5 +1100,3 @@ enum monster_type                      // menv[].type
     WANDERING_MONSTER = 3500, // only used in monster placement routines - forced limit checks {dlb}
 };
 COMPILE_CHECK(NUM_MONSTERS < MONS_NO_MONSTER);
-COMPILE_CHECK(NUM_MONSTERS < 32768); // stored in a 16 bit field,
-                                     // with untested signedness

@@ -37,10 +37,10 @@
 
 // Make sure there's enough room in you.unique_items to hold all
 // the unrandarts.
-COMPILE_CHECK(NUM_UNRANDARTS < MAX_UNRANDARTS);
+COMPILE_CHECK((NUM_UNRANDARTS < MAX_UNRANDARTS));
 // Non-artefact brands and unrandart indexes both go into
 // item.special, so make sure they don't overlap.
-COMPILE_CHECK((int) NUM_SPECIAL_WEAPONS < (int) UNRAND_START);
+COMPILE_CHECK(((int) NUM_SPECIAL_WEAPONS < (int) UNRAND_START));
 
 static bool _god_fits_artefact(const god_type which_god, const item_def &item,
                                bool name_check_only = false)
@@ -303,9 +303,22 @@ unique_item_status_type get_unique_item_status(int art)
     return you.unique_items[art - UNRAND_START];
 }
 
-static void _set_unique_item_status(int art, unique_item_status_type status)
+static void _set_unique_item_status(int art, bool exists)
 {
     ASSERT_RANGE(art, UNRAND_START + 1, UNRAND_LAST);
+
+    const unique_item_status_type status = !exists
+        ? UNIQ_NOT_EXISTS
+        : !crawl_state.generating_level
+                // treat unrands that generate in these branches as if they
+                // were acquired. TODO: there's a potential bug here if every
+                // octopus king ring generates and the last is acquired. Also,
+                // I suspect that these getting lost in the abyss isn't handled
+                // right
+                || level_id::current().branch == BRANCH_TROVE
+                || level_id::current().branch == BRANCH_ABYSS
+            ? UNIQ_EXISTS_NONLEVELGEN
+            : UNIQ_EXISTS;
     you.unique_items[art - UNRAND_START] = status;
 }
 
@@ -346,10 +359,8 @@ struct jewellery_fake_artp
 };
 
 static map<jewellery_type, vector<jewellery_fake_artp>> jewellery_artps = {
-    { AMU_RAGE, { { ARTP_BERSERK, 1 } } },
     { AMU_REGENERATION, { { ARTP_REGENERATION, 1 } } },
-    { AMU_REFLECTION, { { ARTP_SHIELDING, 0 } } },
-    { AMU_HARM, { { ARTP_DRAIN, 1 } } },
+    { AMU_REFLECTION, { { ARTP_SHIELDING, AMU_REFLECT_SH / 2} } },
 
     { RING_MAGICAL_POWER, { { ARTP_MAGICAL_POWER, 9 } } },
     { RING_FLIGHT, { { ARTP_FLY, 1 } } },
@@ -539,7 +550,7 @@ static bool _artp_can_go_on_item(artefact_prop_type prop, const item_def &item,
             return item_class != OBJ_WEAPONS; // they already have slaying!
         case ARTP_POISON:
         case ARTP_SEE_INVISIBLE:
-            return !item.is_type(OBJ_ARMOUR, ARM_NAGA_BARDING);
+            return !item.is_type(OBJ_ARMOUR, ARM_BARDING);
             // naga already have rPois & sInv!
         case ARTP_CORRODE:
             return !extant_props[ARTP_RCORR];
@@ -561,8 +572,9 @@ static bool _artp_can_go_on_item(artefact_prop_type prop, const item_def &item,
             // and obv we shouldn't generate contradictory props
         case ARTP_PREVENT_TELEPORTATION:
             return !extant_props[ARTP_BLINK]
-                   && !extant_props[ARTP_CAUSE_TELEPORTATION];
-            // no contradictory props
+                   && !extant_props[ARTP_CAUSE_TELEPORTATION]
+                   && item_class == OBJ_ARMOUR;
+            // armour only, and no contradictory props
         case ARTP_BLINK:
             return !extant_props[ARTP_PREVENT_TELEPORTATION];
             // no contradictory props
@@ -576,8 +588,8 @@ static bool _artp_can_go_on_item(artefact_prop_type prop, const item_def &item,
                    && (item_class != OBJ_JEWELLERY
                        || jewellery_is_amulet(item));
         case ARTP_HARM:
-            return item_class != OBJ_JEWELLERY && extant_props[ARTP_DRAIN];
-            // only get harm with *Drain
+            return item_class == OBJ_ARMOUR;
+            // only get harm on delay equipment
         default:
             return true;
     }
@@ -715,7 +727,7 @@ static const artefact_prop_data artp_data[] =
     { "Fragile", ARTP_VAL_BOOL, 25, // ARTP_FRAGILE,
         nullptr, []() { return 1; }, 0, 0 },
     { "SH", ARTP_VAL_ANY, 0, nullptr, nullptr, 0, 0 }, // ARTP_SHIELDING,
-    { "Harm", ARTP_VAL_BOOL, 0, // ARTP_HARM,
+    { "Harm", ARTP_VAL_BOOL, 25, // ARTP_HARM,
         []() {return 1;}, nullptr, 0, 0},
 };
 COMPILE_CHECK(ARRAYSZ(artp_data) == ARTP_NUM_PROPERTIES);
@@ -1329,8 +1341,11 @@ int find_okay_unrandart(uint8_t aclass, uint8_t atype, bool in_abyss)
 {
     int ret = -1;
 
-    // Pick randomly among not-yet-existing unrandarts with the proper
-    // base_type and sub_type.
+    // Pick randomly among unrandarts with the proper
+    // base_type and sub_type. This will rule out unrands that have already
+    // placed as part of levelgen, but may find unrands that have been acquired.
+    // because of this, the caller needs to properly set up a fallback randart
+    // in some cases: see makeitem.cc:_setup_fallback_randart.
     for (int i = 0, count = 0; i < NUM_UNRANDARTS; i++)
     {
         const int              index = i + UNRAND_START;
@@ -1344,7 +1359,11 @@ int find_okay_unrandart(uint8_t aclass, uint8_t atype, bool in_abyss)
             get_unique_item_status(index);
 
         if (in_abyss && status != UNIQ_LOST_IN_ABYSS
-            || !in_abyss && status != UNIQ_NOT_EXISTS)
+            || !in_abyss && status != UNIQ_NOT_EXISTS
+               // for acquired items, ignore them in the random calculations
+               // here and let fallback artefacts replace them.
+               // TODO: abyss? double check trove
+               && status != UNIQ_EXISTS_NONLEVELGEN)
         {
             continue;
         }
@@ -1481,10 +1500,6 @@ static bool _randart_is_redundant(const item_def &item,
         provides = ARTP_RCORR;
         break;
 
-    case AMU_RAGE:
-        provides = ARTP_BERSERK;
-        break;
-
     case AMU_INACCURACY:
         provides = ARTP_SLAYING;
         break;
@@ -1495,10 +1510,6 @@ static bool _randart_is_redundant(const item_def &item,
 
     case AMU_REFLECTION:
         provides = ARTP_SHIELDING;
-        break;
-
-    case AMU_HARM:
-        provides = ARTP_DRAIN;
         break;
     }
 
@@ -1551,10 +1562,6 @@ static bool _randart_is_conflicting(const item_def &item,
     case RING_TELEPORT_CONTROL:
 #endif
         conflicts = ARTP_PREVENT_TELEPORTATION;
-        break;
-
-    case AMU_RAGE:
-        conflicts = ARTP_STEALTH;
         break;
     }
 
@@ -1746,12 +1753,14 @@ static void _make_octoring(item_def &item)
 
     // If there are any types left, unset the 'already found' flag
     if (you.octopus_king_rings != 0xff)
-        _set_unique_item_status(UNRAND_OCTOPUS_KING_RING, UNIQ_NOT_EXISTS);
+        _set_unique_item_status(UNRAND_OCTOPUS_KING_RING, false);
 }
 
 bool make_item_unrandart(item_def &item, int unrand_index)
 {
     ASSERT_RANGE(unrand_index, UNRAND_START + 1, (UNRAND_START + NUM_UNRANDARTS));
+    rng::subgenerator item_rng; // for safety's sake, this is sometimes called
+                                // directly
 
     item.unrand_idx = unrand_index;
 
@@ -1768,7 +1777,7 @@ bool make_item_unrandart(item_def &item, int unrand_index)
     ASSERT(!item.props.exists(ARTEFACT_APPEAR_KEY));
     item.props[ARTEFACT_APPEAR_KEY].get_string() = unrand->unid_name;
 
-    _set_unique_item_status(unrand_index, UNIQ_EXISTS);
+    _set_unique_item_status(unrand_index, true);
 
     if (unrand_index == UNRAND_FAERIE)
         _make_faerie_armour(item);

@@ -42,11 +42,9 @@
 #define BARBS_MOVE_KEY "moved_with_barbs_status"
 #define HORROR_PENALTY_KEY "horror_penalty"
 #define POWERED_BY_DEATH_KEY "powered_by_death_strength"
-#define SONG_OF_SLAYING_KEY "song_of_slaying_bonus"
+#define WEREBLOOD_KEY "wereblood_bonus"
 #define FORCE_MAPPABLE_KEY "force_mappable"
-#define REGEN_AMULET_ACTIVE "regen_amulet_active"
 #define MANA_REGEN_AMULET_ACTIVE "mana_regen_amulet_active"
-#define ACROBAT_AMULET_ACTIVE "acrobat_amulet_active"
 #define SAP_MAGIC_KEY "sap_magic_amount"
 #define TEMP_WATERWALK_KEY "temp_waterwalk"
 #define EMERGENCY_FLIGHT_KEY "emergency_flight"
@@ -60,8 +58,6 @@
 #define HORROR_LVL_OVERWHELMING  5
 
 #define SEVERE_CONTAM_LEVEL 3
-
-#define FROZEN_RAMPARTS_RADIUS 3
 
 /// Maximum stat value
 static const int MAX_STAT_VALUE = 125;
@@ -150,9 +146,7 @@ public:
     FixedVector<int8_t, NUM_STATS> stat_loss;
     FixedVector<int8_t, NUM_STATS> base_stats;
 
-    int hunger;
     int disease;
-    hunger_state_t hunger_state;
     uint8_t max_level;
     int hit_points_regeneration;
     int magic_points_regeneration;
@@ -167,6 +161,10 @@ public:
     FixedBitVector<NUM_EQUIP> melded;
     // Whether these are unrands that we should run the _*_world_reacts func for
     FixedBitVector<NUM_EQUIP> unrand_reacts;
+    // True if the slot has an item that activates when worn with max hp (regen
+    // items, acrobat amulet) and max hp has been reached while wearing it;
+    // false otherwise.
+    FixedBitVector<NUM_EQUIP> activated;
 
     FixedArray<int, NUM_OBJECT_CLASSES, MAX_SUBTYPES> force_autopickup;
 
@@ -249,8 +247,6 @@ public:
 
     branch_type where_are_you;
     int depth;
-
-    FixedVector<uint8_t, 30> branch_stairs;
 
     god_type religion;
     string jiyva_second_name;       // Random second name of Jiyva
@@ -419,8 +415,11 @@ public:
     // If true, player has triggered a trap effect by exploring.
     bool trapped;
 
+    // TODO burn this API with fire
     bool wield_change;          // redraw weapon
+    bool gear_change;           // redraw equip bar
     bool redraw_quiver;         // redraw quiver
+    bool redraw_noise;
 
     bool redraw_title;
     bool redraw_hit_points;
@@ -435,8 +434,6 @@ public:
     targeter *flash_where;
 
     int time_taken;
-
-    int old_hunger;            // used for hunger delta-meter (see output.cc)
 
     // the loudest noise level the player has experienced in los this turn
     int los_noise_level;
@@ -672,6 +669,8 @@ public:
                           bool ignore_transform = false,
                           bool quiet = true) const override;
 
+    bool wear_barding() const;
+
     string name(description_level_type type, bool force_visible = false,
                 bool force_article = false) const override;
     string pronoun(pronoun_type pro, bool force_visible = false) const override;
@@ -713,7 +712,6 @@ public:
                            bool slow_cold_blood = true) override;
     void god_conduct(conduct_type thing_done, int level) override;
 
-    void make_hungry(int nutrition, bool silent = true) override;
     bool poison(actor *agent, int amount = 1, bool force = false) override;
     bool sicken(int amount) override;
     void paralyse(actor *, int str, string source = "") override;
@@ -835,8 +833,7 @@ public:
     int shield_block_penalty() const override;
     int shield_bypass_ability(int tohit) const override;
     void shield_block_succeeded(actor *foe) override;
-    int missile_deflection() const override;
-    void ablate_deflection() override;
+    bool missile_repulsion() const override;
 
     // Combat-related adjusted penalty calculation methods
     int unadjusted_body_armour_penalty() const override;
@@ -862,6 +859,8 @@ public:
     void apply_location_effects(const coord_def &oldpos,
                                 killer_type killer = KILL_NONE,
                                 int killernum = -1) override;
+
+    void be_agile(int pow);
 
     ////////////////////////////////////////////////////////////////
 
@@ -907,14 +906,6 @@ public:
 
     int armour_class_with_one_removal(item_def sub) const;
 
-protected:
-    void _removed_beholder(bool quiet = false);
-    bool _possible_beholder(const monster* mon) const;
-
-    void _removed_fearmonger(bool quiet = false);
-    bool _possible_fearmonger(const monster* mon) const;
-
-private:
     int ac_changes_from_mutations() const;
     vector<const item_def *> get_armour_items() const;
     vector<const item_def *> get_armour_items_one_sub(const item_def& sub) const;
@@ -923,6 +914,13 @@ private:
                                     vector<const item_def *> armour_items) const;
     int armour_class_with_specific_items(
                                 vector<const item_def *> items) const;
+
+protected:
+    void _removed_beholder(bool quiet = false);
+    bool _possible_beholder(const monster* mon) const;
+
+    void _removed_fearmonger(bool quiet = false);
+    bool _possible_fearmonger(const monster* mon) const;
 
 };
 COMPILE_CHECK((int) SP_UNKNOWN_BRAND < 8*sizeof(you.seen_weapon[0]));
@@ -975,16 +973,10 @@ void update_acrobat_status();
 bool is_effectively_light_armour(const item_def *item);
 bool player_effectively_in_light_armour();
 
-int player_energy();
-
 int player_shield_racial_factor();
 int player_armour_shield_spell_penalty();
 
 int player_movement_speed();
-
-int player_hunger_rate();
-
-int calc_hunger(int food_cost);
 
 int player_icemail_armour_class();
 int sanguine_armour_bonus();
@@ -997,8 +989,6 @@ int player_prot_life(bool calc_unid = true, bool temp = true,
 bool regeneration_is_inhibited();
 int player_regen();
 int player_mp_regen();
-void update_amulet_attunement_by_health();
-void update_mana_regen_amulet_attunement();
 
 int player_res_cold(bool calc_unid = true, bool temp = true,
                     bool items = true);
@@ -1007,7 +997,6 @@ int player_res_acid(bool calc_unid = true, bool items = true);
 bool player_res_torment(bool random = true);
 bool player_kiku_res_torment();
 
-bool player_likes_chunks(bool permanently = false);
 bool player_likes_water(bool permanently = false);
 
 int player_res_electricity(bool calc_unid = true, bool temp = true,
@@ -1015,8 +1004,7 @@ int player_res_electricity(bool calc_unid = true, bool temp = true,
 
 int player_res_fire(bool calc_unid = true, bool temp = true,
                     bool items = true);
-int player_res_sticky_flame(bool calc_unid = true, bool temp = true,
-                            bool items = true);
+int player_res_sticky_flame();
 int player_res_steam(bool calc_unid = true, bool temp = true,
                      bool items = true);
 
@@ -1035,7 +1023,6 @@ int player_spec_death();
 int player_spec_earth();
 int player_spec_fire();
 int player_spec_hex();
-int player_spec_charm();
 int player_spec_poison();
 int player_spec_summ();
 
@@ -1111,6 +1098,7 @@ bool sanguine_armour_valid();
 void activate_sanguine_armour();
 
 void refresh_weapon_protection();
+void handle_spectral_brand();
 
 void set_mp(int new_amount);
 

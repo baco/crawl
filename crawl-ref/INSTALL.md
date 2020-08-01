@@ -53,17 +53,31 @@ cd crawl-ref/source
 make -j4 TILES=y
 ```
 
+### Packaged Dependencies
+
+DCSS uses Lua, SDL, SQLite and several other third party packages. Generally
+you should use the versions supplied by your OS's package manager. If that's
+not possible, you can use the versions packaged with DCSS.
+
+To use packaged dependencies:
+
+1. Clone the repository with Git (you can't use a tarball - the dependencies
+   use Git submodules).
+2. Run `git submodule update --init` in the repository.
+3. Compile as per above.
+
 ### Ubuntu / Debian
 
-You can install all needed dependencies from the OS:
+These instructions may work for other DPKG-based distros.
 
 ```sh
+# python-is-python3 is required for Ubuntu 20.04 and newer
 sudo apt install build-essential libncursesw5-dev bison flex liblua5.1-0-dev \
-libsqlite3-dev libz-dev pkg-config python-yaml binutils-gold
+libsqlite3-dev libz-dev pkg-config python3-yaml binutils-gold python-is-python3
 
 # Dependencies for tiles builds
 sudo apt install libsdl2-image-dev libsdl2-mixer-dev libsdl2-dev \
-libfreetype6-dev libpng-dev ttf-dejavu-core
+libfreetype6-dev libpng-dev ttf-dejavu-core advancecomp pngcrush
 ```
 
 Then follow [the above compilation steps](#compiling).
@@ -72,30 +86,13 @@ Then follow [the above compilation steps](#compiling).
 
 These instructions may work for other RPM-based distros.
 
-You can install all needed dependencies from the OS:
-
 ```sh
 sudo dnf install gcc gcc-c++ make bison flex ncurses-devel compat-lua-devel \
-sqlite-devel zlib-devel pkgconfig python-yaml
+sqlite-devel zlib-devel pkgconfig python3-yaml
 
 # Dependencies for tiles builds:
 sudo dnf install SDL2-devel SDL2_image-devel libpng-devel freetype-devel \
-dejavu-sans-fonts dejavu-sans-mono-fonts
-```
-
-Then follow [the above compilation steps](#compiling).
-
-### Void
-
-You can install all needed dependencies from the OS:
-
-```sh
-sudo xbps-install make gcc perl flex bison pkg-config ncurses-devel \
-lua51-devel sqlite-devel zlib-devel python-yaml
-
-# Dependencies for tiles builds:
-sudo xbps-install pngcrush dejavu-fonts-ttf SDL2-devel SDL2_mixer-devel \
-SDL2_image-devel freetype-devel
+dejavu-sans-fonts dejavu-sans-mono-fonts advancecomp pngcrush
 ```
 
 Then follow [the above compilation steps](#compiling).
@@ -108,21 +105,24 @@ You need the following dependencies:
 * gcc / clang
 * perl
 * pkg-config
-* Python and PyYAML
-* libncurses (and headers)
+* Python 3 and PyYAML
+* libncurses
 * flex / bison (optional)
 
-You can install these dependencies from your OS package manager, or use DCSS's packaged versions (`git submodule update --init`):
+You can install these dependencies from your OS package manager, or use DCSS's
+packaged versions (as described in [Packaged
+Dependencies](#packaged-dependencies) above):
 
-* lua 5.1 (and headers)
-* sqlite (and headers)
-* zlib (and headers)
-* freetype (and headers)
-* DejaVu fonts (when compiling in tiles mode)
-* SDL2 (and headers)
-* libpng (and headers)
-* pcre (and headers)
-* zlib (and headers)
+* lua 5.1
+* sqlite
+* zlib
+* pcre
+* zlib
+* freetype (tiles builds only)
+* DejaVu fonts (tiles builds only)
+* SDL2 (tiles builds only)
+* SDL2_image (tiles builds only)
+* libpng (tiles builds only)
 
 Then follow [the above compilation steps](#compiling).
 
@@ -221,7 +221,7 @@ from within the MSYS2 Shell.
     ```sh
     pacman -S mingw-w64-x86_64-python-yaml
     # or
-    pacman -S mingw64/mingw-w64-x86_64-python-pip
+    pacman -S mingw-w64-x86_64-python-pip
     pip install pyyaml
     ```
 
@@ -251,8 +251,7 @@ from within the MSYS2 Shell.
     ```
 
     If you want a debug build, add the target `debug` to the above commands (eg
-    `make debug TILES=y`) For building packages, see instructions in the
-    release guide.
+    `make debug TILES=y`).
 
 7. When the build process finishes, you can run crawl.exe directly from the
    source directory in the MSYS2 shell. For Tiles, type `./crawl.exe`, and for
@@ -260,6 +259,24 @@ from within the MSYS2 Shell.
    window (the Windows version of DCSS requires a command.exe shell and will
    not run in an MSYS2 shell). Both versions can also be started by
    double-clicking `crawl.exe` using the graphical file explorer.
+
+8. If you want to build the installer or zipped packages instead,
+   you need to install zip and nsis:
+
+    ```sh
+    pacman -S zip
+    # and
+    pacman -S mingw-w64-x86_64-nsis
+    ```
+
+    Then build by running:
+
+    ```sh
+    # installer
+    make package-windows-installer
+    # zips
+    make package-windows-zips
+    ```
 
 ### Windows Subsystem for Linux (WSL)
 
@@ -353,7 +370,7 @@ Troubleshooting tips:
   `source/contrib/bin/8.0/$(Platform)` after building the `Contribs` solution.
 - Make sure `crawl.exe` and `tilegen.exe` are in `crawl-ref/source` after
   building the `crawl-ref` solution.
-- `tilegen.exe runs early during the `crawl.exe` build process, using
+- `tilegen.exe` runs early during the `crawl.exe` build process, using
   `libpng.dll` to build PNG files inside `source/rtiles`. Breaking tilegen
   (e.g. by building a different `Contribs` configuration) after building these
   png files correctly will result in `tilegen.exe` crashing during the crawl
@@ -403,7 +420,8 @@ Use `make install prefix=/usr/local` to build and install DCSS.
 
 Make options:
 
-* `prefix`: Specify the prefix to install to. You probably want `/usr` or `/usr/local`
+* `prefix`: Specify the prefix to install to. You probably want `/usr` or
+  `/usr/local`
 * `SAVEDIR`: defaults to `~/.crawl`
 * `DATADIR`: defaults to `$prefix/share/crawl`
 
@@ -467,6 +485,8 @@ font](http://www.yohng.com/software/terminalvector.html)
 
 ## Getting Help
 
-The best place to ask for help is `##crawl-dev` on Freenode IRC, where developers chat.
+The best place to ask for help is `##crawl-dev` on Freenode IRC, where
+developers chat.
 
-You can also try [any of the community forums detailed in the README](../README.md#community).
+You can also try [any of the community forums detailed in the
+README](../README.md#community).

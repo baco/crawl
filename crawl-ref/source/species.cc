@@ -458,7 +458,7 @@ void change_species_to(species_type sp)
         }
     }
 
-    update_vision_range(); // for Ba, and for DS with Nightstalker
+    update_vision_range(); // for Ba, and for Ko
 
     if ((old_sp == SP_OCTOPODE) != (sp == SP_OCTOPODE))
     {
@@ -493,6 +493,7 @@ void change_species_to(species_type sp)
     init_player_doll();
 #endif
     redraw_screen();
+    update_screen();
 }
 
 // A random valid (selectable on the new game screen) species.
@@ -516,9 +517,11 @@ species_type random_draconian_colour()
   species_type species;
   do {
       species =
-          static_cast<species_type>(random_range(SP_FIRST_NONBASE_DRACONIAN,
-                                                 SP_LAST_NONBASE_DRACONIAN));
-  } while (species_is_removed(species));
+          static_cast<species_type>(random_range(0,
+                                                 NUM_SPECIES - 1));
+  } while (!species_is_draconian(species)
+           || species_is_removed(species)
+           || species == SP_BASE_DRACONIAN);
   return species;
 }
 
