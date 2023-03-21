@@ -37,6 +37,7 @@ enum command_type
     CMD_ATTACK_DOWN_LEFT,
     CMD_ATTACK_UP_RIGHT,
     CMD_ATTACK_DOWN_RIGHT,
+    CMD_PRIMARY_ATTACK,
     CMD_OPEN_DOOR,
     CMD_CLOSE_DOOR_LEFT,
     CMD_CLOSE_DOOR_DOWN,
@@ -61,19 +62,18 @@ enum command_type
     CMD_SHOW_TERRAIN,
     CMD_FULL_VIEW,
     CMD_EVOKE,
-    CMD_EVOKE_WIELDED,
-    CMD_FORCE_EVOKE_WIELDED,
     CMD_WIELD_WEAPON,
     CMD_WEAPON_SWAP,
     CMD_FIRE,
     CMD_QUIVER_ITEM,
-    CMD_THROW_ITEM_NO_QUIVER,
+    CMD_FIRE_ITEM_NO_QUIVER,
     CMD_WEAR_ARMOUR,
     CMD_REMOVE_ARMOUR,
     CMD_WEAR_JEWELLERY,
     CMD_REMOVE_JEWELLERY,
     CMD_CYCLE_QUIVER_FORWARD,
     CMD_CYCLE_QUIVER_BACKWARD,
+    CMD_SWAP_QUIVER_RECENT,
     CMD_LIST_ARMOUR,
     CMD_LIST_JEWELLERY,
     CMD_LIST_GOLD,
@@ -105,6 +105,7 @@ enum command_type
     CMD_REPLAY_MESSAGES,
     CMD_REDRAW_SCREEN,
     CMD_MACRO_ADD,
+    CMD_MACRO_MENU,
     CMD_SAVE_GAME,
     CMD_SAVE_GAME_NOW,
     CMD_SUSPEND_GAME,
@@ -129,10 +130,12 @@ enum command_type
 
     CMD_ANNOTATE_LEVEL,
 
-#ifdef CLUA_BINDINGS
     CMD_AUTOFIGHT,
     CMD_AUTOFIGHT_NOMOVE,
-#endif
+    CMD_AUTOFIRE,
+
+    CMD_EQUIP,
+    CMD_UNEQUIP,
 
 #ifdef USE_TILE
     CMD_ZOOM_IN,
@@ -143,9 +146,11 @@ enum command_type
     CMD_MAX_TILE = CMD_EDIT_PLAYER_TILE,
 #endif
 
-#ifdef TOUCH_UI
-    // bring up the on-screen keyboard if needed
-    CMD_SHOW_KEYBOARD,
+#ifdef __ANDROID__
+    // toggle the tab icons visibility in the small layout
+    CMD_TOGGLE_TAB_ICONS,
+    // toggle the on-screen keyboard visibility
+    CMD_TOGGLE_KEYBOARD,
 #endif
 
     // Repeat previous command
@@ -154,6 +159,11 @@ enum command_type
     // Repeat next command a given number of times
     CMD_REPEAT_CMD,
 
+    CMD_SHOW_CHARACTER_DUMP,
+    CMD_GAME_MENU,
+#ifdef TARGET_OS_MACOSX
+    CMD_REVEAL_OPTIONS,
+#endif
     CMD_LUA_CONSOLE,
 
     CMD_MAX_NORMAL = CMD_LUA_CONSOLE,
@@ -273,6 +283,9 @@ enum command_type
     CMD_TARGET_FIND_UPSTAIR,
     CMD_TARGET_FIND_DOWNSTAIR,
     CMD_TARGET_FIND_YOU,
+    CMD_TARGET_CYCLE_QUIVER_BACKWARD,
+    CMD_TARGET_CYCLE_QUIVER_FORWARD,
+    CMD_TARGET_SELECT_ACTION,
     CMD_TARGET_WIZARD_MAKE_FRIENDLY,
     CMD_TARGET_WIZARD_BLESS_MONSTER,
     CMD_TARGET_WIZARD_MAKE_SHOUT,
@@ -294,6 +307,36 @@ enum command_type
     CMD_TARGET_MOUSE_SELECT,
     CMD_TARGET_HELP,
     CMD_MAX_TARGET = CMD_TARGET_HELP,
+
+    CMD_MENU_UP,      // move hover or menu scroll, depending on options
+    CMD_MIN_MENU = CMD_MENU_UP,
+    CMD_MENU_DOWN,
+    CMD_MENU_LEFT, // for multi-col menus, left/right move between columns, otherwise they cycle mode
+    CMD_MENU_RIGHT,
+    CMD_MENU_LINE_UP, // move menu scroll no matter what
+    CMD_MENU_LINE_DOWN,
+    CMD_MENU_PAGE_UP,
+    CMD_MENU_PAGE_DOWN,
+    CMD_MENU_SCROLL_TO_TOP,
+    CMD_MENU_SCROLL_TO_END,
+    CMD_MENU_SEARCH,
+    CMD_MENU_CYCLE_MODE,
+    CMD_MENU_CYCLE_MODE_REVERSE,
+    CMD_MENU_CYCLE_HEADERS,
+    CMD_MENU_HELP,
+    CMD_MENU_SELECT, // e.g. select + accept
+    CMD_MENU_EXAMINE, // used internally for relevant menus, doesn't need a binding
+    CMD_MENU_EXIT,
+    CMD_MAX_MENU = CMD_MENU_EXIT,
+
+    // allow multiselect keybinds to override default menu keybinds
+    CMD_MENU_ACCEPT_SELECTION,
+    CMD_MIN_MENU_MS = CMD_MENU_ACCEPT_SELECTION,
+    CMD_MENU_SELECT_ALL,
+    CMD_MENU_CLEAR_SELECTION,
+    CMD_MENU_INVERT_SELECTION,
+    CMD_MENU_TOGGLE_SELECTED,
+    CMD_MAX_MENU_MS = CMD_MENU_TOGGLE_SELECTED,
 
 #ifdef USE_TILE
     // Tile doll editing screen

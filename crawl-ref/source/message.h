@@ -9,10 +9,14 @@
 #include <streambuf>
 #include <string>
 #include <sstream>
+#include <vector>
 
+#include "mpr.h"
 #include "canned-message-type.h"
 #include "enum.h"
 #include "player.h"
+
+using std::vector;
 
 // Write the message window contents out.
 void display_message_window();
@@ -57,6 +61,15 @@ void mpr_comma_separated_list(const string &prefix,
 void msgwin_set_temporary(bool temp);
 // Clear the last set of temporary messages from both
 // message window and history.
+class msgwin_temporary_mode
+{
+public:
+    msgwin_temporary_mode();
+    ~msgwin_temporary_mode();
+private:
+    bool previous;
+};
+
 void msgwin_clear_temporary();
 
 void msgwin_prompt(string prompt);
@@ -103,6 +116,7 @@ namespace msg
     public:
         tee();
         tee(string &_target);
+        void force_update();
         virtual ~tee();
         virtual void append(const string &s, msg_channel_type ch = MSGCH_PLAIN);
         virtual void append_line(const string &s, msg_channel_type ch = MSGCH_PLAIN);
@@ -137,6 +151,7 @@ namespace msg
 }
 
 void webtiles_send_messages(); // does nothing unless USE_TILE_WEB is defined
+void webtiles_send_more_text(string);
 
 void save_messages(writer& outf);
 void load_messages(reader& inf);
@@ -151,8 +166,6 @@ void replay_messages_during_startup();
 void set_more_autoclear(bool on);
 
 string get_last_messages(int mcount, bool full = false);
-void get_recent_messages(vector<string> &messages,
-                         vector<msg_channel_type> &channels);
 bool recent_error_messages();
 
 int channel_to_colour(msg_channel_type channel, int param = 0);

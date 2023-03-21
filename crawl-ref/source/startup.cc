@@ -56,12 +56,17 @@
  #include "tilepick.h"
 #endif
 #include "tileview.h"
+#include "traps.h" // set_shafted
 #include "viewchar.h"
 #include "view.h"
 #ifdef USE_TILE_LOCAL
  #include "windowmanager.h"
 #endif
 #include "ui.h"
+#ifdef __ANDROID__
+ #include "syscalls.h"
+#endif
+#include "version.h"
 
 using namespace ui;
 
@@ -69,8 +74,7 @@ static void _loading_message(string m)
 {
     mpr(m.c_str());
 #ifdef USE_TILE_LOCAL
-    if (!crawl_state.tiles_disabled && crawl_state.title_screen)
-        loading_screen_update_msg(m.c_str());
+    loading_screen_update_msg(m.c_str());
 #endif
 }
 
@@ -111,8 +115,8 @@ static void _initialize()
     reset_all_monsters();
     init_anon();
 
-    igrd.init(NON_ITEM);
-    mgrd.init(NON_MONSTER);
+    env.igrid.init(NON_ITEM);
+    env.mgrid.init(NON_MONSTER);
     env.map_knowledge.init(map_cell());
     env.pgrid.init(terrain_property_t{});
 
@@ -126,8 +130,7 @@ static void _initialize()
     // Draw the splash screen before the database gets initialised as that
     // may take awhile and it's better if the player can look at a pretty
     // screen while this happens.
-    if (!crawl_state.tiles_disabled && crawl_state.title_screen)
-        loading_screen_open();
+    loading_screen_open();
 #endif
 
     // Initialise internal databases.
@@ -137,7 +140,9 @@ static void _initialize()
     _loading_message("Loading spells and features...");
     init_feat_desc_cache();
     init_spell_name_cache();
-    init_spell_rarities();
+#ifdef DEBUG
+    validate_spellbooks();
+#endif
 
     // Read special levels and vaults.
     _loading_message("Loading maps...");
@@ -148,8 +153,7 @@ static void _initialize()
         end(0);
 
 #ifdef USE_TILE_LOCAL
-    if (!crawl_state.tiles_disabled && crawl_state.title_screen)
-        loading_screen_close();
+    loading_screen_close();
 #endif
 
     you.game_seed = crawl_state.seed;
@@ -182,19 +186,20 @@ static void _initialize()
 #error "DEBUG must be defined if DEBUG_TESTS is defined"
 #endif
 
-#if defined(DEBUG_DIAGNOSTICS) || defined(DEBUG_TESTS)
+#if !defined(DEBUG_DIAGNOSTICS) && !defined(DEBUG_TESTS)
+        if (!crawl_state.script)
+        {
+            end(1, false, "Non-debug Crawl cannot run tests. "
+                "Please use a debug build (defined FULLDEBUG, DEBUG_DIAGNOSTIC "
+                "or DEBUG_TESTS)");
+        }
+#endif
 #ifdef USE_TILE
         init_player_doll();
 #endif
         dgn_reset_level();
         crawl_state.show_more_prompt = false;
-        run_tests();
-        // doesn't return
-#else
-        end(1, false, "Non-debug Crawl cannot run tests. "
-            "Please use a debug build (defined FULLDEBUG, DEBUG_DIAGNOSTIC "
-            "or DEBUG_TESTS)");
-#endif
+        run_tests(); // noreturn
     }
 
     mpr(opening_screen().tostring().c_str());
@@ -213,9 +218,9 @@ static void _zap_los_monsters()
     {
         if (items_also)
         {
-            int item = igrd(*ri);
+            int item = env.igrid(*ri);
 
-            if (item != NON_ITEM && mitm[item].defined())
+            if (item != NON_ITEM && env.item[item].defined())
                 destroy_item(item);
         }
 
@@ -226,6 +231,17 @@ static void _zap_los_monsters()
         dprf("Dismissing %s",
              mon->name(DESC_PLAIN, true).c_str());
 
+        if (mons_is_or_was_unique(*mon))
+        {
+            if (mons_is_elven_twin(mon))
+            {
+                if (monster* sibling = mons_find_elven_twin_of(mon))
+                {
+                    sibling->flags |=MF_HARD_RESET;
+                    monster_die(*sibling, KILL_DISMISSED, NON_MONSTER, true, true);
+                }
+            }
+        }
         // Do a hard reset so the monster's items will be discarded.
         mon->flags |= MF_HARD_RESET;
         // Do a silent, wizard-mode monster_die() just to be extra sure the
@@ -243,6 +259,11 @@ static void _post_init(bool newc)
     // case there are any early game warning messages to be logged.
 #ifdef USE_TILE
     tiles.resize();
+
+#ifdef USE_TILE_WEB
+    if (!newc)
+        sync_last_milestone();
+#endif
 #endif
 
     clua.load_persist();
@@ -259,27 +280,35 @@ static void _post_init(bool newc)
     calc_hp();
     calc_mp();
     shopping_list.refresh();
+    populate_sets_by_obj_type();
 
     run_map_local_preludes();
 
     if (newc)
     {
-        if (Options.pregen_dungeon && crawl_state.game_standard_levelgen())
+        // n.b. temple already generated in setup_game at this point
+        if (Options.pregen_dungeon == level_gen_type::full
+            && crawl_state.game_standard_levelgen())
+        {
             pregen_dungeon(level_id(NUM_BRANCHES, -1));
+        }
 
         you.entering_level = false;
         you.transit_stair = DNGN_UNSEEN;
         you.depth = starting_absdepth() + 1;
-        // Abyssal Knights start out in the Abyss.
-        if (you.chapter == CHAPTER_POCKET_ABYSS)
-            you.where_are_you = BRANCH_ABYSS;
-        else
-            you.where_are_you = root_branch;
+        you.where_are_you = root_branch;
+        if (you.depth > 1)
+            set_shafted();
     }
 
     // XXX: Any invalid level_id should do.
     level_id old_level;
     old_level.branch = NUM_BRANCHES;
+
+#ifdef USE_TILE_WEB
+    if (tiles.get_ui_state() == UI_CRT)
+        tiles.set_ui_state(UI_NORMAL);
+#endif
 
     load_level(you.entering_level ? you.transit_stair :
                you.char_class == JOB_DELVER ? DNGN_STONE_STAIRS_UP_I : DNGN_STONE_STAIRS_DOWN_I,
@@ -287,13 +316,6 @@ static void _post_init(bool newc)
                newc               ? LOAD_START_GAME : LOAD_RESTART_GAME,
                old_level);
 
-    if (newc && you.chapter == CHAPTER_POCKET_ABYSS)
-        generate_abyss();
-
-#ifdef DEBUG_DIAGNOSTICS
-    // Debug compiles display a lot of "hidden" information, so we auto-wiz.
-    you.wizard = true;
-#endif
 #ifdef WIZARD
     // Save-less games are pointless except for tests.
     if (Options.no_save)
@@ -308,25 +330,30 @@ static void _post_init(bool newc)
     you.redraw_armour_class = true;
     you.redraw_evasion      = true;
     you.redraw_experience   = true;
-    you.redraw_quiver       = true;
     you.redraw_noise        = true;
     you.wield_change        = true;
     you.gear_change         = true;
+    quiver::set_needs_redraw();
+
 
     // Start timer on session.
     you.last_keypress_time = chrono::system_clock::now();
 
-#ifdef CLUA_BINDINGS
+    // in principle everything here might be skippable if CLUA_BINDINGS is not
+    // defined, but do it anyways for consistency with normal builds.
     clua.runhook("chk_startgame", "b", newc);
 
     read_init_file(true);
     Options.fixup_options();
+    read_startup_prefs();
+#ifdef USE_TILE_WEB
+    tiles.send_options();
+#endif
 
     // In case Lua changed the character set.
     init_char_table(Options.char_set);
     init_show_table();
     init_monster_symbols();
-#endif
 
 #ifdef USE_TILE
     init_player_doll();
@@ -335,14 +362,22 @@ static void _post_init(bool newc)
 #endif
     update_player_symbol();
 
+    if (newc)
+        quiver::on_newchar(); // needs to happen after init file is read
+
     draw_border();
     new_level(!newc);
     update_turn_count();
     update_vision_range();
-    you.xray_vision = !!you.duration[DUR_SCRYING];
     init_exclusion_los();
-    ash_check_bondage(false);
+    ash_check_bondage();
+    if (you.prev_save_version != Version::Long)
+        check_if_everything_is_identified();
 
+    // XX why is this run now in addition to a related call in load_level?
+    // (There this function is only called on level change, and instead
+    // we run travel_init_load_level; this function is just a call to
+    // travel_init_new_level, which from the comments shouldn't be run on load?)
     trackers_init_new_level();
 
     if (newc) // start a new game
@@ -929,8 +964,9 @@ static void _show_startup_menu(newgame_def& ng_choice,
 {
     unwind_bool no_more(crawl_state.show_more_prompt, false);
 
-#if defined(USE_TILE_LOCAL) && defined(TOUCH_UI)
-    wm->show_keyboard();
+#if defined(USE_TILE_LOCAL) && defined(__ANDROID__)
+    jni_keyboard_control(false);
+    sleep(1); // wait for keyboard
 #elif defined(USE_TILE_WEB)
     tiles_crt_popup show_as_popup;
 #endif

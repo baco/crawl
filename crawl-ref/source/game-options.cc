@@ -48,56 +48,50 @@ maybe_bool read_maybe_bool(const string &field)
 {
     // TODO: check for "maybe" explicitly or something?
     if (field == "true" || field == "1" || field == "yes")
-        return MB_TRUE;
+        return true;
 
     if (field == "false" || field == "0" || field == "no")
-        return MB_FALSE;
+        return false;
 
-    return MB_MAYBE;
+    return maybe_bool::maybe;
 }
 
 bool read_bool(const string &field, bool def_value)
 {
     const maybe_bool result = read_maybe_bool(field);
-    if (result != MB_MAYBE)
-        return tobool(result, false);
+    if (result.is_bool())
+        return bool(result);
 
     Options.report_error("Bad boolean: %s (should be true or false)", field.c_str());
     return def_value;
 }
 
 
-void BoolGameOption::reset() const { value = default_value; }
-
-string BoolGameOption::loadFromString(string field, rc_line_type) const
+string BoolGameOption::loadFromString(const string &field, rc_line_type ltyp)
 {
     string error;
     const maybe_bool result = read_maybe_bool(field);
-    if (result == MB_MAYBE)
+    if (!result.is_bool())
     {
         return make_stringf("Bad %s value: %s (should be true or false)",
                             name().c_str(), field.c_str());
     }
 
-    value = tobool(result, false);
-    return "";
+    value = bool(result);
+    return GameOption::loadFromString(field, ltyp);
 }
 
-void ColourGameOption::reset() const { value = default_value; }
-
-string ColourGameOption::loadFromString(string field, rc_line_type) const
+string ColourGameOption::loadFromString(const string &field, rc_line_type ltyp)
 {
     const int col = str_to_colour(field, -1, true, elemental);
     if (col == -1)
         return make_stringf("Bad %s -- %s\n", name().c_str(), field.c_str());
 
     value = col;
-    return "";
+    return GameOption::loadFromString(field, ltyp);
 }
 
-void CursesGameOption::reset() const { value = default_value; }
-
-string CursesGameOption::loadFromString(string field, rc_line_type) const
+string CursesGameOption::loadFromString(const string &field, rc_line_type ltyp)
 {
     string error;
     const unsigned result = _curses_attribute(field, error);
@@ -105,7 +99,7 @@ string CursesGameOption::loadFromString(string field, rc_line_type) const
         return make_stringf("%s (for %s)", error.c_str(), name().c_str());
 
     value = result;
-    return "";
+    return GameOption::loadFromString(field, ltyp);
 }
 
 #ifdef USE_TILE
@@ -114,42 +108,34 @@ TileColGameOption::TileColGameOption(VColour &val, std::set<std::string> _names,
         : GameOption(_names), value(val),
           default_value(str_to_tile_colour(_default)) { }
 
-void TileColGameOption::reset() const { value = default_value; }
-
-string TileColGameOption::loadFromString(string field, rc_line_type) const
+string TileColGameOption::loadFromString(const string &field, rc_line_type ltyp)
 {
     value = str_to_tile_colour(field);
-    return "";
+    return GameOption::loadFromString(field, ltyp);
 }
 #endif
 
-void IntGameOption::reset() const { value = default_value; }
-
-string IntGameOption::loadFromString(string field, rc_line_type) const
+string IntGameOption::loadFromString(const string &field, rc_line_type ltyp)
 {
     int val = default_value;
     if (!parse_int(field.c_str(), val))
         return make_stringf("Bad %s: \"%s\"", name().c_str(), field.c_str());
     if (val < min_value)
-        return make_stringf("Bad %s: %d < %d", name().c_str(), val, min_value);
+        return make_stringf("Bad %s: %d should be >= %d", name().c_str(), val, min_value);
     if (val > max_value)
-        return make_stringf("Bad %s: %d > %d", name().c_str(), val, max_value);
+        return make_stringf("Bad %s: %d should be <<= %d", name().c_str(), val, max_value);
     value = val;
-    return "";
+    return GameOption::loadFromString(field, ltyp);
 }
 
-void StringGameOption::reset() const { value = default_value; }
-
-string StringGameOption::loadFromString(string field, rc_line_type) const
+string StringGameOption::loadFromString(const string &field, rc_line_type ltyp)
 {
     value = field;
-    return "";
+    return GameOption::loadFromString(field, ltyp);
 }
 
-void ColourThresholdOption::reset() const { value = default_value; }
-
-string ColourThresholdOption::loadFromString(string field,
-                                             rc_line_type ltyp) const
+string ColourThresholdOption::loadFromString(const string &field,
+                                             rc_line_type ltyp)
 {
     string error;
     const colour_thresholds result = parse_colour_thresholds(field, &error);
@@ -171,13 +157,14 @@ string ColourThresholdOption::loadFromString(string field,
                 remove_matching(value, entry);
             break;
         default:
+            // XX should this really be a die?
             die("Unknown rc line type for %s: %d!", name().c_str(), ltyp);
     }
-    return "";
+    return GameOption::loadFromString(field, ltyp);
 }
 
 colour_thresholds
-    ColourThresholdOption::parse_colour_thresholds(string field,
+    ColourThresholdOption::parse_colour_thresholds(const string &field,
                                                    string* error) const
 {
     colour_thresholds result;
@@ -190,6 +177,8 @@ colour_thresholds
             const string failure = make_stringf("Bad %s pair: '%s'",
                                                 name().c_str(),
                                                 pair_str.c_str());
+            // XX should this really be a `die`? I *think* it can only be
+            // triggered by someone setting a bad default in this file...
             if (!error)
                 die("%s", failure.c_str());
             *error = failure;
@@ -205,6 +194,7 @@ colour_thresholds
             const string failure = make_stringf("Bad %s: '%s'",
                                                 name().c_str(),
                                                 colstr.c_str());
+            // see note above
             if (!error)
                 die("%s", failure.c_str());
             *error = failure;

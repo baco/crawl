@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "command-type.h"
 #include "enum.h"
 #include "mon-info.h"
@@ -12,6 +14,8 @@
 #include "targeting-type.h"
 #include "trap-type.h"
 #include "view.h"
+
+using std::vector;
 
 struct describe_info;
 
@@ -46,6 +50,10 @@ public:
     // Update the prompt shown at top.
     virtual void update_top_prompt(string*) {}
 
+    virtual bool targeted() { return true; }
+
+    virtual string get_error() { return ""; }
+
     // Add relevant descriptions to the target status.
     virtual vector<string> get_monster_desc(const monster_info& mi);
 private:
@@ -54,25 +62,7 @@ private:
 public:
     bool just_looking;
     desc_filter get_desc_func; // Function to add relevant descriptions
-};
-
-// output from direction() function:
-class dist
-{
-public:
-    dist();
-
-    bool isMe() const;
-
-    bool isValid;       // valid target chosen?
-    bool isTarget;      // target (true), or direction (false)?
-    bool isEndpoint;    // Does the player want the attack to stop at target?
-    bool isCancel;      // user cancelled (usually <ESC> key)
-    bool choseRay;      // user wants a specific beam
-
-    coord_def target;   // target x,y or logical extension of beam to map edge
-    coord_def delta;    // delta x and y if direction - always -1,0,1
-    ray_def ray;        // ray chosen if necessary
+    maybe_bool needs_path;
 };
 
 struct direction_chooser_args
@@ -85,6 +75,7 @@ struct direction_chooser_args
     bool needs_path;
     bool prefer_farthest;
     bool unrestricted; // for wizmode
+    bool allow_shift_dir;
     confirm_prompt_type self;
     const char *target_prefix;
     string top_prompt;
@@ -103,13 +94,16 @@ struct direction_chooser_args
         needs_path(true),
         prefer_farthest(false),
         unrestricted(false),
+        allow_shift_dir(true),
         self(confirm_prompt_type::prompt),
         target_prefix(nullptr),
         behaviour(nullptr),
         show_floor_desc(false),
         show_boring_feats(true),
         get_desc_func(nullptr),
-        default_place(0, 0) {}
+        default_place(0, 0)
+    { }
+
 };
 
 class direction_chooser;
@@ -131,9 +125,13 @@ class direction_chooser
     friend class UIDirectionChooserView;
 public:
     direction_chooser(dist& moves, const direction_chooser_args& args);
+    bool noninteractive();
     bool choose_direction();
+    string target_description() const;
 
 private:
+    void update_validity();
+
     bool targets_objects() const;
     bool targets_enemies() const;
 
@@ -261,6 +259,7 @@ private:
     int range;                  // Max range to consider
     bool just_looking;
     bool prefer_farthest;       // Prefer to target the farthest monster.
+    bool allow_shift_dir;       // Allow aiming in cardinal directions.
     confirm_prompt_type self;   // What do when aiming at yourself
     const char *target_prefix;  // A string displayed before describing target
     string top_prompt;          // Shown at the top of the message window
@@ -289,6 +288,7 @@ private:
 
     bool unrestricted;
 public:
+    bool force_cancel;
     // TODO: fix the weird behaviour that led to this hack
     bool needs_path;            // Determine a ray while we're at it?
 };
@@ -306,7 +306,7 @@ void direction(dist &moves, const direction_chooser_args& args);
 
 string get_terse_square_desc(const coord_def &gc);
 void terse_describe_square(const coord_def &c, bool in_range = true);
-void full_describe_square(const coord_def &c, bool cleanup = true);
+bool full_describe_square(const coord_def &c, bool cleanup = true);
 void get_square_desc(const coord_def &c, describe_info &inf);
 
 void describe_floor();
@@ -329,5 +329,10 @@ vector<dungeon_feature_type> features_by_desc(const base_pattern &pattern);
 void full_describe_view();
 void do_look_around(const coord_def &whence = coord_def(0, 0));
 bool get_look_position(coord_def *c);
+
+#ifdef USE_TILE
+bool targeting_mouse_select(const coord_def &gc);
+bool targeting_mouse_move(const coord_def &gc);
+#endif
 
 extern const struct coord_def Compass[9];

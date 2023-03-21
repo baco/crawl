@@ -152,6 +152,10 @@ Ce sort libère une massive décharge électrique qui passe d'une cible à l'aut
 jusqu'à ce qu'elle touche le sol. Elle peut se mettre à la terre de façon
 inoffensive s'il n'y a pas de cibles suffisamment  proche au sorcier.
 %%%%
+Charm spell
+
+Ce sort force une créature hostile à se battre à vos côtés pour un moment.
+%%%%
 Cold Breath spell
 
 Cette créature peut cracher un souffle concentré d'air glacial. Il peut
@@ -177,12 +181,6 @@ contrôlable.
 Conjure Flame spell
 
 Ce sort crée une colonne de flammes ronflantes.
-%%%%
-Controlled Blink spell
-
-Ce sort permet une translocation à courte distance, avec un contrôle précis.
-Soyez conscient que la téléportation contrôlée entrainera une contamination du
-sorcier par de l'énergie magique.
 %%%%
 Corona spell
 
@@ -267,10 +265,6 @@ Ce sort transforme temporairement le sorcier en un grand dragon cracheur de
 feu. Les sorciers draconiens conserveront leur couleur et leur souffle initial
 une fois transformés.
 %%%%
-Enslavement spell
-
-Ce sort force une créature hostile à se battre à vos côtés pour un moment.
-%%%%
 Ensnare spell
 
 Ce sortilège provoque l'envoie, à partir du lanceur de sort, d'une substance
@@ -304,10 +298,6 @@ Fireball spell
 
 Ce sort expédie un missile de feu explosif. Ce sortilège n'a aucune coût
 additionnel de niveaux de sorts si le sorcier connait Boule de Feu Retardée.
-%%%%
-Flame Tongue spell
-
-Ce sort crée une courte rafale de flammes.
 %%%%
 Flight spell
 

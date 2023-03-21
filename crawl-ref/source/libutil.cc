@@ -380,6 +380,7 @@ bool valid_cursor_pos(int x, int y, GotoRegion region)
     return x >= 1 && y >= 1 && x <= sz.x && y <= sz.y;
 }
 
+#ifndef TARGET_OS_WINDOWS
 static GotoRegion _find_correct_region()
 {
     for (int r = GOTO_MSG; r < GOTO_MLIST; r++)
@@ -393,6 +394,7 @@ static GotoRegion _find_correct_region()
     // should probably fail for entirely invalid coords somehow
     return GOTO_CRT;
 }
+#endif
 
 void assert_valid_cursor_pos()
 {
@@ -485,20 +487,19 @@ mouse_mode mouse_control::ms_current_mode = MOUSE_MODE_NORMAL;
 
 mouse_control::mouse_control(mouse_mode mode)
 {
+#ifdef USE_TILE_WEB
+    // relies on being called before ms_current_mode is updated
+    tiles.update_input_mode(mode);
+#endif
+
     m_previous_mode = ms_current_mode;
     ms_current_mode = mode;
-
-#ifdef USE_TILE_WEB
-    if (m_previous_mode != ms_current_mode)
-        tiles.update_input_mode(mode);
-#endif
 }
 
 mouse_control::~mouse_control()
 {
 #ifdef USE_TILE_WEB
-    if (m_previous_mode != ms_current_mode)
-        tiles.update_input_mode(m_previous_mode);
+    tiles.update_input_mode(m_previous_mode);
 #endif
     ms_current_mode = m_previous_mode;
 }
@@ -645,16 +646,24 @@ void text_popup(const string& text, const wchar_t *caption)
     MessageBoxW(0, OUTW(text), caption, MB_OK);
 }
 #else
-#ifndef USE_TILE_LOCAL // is curses in use?
-
 /* [ds] This SIGHUP handling is primitive and far from safe, but it
  * should be better than nothing. Feel free to get rigorous on this.
  */
-static void handle_hangup(int)
+void handle_hangup(int)
 {
+#ifdef USE_TILE_LOCAL
+    // Losing the controlling terminal doesn't matter, we continue and will
+    // shut down only when the actual window is closed.
+    // But, in headless mode, there's no window, so we do want to react to hup.
+    if (!in_headless_mode())
+        return;
+
+#endif
+
     if (crawl_state.seen_hups++)
         return;
 
+#ifndef USE_TILE_LOCAL // is curses in use?
     // When using Curses, closing stdin will cause any Curses call blocking
     // on key-presses to immediately return, including any call that was
     // still blocking in the main thread when the HUP signal was caught.
@@ -667,8 +676,8 @@ static void handle_hangup(int)
     // if it were a plain kernel-side descriptor, calling functions such
     // as select() or read() is undefined behaviour.
     fclose(stdin);
-}
 # endif
+}
 
 void init_signals()
 {
@@ -684,16 +693,19 @@ void init_signals()
 #endif
 
 #ifdef SIGINT
+#ifdef USE_TILE_LOCAL
+    // for local tiles, headless mode is checked in the signal handler, so
+    // we want to unconditionally add the handler here to get ctrl-c. For
+    // console this is handled somewhat differently; see _headless_startup().
+    signal(SIGINT, handle_hangup);
+#else
     signal(SIGINT, SIG_IGN);
 #endif
+#endif
 
-# ifdef USE_TILE_LOCAL
-    // Losing the controlling terminal doesn't matter, we continue and will
-    // shut down only when the actual window is closed.
-    signal(SIGHUP, SIG_IGN);
-# else
+#ifdef SIGHUP
     signal(SIGHUP, handle_hangup);
-# endif
+#endif
 #endif
 
 #ifdef DGL_ENABLE_CORE_DUMP
@@ -711,6 +723,7 @@ void release_cli_signals()
 #ifdef USE_UNIX_SIGNALS
     signal(SIGQUIT, SIG_DFL);
     signal(SIGINT, SIG_DFL);
+    signal(SIGHUP, SIG_DFL);
 #endif
 }
 

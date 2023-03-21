@@ -1,9 +1,7 @@
+#pragma once
+
 #include <sys/types.h>
 #include <sys/param.h>
-
-#ifdef __ANDROID__
-  #include <sys/endian.h>
-#endif
 
 #ifdef __sun
 # include <sys/isa_defs.h>
@@ -14,6 +12,10 @@
 # else
 #  define BYTE_ORDER BIG_ENDIAN
 # endif
+#endif
+
+#ifdef __HAIKU__
+#include <endian.h>
 #endif
 
 #ifndef htole32

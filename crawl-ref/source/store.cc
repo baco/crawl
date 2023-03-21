@@ -13,6 +13,7 @@
 #include "dlua.h"
 #include "monster.h"
 #include "stringutil.h"
+#include "tag-version.h"
 
 // These tend to be called from tight loops, and C++ method calls don't
 // get optimized away except for LTO -fwhole-program builds, so merely
@@ -1760,7 +1761,7 @@ static bool _cmp(string a, string b)
 
 void dump_prop_accesses()
 {
-    FILE *f = fopen("prop_accesses", "w");
+    FILE *f = fopen_u("prop_accesses", "w");
     ASSERT(f);
 
     vector<string> props;

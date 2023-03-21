@@ -6,6 +6,7 @@
 #include "item-name.h"
 #include "player.h"
 #include "stringutil.h"
+#include "tag-version.h"
 #include "travel.h"
 
 FixedVector<level_id, NUM_BRANCHES> brentry;
@@ -58,6 +59,7 @@ static const branch_type logical_branch_order[] = {
     BRANCH_WIZLAB,
     BRANCH_DESOLATION,
     BRANCH_GAUNTLET,
+    BRANCH_ARENA,
 };
 COMPILE_CHECK(ARRAYSZ(logical_branch_order) == NUM_BRANCHES);
 
@@ -66,6 +68,7 @@ static const branch_type danger_branch_order[] = {
     BRANCH_TEMPLE,
     BRANCH_BAZAAR,
     BRANCH_TROVE,
+    BRANCH_ARENA,
     BRANCH_DUNGEON,
     BRANCH_SEWER,
     BRANCH_OSSUARY,
@@ -292,17 +295,6 @@ branch_type parent_branch(branch_type branch)
     return branches[branch].parent_branch;
 }
 
-int runes_for_branch(branch_type branch)
-{
-    switch (branch)
-    {
-    case BRANCH_VAULTS:   return VAULTS_ENTRY_RUNES;
-    case BRANCH_ZIGGURAT: return ZIG_ENTRY_RUNES;
-    case BRANCH_ZOT:      return ZOT_ENTRY_RUNES;
-    default:              return 0;
-    }
-}
-
 /**
  * Describe the ambient noise level in this branch.
  *
@@ -317,16 +309,9 @@ string branch_noise_desc(branch_type br)
     {
         desc = "This branch is ";
         if (noise > 0)
-        {
-            desc += make_stringf("very noisy, and so sound travels much less "
-                                 "far.");
-        }
+            desc += "noisy: sounds don't travel as far here.";
         else
-        {
-            desc += make_stringf("unnaturally silent, and so sound travels "
-                                 "much further.");
-
-        }
+            desc += "unnaturally silent: sounds travel farther here.";
     }
 
     return desc;
@@ -367,4 +352,21 @@ branch_type rune_location(rune_type rune)
             return br.id;
 
     return NUM_BRANCHES;
+}
+
+static const string VAULTS_LOCKED_KEY = "LOCKED_VAULTS_ENTRANCE";
+
+bool vaults_is_locked()
+{
+    return you.props.exists(VAULTS_LOCKED_KEY);
+}
+
+void lock_vaults()
+{
+    you.props[VAULTS_LOCKED_KEY] = true;
+}
+
+void unlock_vaults()
+{
+    you.props.erase(VAULTS_LOCKED_KEY);
 }

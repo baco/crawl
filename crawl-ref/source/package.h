@@ -3,13 +3,20 @@
 #define USE_ZLIB
 
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 #ifdef USE_ZLIB
 #include <zlib.h>
 #endif
 
-#if !defined(DGAMELAUNCH) && !defined(__ANDROID__) && !defined(DEBUG_DIAGNOSTICS)
+using std::map;
+using std::pair;
+using std::set;
+using std::string;
+using std::vector;
+
+#if !defined(DGAMELAUNCH) && !defined(DEBUG_DIAGNOSTICS)
 #define DO_FSYNC
 #endif
 
@@ -76,6 +83,7 @@ public:
     vector<string> list_chunks();
     void abort();
     void unlink();
+    string get_filename() { return filename; }
 
     // statistics
     plen_t get_slack();

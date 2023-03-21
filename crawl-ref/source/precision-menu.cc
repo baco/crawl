@@ -96,10 +96,6 @@ bool PrecisionMenu::process_key(int key)
         }
     }
 
-#ifdef TOUCH_UI
-    if (key == CK_TOUCH_DUMMY)
-        return true; // mouse click in title area, which wouldn't usually be handled
-#endif
     // Handle CK_MOUSE_CLICK separately
     // This signifies a menu ending action
     if (key == CK_MOUSE_CLICK)
@@ -910,8 +906,9 @@ void FormattedTextItem::render()
 #ifdef USE_TILE_LOCAL
 TextTileItem::TextTileItem()
 {
+    const ImageManager *image = tiles.get_image_manager();
     for (int i = 0; i < TEX_MAX; i++)
-        m_tile_buf[i].set_tex(&tiles.get_image_manager()->m_textures[i]);
+        m_tile_buf[i].set_tex(&image->get_texture(static_cast<TextureID>(i)));
     m_unit_height_pixels = max<int>(m_unit_height_pixels, TILE_Y);
 }
 

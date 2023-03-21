@@ -3,6 +3,7 @@
 #include "actor.h"
 
 #include "coord.h"
+#include "god-passive.h"
 #include "los-type.h"
 #include "losglobal.h"
 #include "state.h"
@@ -28,7 +29,7 @@ bool player::see_cell(const coord_def &p) const
         return true;
     if (!in_bounds(pos()))
         return false; // A non-arena player at (0,0) can't see anything.
-    if (xray_vision)
+    if (wizard_vision)
         return (pos() - p).rdist() <= current_vision;
     return actor::see_cell(p);
 }
@@ -51,8 +52,6 @@ bool player::trans_wall_blocking(const coord_def &p) const
 bool player::can_see(const actor& a) const
 {
     if (crawl_state.game_is_arena() || crawl_state.arena_suspended)
-        return see_cell(a.pos());
-    else if (xray_vision)
         return see_cell(a.pos());
     else
         return actor::can_see(a);

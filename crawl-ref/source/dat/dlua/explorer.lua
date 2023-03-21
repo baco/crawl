@@ -7,11 +7,11 @@ util.namespace('explorer')
 
 -- matches pregeneration order
 explorer.generation_order = {
+                "Temple",
                 "D:1",
                 "D:2", "D:3", "D:4", "D:5", "D:6", "D:7", "D:8", "D:9",
                 "D:10", "D:11", "D:12", "D:13", "D:14", "D:15",
-                "Temple",
-                "Lair:1", "Lair:2", "Lair:3", "Lair:4", "Lair:5", "Lair:6",
+                "Lair:1", "Lair:2", "Lair:3", "Lair:4", "Lair:5",
                 "Orc:1", "Orc:2",
                 "Spider:1", "Spider:2", "Spider:3", "Spider:4",
                 "Snake:1", "Snake:2", "Snake:3", "Snake:4",
@@ -19,7 +19,7 @@ explorer.generation_order = {
                 "Swamp:1", "Swamp:2", "Swamp:3", "Swamp:4",
                 "Vaults:1", "Vaults:2", "Vaults:3", "Vaults:4", "Vaults:5",
                 "Crypt:1", "Crypt:2", "Crypt:3",
-                "Depths:1", "Depths:2", "Depths:3", "Depths:4", "Depths:5",
+                "Depths:1", "Depths:2", "Depths:3", "Depths:4",
                 "Hell",
                 "Elf:1", "Elf:2", "Elf:3",
                 "Zot:1", "Zot:2", "Zot:3", "Zot:4", "Zot:5",
@@ -212,11 +212,7 @@ function explorer.feat_interesting(feat_name)
     if string.find(feat_name, "altar_") == 1 then
         return true
     elseif string.find(feat_name, "enter_") == 1 then -- could be more selective
-        if explorer.in_hell() then
-            return feat_name ~= "enter_hell"
-        else
-            return true
-        end
+        return true
     elseif feat_name == "transporter" or string.find(feat_name, "runed_") then
         return true
     end
@@ -387,8 +383,9 @@ explorer.catalog_names =    {vaults    = "   Vaults: ",
 -- fairly subjective, some of these should probably be relative to depth
 explorer.dangerous_monsters = {
         "ancient lich",
+        "dread lich",
         "orb of fire",
-        "greater mummy",
+        "royal mummy",
         "Hell Sentinel",
         "Ice Fiend",
         "Brimstone Fiend",
@@ -467,6 +464,9 @@ function explorer.catalog_current_place(lvl, to_show, hide_empty)
     if not explorer.quiet then
         h_l = { }
         for _, cat in ipairs(to_show) do
+            if crawl.seen_hups() > 0 then
+                break
+            end
             h_l[#h_l+1] = explorer.make_highlight(highlights, cat, hide_empty)
         end
         h_l = util.filter(function (a) return #a > 0 end, h_l)
@@ -497,9 +497,16 @@ end
 
 function explorer.catalog_portals(i, lvl, cats_to_show, show_level_fun)
     local result = { }
+    current_where = you.where()
     for j,port in ipairs(explorer.portal_order) do
+        if crawl.seen_hups() > 0 then
+            break
+        end
         if you.where() == dgn.level_name(dgn.br_entrance(port)) then
             result[port] = explorer.catalog_place(-j, port, cats_to_show, show_level_fun)
+            -- restore the level, in case there are multiple portals from a
+            -- single level
+            debug.goto_place(current_where)
         end
     end
     return result
@@ -514,20 +521,16 @@ function explorer.catalog_dungeon(max_depth, cats_to_show, show_level_fun)
     for i,lvl in ipairs(explorer.generation_order) do
         if i > max_depth then break end
         result[lvl] = explorer.catalog_place(i, lvl, cats_to_show, show_level_fun)
-        local portals = explorer.catalog_portals(i, lvl, cats_to_show, show_level_fun)
-        for port, cat in pairs(portals) do
-            result[port] = cat
+        if crawl.seen_hups() > 0 then
+            break
         end
-        -- if (dgn.br_exists(string.match(lvl, "[^:]+"))) then
-        --     debug.goto_place(lvl)
-        --     debug.generate_level()
-        --     local old_quiet = explorer.quiet
-        --     if show_level_fun ~= nil and not show_level_fun(i) then
-        --         explorer.quiet = true
-        --     end
-        --     result[lvl] = explorer.catalog_current_place(lvl, cats_to_show, true)
-        --     explorer.quiet = old_quiet
-        -- end
+        if result[lvl] ~= nil then
+            -- only check portals if the place was built
+            local portals = explorer.catalog_portals(i, lvl, cats_to_show, show_level_fun)
+            for port, cat in pairs(portals) do
+                result[port] = cat
+            end
+        end
     end
     return result
 end
@@ -540,6 +543,8 @@ function explorer.catalog_seed(seed, depth, cats, show_level_fun, describe_cat)
         out("Catalog for seed " .. seed ..
             " (" .. table.concat(cats, ", ") .. "):")
     end
+    -- this will return early on hup, so the caller should consider checking
+    -- for hups and printing an appropriate message
     return explorer.catalog_dungeon(depth, cats, show_level_fun)
 end
 
@@ -560,6 +565,9 @@ function explorer.catalog_seeds(seeds, depth, cats, show_level_fun, describe_cat
         cats = util.set(explorer.available_cats)
     end
     for _, i in ipairs(seeds) do
+        if crawl.seen_hups() > 0 then
+            break
+        end
         if _ > 1 then out("") end -- generates a newline for stderr output
         explorer.catalog_seed(i, depth, cats, show_level_fun, describe_cat)
     end

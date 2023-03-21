@@ -12,7 +12,7 @@ the options about rebasing so you avoid making unnecessary merge commits.
 
 ## Team Discussion and Coordination
 
-Most development discussion happens on IRC in the \#\#crawl-dev on Freenode, so
+Most development discussion happens on IRC in the \#crawl-dev on Libera, so
 it's good to join and participate in that channel. Use the !tell command
 through Sequell to leave IRC messages to other team or community members you’re
 working with. The channel is also [*logged*](http://s-z.org/crawl-dev/#), if
@@ -43,7 +43,7 @@ service like github gist, dpaste, sprunge, or pastebin to share code snippets.
 
 ## Documentation and Formatting
 
-The [*coding conventions*](crawl-ref/docs/develop/coding_conventions.txt)
+The [*coding conventions*](../coding_conventions.md)
 document describes how Crawl’s C++ source code should be formatted. For
 documenting C++ code, we use
 [*Doxygen*](http://www.stack.nl/~dimitri/doxygen/index.html) comments and the
@@ -52,7 +52,7 @@ JavaDoc style, and example of which you can see
 all new functions and data structures in this way, but not required.
 
 Significant changes that affect the gameplay should be documented in the
-[*changelog*](crawl-ref/docs/changelog.txt). We try to be brief in
+[*changelog*](../../changelog.txt). We try to be brief in
 these entries, giving players a simple description of the change without
 technical detail. It’s good to read previous entries or ask a team member if
 you’re not sure about including an item or how to word it.
@@ -99,7 +99,7 @@ Although there isn’t a fixed schedule, releases tend to happen every 6 months
 and are followed by a two week *online tournament* based on the released
 version. The steps for branching and tagging the release in git as well as
 building the release packages are described in the [*release
-guide*](crawl-ref/docs/develop/release/guide.txt). The work for release and
+guide*](../release/guide.txt). The work for release and
 tournament is usually done by several people who help out with specific
 portions of the process from release to release. Ask other team members if
 you’d like to help out.

@@ -10,6 +10,7 @@
 #include <cmath>
 
 #include "areas.h"
+#include "art-enum.h"
 #include "coordit.h" // radius_iterator
 #include "env.h"
 #include "god-passive.h"
@@ -18,8 +19,10 @@
 #include "libutil.h"
 #include "message.h"
 #include "output.h"
+#include "player.h"
 #include "prompt.h"
 #include "religion.h"
+#include "spl-other.h"
 #include "spl-util.h"
 #include "stringutil.h"
 #include "terrain.h"
@@ -34,9 +37,9 @@ spret cast_deaths_door(int pow, bool fail)
     mprf(MSGCH_SOUND, "You seem to hear sand running through an hourglass...");
 
     you.set_duration(DUR_DEATHS_DOOR, 10 + random2avg(13, 3)
-                                       + (random2(pow) / 10));
+                                       + div_rand_round(random2(pow), 10));
 
-    const int hp = max(calc_spell_power(SPELL_DEATHS_DOOR, true) / 10, 1);
+    const int hp = max(div_rand_round(pow, 10), 1);
     you.attribute[ATTR_DEATHS_DOOR_HP] = hp;
     set_hp(hp);
 
@@ -68,6 +71,26 @@ spret ice_armour(int pow, bool fail)
     you.redraw_armour_class = true;
 
     return spret::success;
+}
+
+void fiery_armour()
+{
+    if (you.duration[DUR_FIERY_ARMOUR])
+        mpr("Your cloak of flame flares fiercely!");
+    else if (you.duration[DUR_ICY_ARMOUR]
+             || you.form == transformation::ice_beast
+             || player_icemail_armour_class())
+    {
+        mprf("A sizzling cloak of flame settles atop your ic%s.",
+             you.form == transformation::ice_beast ? "e" : "y armour");
+        // TODO: add corresponding inverse message for casting ozo's etc
+        // while DUR_FIERY_ARMOUR is active (maybe..?)
+    }
+    else
+        mpr("A protective cloak of flame settles atop you.");
+
+    you.increase_duration(DUR_FIERY_ARMOUR, random_range(110, 140), 1500);
+    you.redraw_armour_class = true;
 }
 
 spret cast_revivification(int pow, bool fail)
@@ -120,7 +143,7 @@ int cast_selective_amnesia(const string &pre_msg)
     int slot;
 
     // Pick a spell to forget.
-    keyin = list_spells(false, false, false, "Forget which spell?");
+    keyin = list_spells(false, false, false, "forget");
     redraw_screen();
     update_screen();
 
@@ -136,7 +159,7 @@ int cast_selective_amnesia(const string &pre_msg)
                     "Forget %s, freeing %d spell level%s for a total of %d?%s",
                     spell_title(spell), spell_levels_required(spell),
                     spell_levels_required(spell) != 1 ? "s" : "",
-                    player_spell_levels() + spell_levels_required(spell),
+                    player_spell_levels(false) + spell_levels_required(spell),
                     in_library ? "" : " This spell is not in your library!");
 
             if (yesno(prompt.c_str(), in_library, 'n', false))
@@ -167,12 +190,23 @@ spret cast_wereblood(int pow, bool fail)
     return spret::success;
 }
 
+int silence_min_range(int pow)
+{
+    return shrinking_aoe_range((20 + pow/5) * BASELINE_DELAY);
+}
+
+int silence_max_range(int pow)
+{
+    return shrinking_aoe_range((19 + pow/5 + pow/2) * BASELINE_DELAY);
+}
+
 spret cast_silence(int pow, bool fail)
 {
     fail_check();
     mpr("A profound silence engulfs you.");
 
-    you.increase_duration(DUR_SILENCE, 10 + pow/4 + random2avg(pow/2, 2), 100);
+    you.increase_duration(DUR_SILENCE, 20 + div_rand_round(pow,5)
+                            + random2avg(div_rand_round(pow,2), 2), 100);
     invalidate_agrid(true);
 
     if (you.beheld())
@@ -180,6 +214,11 @@ spret cast_silence(int pow, bool fail)
 
     learned_something_new(HINT_YOU_SILENCE);
     return spret::success;
+}
+
+int liquefaction_max_range(int pow)
+{
+    return shrinking_aoe_range((9 + pow) * BASELINE_DELAY);
 }
 
 spret cast_liquefaction(int pow, bool fail)
@@ -207,30 +246,4 @@ spret cast_transform(int pow, transformation which_trans, bool fail)
     fail_check();
     transform(pow, which_trans);
     return spret::success;
-}
-
-spret cast_noxious_bog(int pow, bool fail)
-{
-    fail_check();
-    flash_view_delay(UA_PLAYER, LIGHTGREEN, 100);
-
-    if (!you.duration[DUR_NOXIOUS_BOG])
-        mpr("You begin spewing toxic sludge!");
-    else
-        mpr("Your toxic spew intensifies!");
-
-    you.props[NOXIOUS_BOG_KEY] = pow;
-    you.increase_duration(DUR_NOXIOUS_BOG, 5 + random2(pow / 10), 24);
-    return spret::success;
-}
-
-void noxious_bog_cell(coord_def p)
-{
-    if (grd(p) == DNGN_DEEP_WATER || grd(p) == DNGN_LAVA)
-        return;
-
-    const int turns = 10
-                    + random2avg(you.props[NOXIOUS_BOG_KEY].get_int() / 20, 2);
-    temp_change_terrain(p, DNGN_TOXIC_BOG, turns * BASELINE_DELAY,
-            TERRAIN_CHANGE_BOG, you.as_monster());
 }

@@ -29,7 +29,7 @@ Using the arena to test problems with specific monsters is rather easy:
 
     crawl -arena "problem monster v problem monster"
 
-For specific ego items is not much harder. Say you had a problem with chaos
+For specific ego items, it's not much harder. Say you had a problem with chaos
 branded melee items. You could do
 
     crawl -arena "10 vault guard; long sword ego:chaos v
@@ -149,6 +149,6 @@ example:
     crawl -arena "arena:smoke random v random"
 
 will cause the monsters to fight in an arena which is filled with smoke. The
-available alternate terrains are in source/dat/arena.des. If an arena you
+available terrains are in source/dat/des/builder/arena.des. If an arena you
 want is tagged with "arena_foo" in the des file, then you put "arena:foo" on
 the command line.

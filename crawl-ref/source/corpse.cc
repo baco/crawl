@@ -74,7 +74,7 @@ void rot_corpses(int elapsedTime)
 
     for (int mitm_index = 0; mitm_index < MAX_ITEMS; ++mitm_index)
     {
-        item_def &it = mitm[mitm_index];
+        item_def &it = env.item[mitm_index];
 
         if (is_shop_item(it) || !_item_needs_rot_check(it))
             continue;
@@ -104,31 +104,4 @@ bool turn_corpse_into_skeleton(item_def &item)
     item.rnd = 1 + random2(255); // not sure this is necessary, but...
     item.props.erase(FORCED_ITEM_COLOUR_KEY);
     return true;
-}
-
-static void _bleed_monster_corpse(const item_def &corpse)
-{
-    const coord_def pos = item_pos(corpse);
-    if (!pos.origin())
-    {
-        const int max_chunks = max_corpse_chunks(corpse.mon_type);
-        bleed_onto_floor(pos, corpse.mon_type, max_chunks, true);
-    }
-}
-
-void butcher_corpse(item_def &item, bool skeleton)
-{
-    item_was_destroyed(item);
-    if (!mons_skeleton(item.mon_type))
-        skeleton = false;
-    if (skeleton)
-    {
-        _bleed_monster_corpse(item);
-        turn_corpse_into_skeleton(item);
-    }
-    else
-    {
-        _bleed_monster_corpse(item);
-        destroy_item(item.index());
-    }
 }

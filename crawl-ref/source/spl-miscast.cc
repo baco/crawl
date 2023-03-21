@@ -202,11 +202,6 @@ static const map<spschool, miscast_datum> miscast_effects = {
             },
             [] (actor& target, actor* source, miscast_source_info /*mc_info*/,
                 int dam, string /*cause*/) {
-                if (target.is_player())
-                    debuff_player();
-                else
-                    debuff_monster(*target.as_monster());
-
                 target.slow_down(source, dam);
             }
         },
@@ -260,7 +255,9 @@ static const map<spschool, miscast_datum> miscast_effects = {
                             break;
                         case ATT_GOOD_NEUTRAL:
                         case ATT_NEUTRAL:
-                        case ATT_STRICT_NEUTRAL:
+#if TAG_MAJOR_VERSION == 34
+                    case ATT_OLD_STRICT_NEUTRAL:
+#endif
                             data.behaviour = BEH_NEUTRAL;
                         break;
                     }
@@ -352,9 +349,15 @@ static const map<spschool, miscast_datum> miscast_effects = {
                 int dam, string /*cause*/) {
 
                 if (target.is_player())
-                    you.increase_duration(DUR_DIMENSION_ANCHOR, dam, dam);
+                {
+                    // number arbitrarily chosen & needs more playtesting
+                    const int dur = div_rand_round(dam, 2);
+                    you.set_duration(DUR_LOCKED_DOWN, dur, dur,
+                                     "You are magically locked in place.");
+                }
                 else
                 {
+                    // TODO: monster version? something else?
                      target.as_monster()->add_ench(
                          mon_enchant(ENCH_DIMENSION_ANCHOR,
                                      0, source, dam * BASELINE_DELAY));
@@ -594,6 +597,14 @@ void miscast_effect(spell_type spell, int fail)
         if (spell_typematch(spell, bit))
             school_list.push_back(bit);
 
+    // only monster spells should lack schools altogether, and they should
+    // only be castable under wizmode
+    ASSERT(you.wizard && (get_spell_flags(spell) & spflag::monster)
+            || !school_list.empty());
+
+    if (school_list.empty())
+        return;
+
     spschool school = *random_iterator(school_list);
 
     if (school == spschool::necromancy
@@ -627,6 +638,14 @@ void miscast_effect(actor& target, actor* source, miscast_source_info mc_info,
 
     if (school == spschool::random)
         school = spschools_type::exponent(random2(SPSCHOOL_LAST_EXPONENT + 1));
+
+    // Don't summon friendly nameless horrors if they would always turn hostile.
+    if (source && source->is_player()
+        && school == spschool::summoning
+        && you.allies_forbidden())
+    {
+        return;
+    }
 
     miscast_datum effect =  miscast_effects.find(school)->second;
 

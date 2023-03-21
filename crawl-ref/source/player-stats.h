@@ -1,6 +1,7 @@
 #pragma once
 
 #include "duration-type.h"
+#include "mutation-type.h"
 #include "stat-type.h"
 
 enum stat_desc_type
@@ -21,8 +22,6 @@ void modify_stat(stat_type which_stat, int amount, bool suppress_msg);
 void notify_stat_change(stat_type which_stat, int amount, bool suppress_msg);
 void notify_stat_change();
 
-void jiyva_stat_action();
-
 int stat_loss_roll();
 bool lose_stat(stat_type which_stat, int stat_loss, bool force = false);
 
@@ -33,5 +32,6 @@ bool restore_stat(stat_type which_stat, int stat_gain,
 duration_type stat_zero_duration(stat_type stat);
 bool have_stat_zero();
 void update_stat_zero(int time);
+bool mutation_causes_stat_zero(mutation_type mut);
 
 int innate_stat(stat_type s);

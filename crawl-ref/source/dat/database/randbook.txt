@@ -54,33 +54,126 @@ book appearance
 %%%%
 book_noun
 
-Tome
-
-Grimoire
-
 Almanac
 
-Volume
+Anthology
+
+Atlas
+
+w:5
+Book
+
+Catalogue
+
+Codex
 
 Compendium
 
+Compilation
+
+w:5
+Cyclopedia
+
+Directory
+
+Elucidation
+
+w:5
+Encyclopedia
+
+Folio
+
+Grimoire
+
 Handbook
 
+w:5
+Incunable
+
+w:5
 Incunabulum
+
+Octavo
+
+Omnibus
 
 Papyrus
 
-Catalogue
+Parchment
+
+Precepts
+
+Quarto
+
+Secrets
+
+Spellbook
+
+Tome
+
+Vellum
+
+Volume
 %%%%
 _book_noun_on_
 
-Guide
+Annotations
 
 Collected Works
 
+Commentary
+
+Discourse
+
+Discursus
+
 Disquisition
 
+Dissertation
+
+Enchiridion
+
+Essays
+
+Excursus
+
+Exposition
+
+Guide
+
+Guidebook
+
+Information
+
+Lectures
+
+Lessons
+
+Meditations
+
+Monograph
+
+Notes
+
+Opusculum
+
 Reference Book
+
+Teachings
+
+Textbook
+
+Thoughts
+
+Tractate
+
+Treatise
+
+Vademecum
+
+Verses
+
+Writings
 %%%%
 # C++: discipline books, including Kiku's gifts
 book_name
@@ -179,86 +272,265 @@ w:3
 %%%%
 _book_adjective_
 
-glistering
-
-sparkling
-
-levitating
-
-droning
-
-conspicuous
-
-inconspicuous
-
-colourful
-
-graven
-
-engraved
+ancient
 
 antique
-
-yellowed
-
-rare
 
 black
 
 blackened
 
+clothbound
+
+colourful
+
+conspicuous
+
+curious
+
+curling
+
+decrepit
+
+disorganized
+
+dog-eared
+
+droning
+
+dusty
+
+embossed
+
+engraved
+
+exquisite
+
+faded
+
+foxed
+
+fuliginous
+
+fusty
+
+gaudy
+
+glistering
+
+glossy
+
+graven
+
+grimy
+
+humming
+
+illuminated
+
+inconspicuous
+
+innocuous
+
+leatherbound
+
+levitating
+
+lithographed
+
+loosely-bound
+
+moldy
+
+moth-eaten
+
+mumbling
+
+murmuring
+
+odd
+
+parchment
+
+peculiar
+
+quavering
+
+quivering
+
+ragged
+
+rare
+
+resplendent
+
+shiny
+
+sooty
+
+sparkling
+
+strange
+
+tattered
+
+thrumming
+
 torn
+
+uncut
+
+unusual
+
+upside-down
+
+vellum
+
+vibrant
+
+vibrating
+
+weird
+
+well-preserved
+
+whispering
+
+worn
+
+yellowed
 %%%%
 _the_book_magic_
 
-w:9
-# capitalise later as needed
-the Arcane Arts
+the @_occult_adjective_@ Arts
 
-w:1
+the @_occult_adjective_@ Truths
+
 the Hermit's Heritage
 
-w:90
+the Histories of Mysteries
+
+the Mind of the Magus
+
+w:5
+the Power of Words
+
+the Rites and Rhymes
+
+the Wizard's Wisdom
+
+w:5
+the Words of Power
+
+w:300
 @_book_magic_@
 %%%%
 _book_magic_
 
-Magic
-
-Theurgy
-
-Thaumaturgy
+@_occult_adjective_@ Knowledge
 
 w:5
 Casting
 
-w:5
-Spellcasting
+Gnosis
 
-Wizardry
+Hermeneutics
+
+Hermetics
+
+w:1
+Hocus-Pocus
+
+Incantation
+
+Magic
+
+Mysticism
 
 Sorcery
 
-Witchcraft
-
-Witchery
+w:5
+Spellcasting
 
 Spellcraft
 
 Spellweaving
 
-w:5
-Secret Knowledge
+Spellwork
+
+Thaumaturgy
+
+Theurgy
+
+Willworking
+
+Witchcraft
+
+Witchery
+
+Wizarding
+
+Wizardry
+%%%%
+_occult_adjective_
+
+# putting this on a book is technically an oxymoron but that makes it funny
+Acroamatic
+
+Arcane
 
 w:5
-Rites and Rhymes
+Awakened
+
+Cryptic
+
+Deep
+
+Esoteric
+
+Forbidden
+
+Hermetic
+
+Hidden
+
+Lost
+
+Magical
+
+Mysterious
 
 w:5
-Hermeneutics
+Mystic
+
+w:5
+Mystical
+
+Occult
+
+w:5
+Revealed
+
+Ritual
+
+Secret
+
+Sibylline
+
+Veiled
 %%%%
 _beginners_
 
 Beginners
+
+w:5
+Initiates
+
+w:5
+Apprentices
+
+w:5
+Learners
 
 w:5
 Neophytes
@@ -267,102 +539,236 @@ w:5
 Novices
 
 w:3
+Amateurs
+
+w:3
 Rookies
 
 w:2
 Absolute Beginners
 
 w:1
+Ex-Berserkers
+
+w:1
 Dummies
 %%%%
+##################
 # level 1
 starting level book
-
-@_the_book_magic_@ for @_beginners_@
 
 w:2
 @_the_book_magic_@ 101
 
-A Beginning Course on @_the_book_magic_@
+@_the_book_magic_@ for @_beginners_@
 
 @_the_book_magic_@, Part One
 
+A Beginning Course on @_the_book_magic_@
+
+A Tutorial on @_the_book_magic_@
+
+w:5
+An Initiation into @_the_book_magic_@
+
+w:5
+An Induction into @_the_book_magic_@
+
 An Introduction to @_the_book_magic_@
 
-w:2
-An Initiation to @_the_book_magic_@
+Beginning @_the_book_magic_@
+
+Even @_beginners_@ Can Use @_the_book_magic_@!
 
 First Steps in @_the_book_magic_@
+
+Practicing @_the_book_magic_@
+
+w:2
+So You Want to Learn @_the_book_magic_@
+
+Starting @_the_book_magic_@
+
+The Basics of @_the_book_magic_@
 %%%%
+##################
 # level 2-4
 easy level book
 
-A Primer on @_the_book_magic_@
+@_book_magic_@, and How To Use It
 
-@_the_book_magic_@ in Simple Steps
-
-An Early Guide to @_the_book_magic_@
-
-The Foundations of @_book_magic_@
-
-Easy @_book_magic_@
-
-@_the_book_magic_@, Part @level@
+@_the_book_magic_@ and You
 
 @_the_book_magic_@ Continued
 
-w:1
-@_book_magic_@, and How To Use It
+@_the_book_magic_@ in Simple Steps
+
+@_the_book_magic_@, Part @level@
+
+A Primer on @_the_book_magic_@
+
+An Early Guide to @_the_book_magic_@
+
+Easy @_book_magic_@
+
+Everyday @_book_magic_@
+
+More @_book_magic_@
+
+Performing Successful @_book_magic_@
+
+Quotidian @_book_magic_@
+
+Simple @_book_magic_@
+
+w:2
+The Antepenultimate Guide to @_the_book_magic_@
+
+The Foundations of @_the_book_magic_@
+
+The Fundamentals of @_the_book_magic_@
+
+w:2
+The Joy of @_book_magic_@
 %%%%
+##################
 # level 4-6
 moderate level book
-
-Advanced Steps in @_the_book_magic_@
-
-The Advanced Guide to @_the_book_magic_@
-
-Further Steps in @_the_book_magic_@
 
 @_the_book_magic_@, Part @level@
 
 Advanced @_book_magic_@
 
+Advanced Steps in @_the_book_magic_@
+
+Even More @_book_magic_@
+
+Experienced @_book_magic_@
+
+Further Progress in @_the_book_magic_@
+
+Further Steps in @_the_book_magic_@
+
+Improving Your @_book_magic_@
+
+Practical @_book_magic_@
+
+Progressing With @_book_magic_@
+
 Sophisticated @_book_magic_@
 
-Further Progress in @_book_magic_@
+The Advanced Guide to @_the_book_magic_@
+
+w:2
+The Penultimate Guide to @_the_book_magic_@
 
 The Second Course in @_book_magic_@
 
-w:1
-Improving Your @_book_magic_@
-
+w:2
+Yet Another @book_noun@ About @_the_book_magic_@
 %%%%
+##############################################
 # powerful casters, used for high level books
 _powerful_caster_
 
+# Generic powerful-sounding names
 Archmage
 
-w:3
+Archmaster
+
+Hierophant
+
+Luminary
+
+Prophet
+
+Sage
+
+Warlock
+
+# Specific references to in-game lore
+w:5
 Deep Elf Lorekeeper
 
-w:3
+w:5
+Genius of the Arcane
+
+# Their hat may be gone, but they're not forgotten...
+w:5
+High Council
+
+w:5
+Lorekeeper
+
+w:5
+Loreminder
+
+# Specific references to DCSS memes, out-of-game lore, or misc.
+w:1
 Blind Seer
 
-w:3
-Prophet
+w:1
+Consilium Hierarch
+
+w:1
+Grand Magus
 
 w:1
 Greatest Mummy
+
+w:1
+Primeval Lich
+
+w:1
+Sorcerer Supreme
+
+w:1
+Ultimate Wizard
+
+w:1
+Weird Sisters
+
+w:1
+Wizard of Zot
 %%%%
 _the_powerful_caster_
 
+w:100
 the @_powerful_caster_@
 
-w:3
+w:30
 Boris
 
-w:1
 Sif Muna
+
+# Various wizards/mages/alchemists from real-world history/folklore
+# I avoided modern/pop-culture figures
+w:1
+Faust
+
+w:1
+Geber
+
+w:1
+Hermes Trismegistus
+
+w:1
+Merlin
+
+w:1
+Morgana le Fay
+
+w:1
+Nicolae
+
+w:1
+Paracelsus
+
+w:1
+Prospero
+
+w:1
+Solomon
 %%%%
 _last_or_lost_
 
@@ -370,22 +776,63 @@ Last
 
 Lost
 %%%%
+_testament_noun_
+
+Archive
+
+Chronicle
+
+History
+
+Journal
+
+Memoir
+
+Record
+
+Testament
+
+Testimony
+
+Wisdom
+
+Writings
+%%%%
+##################
 # level 7-9, books in the form of "XYZ's <bookname>"
 # Prefixed articles will be filtered out.
 _difficult level book owner_
 
+@_the_book_magic_@, Part @level@
+
 A Thorough Guide to @_the_book_magic_@
+
+w:5
+Mastering @_the_book_magic_@
+
+w:5
+Mastery of @_the_book_magic_@
+
+w:5
+The Final @book_name@ of @_the_book_magic_@
+
+w:5
+The Final @book_name_on@ on @_the_book_magic_@
 
 The @_last_or_lost_@ Secrets of @_the_book_magic_@
 
+The @book_noun@ of Greatest Risks and Utility
+
 The Arcane Secrets of @_book_magic_@
+
+The Highest Levels of @_the_book_magic_@
 
 The Intricacies of @_the_book_magic_@
 
-The @book_noun@ of Greatest Risks and Utility
+w:2
+The Ultimate Guide to @_the_book_magic_@
 
-w:1
-Mastering @_book_magic_@
+Total Understanding of @_the_book_magic_@
 %%%%
 # level 7-9, books without being named after their owner/author
 difficult level book
@@ -395,385 +842,1783 @@ w:50
 
 The @_last_or_lost_@ @book_noun@ of @_the_powerful_caster_@
 
+w:5
+@_the_book_magic_@ of @_the_powerful_caster_@
+
+w:5
+The @_last_or_lost_@ @_testament_noun_@ of @_the_powerful_caster_@
+
+w:5
+The @_occult_adjective_@ @_testament_noun_@ of @_the_powerful_caster_@
+
+# they wrote it just for you!
 w:1
-The Testament of @_the_powerful_caster_@
+A @book_noun@ from @_the_powerful_caster_@ to @player_name@
 %%%%
+##############################################
 # synonyms for predominant spell schools
 # variants starting with the definite article will get "the" prepended
 # to the adjective version
+Air
+
+Aeromancy
+
+Air
+
+Anemomancy
+
+Astrapomancy
+
+Austromancy
+
+Breath
+
+Ceraunoscopy
+
+Clouds
+
+Conduction
+
+Electricity
+
+Electrocution
+
+Exhalation
+
+Feathers
+
+Fog
+
+Fumes
+
+Gases
+
+Gusts
+
+Haze
+
+Inhalation
+
+Lightning
+
+Nephomancy
+
+Ouranomancy
+
+Ozone
+
+Thunder
+
+Turbulence
+
+Weather
+
+Vapour
+
+Voltage
+
+the Atmosphere
+
+the Birds
+
+the Brume
+
+the Cumulonimbus
+
+the Lungs
+
+the Nimbus
+
+the Sixfirhy
+
+the Sky
+
+the Squall
+
+the Storm
+
+the Tempest
+
+the Welkin
+
+the Wind
+
+the Zephyr
+%%%%
 Conjuration
 
-Conjuration
+Arcane Combat
 
-Confrontation
+Arcane Weapons
+
+Assaults
 
 Attacks
 
-w:5
 Battle Magic
 
-w:5
+Battling
+
+Blasting
+
+Blasts
+
+Blows
+
+Bolts
+
+Bombardment
+
+Bruises
+
 Combat Magic
 
+Concussion
+
+Conflict
+
+Confrontation
+
+Conjuration
+
 w:5
-Arcane Weapons
+Conjuring
 
-w:1
-Blows and Bruises
+w:5
+Conjury
 
-w:1
-Damage Dealing
+Damage
+
+Destruction
+
+Energy
+
+w:5
+Force
+
+w:5
+Forces
+
+Fulmination
+
+Hurting
+
+Impulse
+
+Injury
+
+Kinetic Energy
+
+Momentum
+
+Outbursts
+
+Percussion
+
+Power
+
+Striking
+
+Trauma
+
+w:2
+Traumaturgy
+
+Violence
+
+Wounds
+
+the Barrage
+
+the Discharge
+
+# Lore callback to the Mad Mage's Maulers
+the Fifth Circle
+
+the Impact
+
+the Missiles
+
+the Salvo
+
+the Shot
+
+the Volley
+%%%%
+Earth
+
+Amathomancy
+
+Bedrock
+
+Breccia
+
+Clay
+
+Cleavage
+
+Detritus
+
+Earth
+
+Erosion
+
+Excavation
+
+Geology
+
+Geomancy
+
+Grit
+
+Lithomancy
+
+Metal
+
+Minerals
+
+Mud
+
+Orogeny
+
+Oromancy
+
+Quicksand
+
+Scree
+
+Silt
+
+Spelunking
+
+Stones
+
+Talus
+
+Tephra
+
+Terra Firma
+
+Terrain
+
+Topography
+
+Topomancy
+
+the Anticline
+
+the Boulder
+
+the Caves
+
+the Crater
+
+# it's from Welsh
+the Cwm
+
+the Fault
+
+the Fjord
+
+the Gargoyle
+
+the Geologist
+
+the Ground
+
+the Lithosphere
+
+the Mantle
+
+the Mesa
+
+the Mountains
+
+the Plateau
+
+the Quake
+
+the Quarry
+
+the Rocks
+
+the Syncline
+
+the Tektite
+
+the Valley
+
+the Volcano
+
+the Xenolith
 %%%%
 Fire
 
+Accelerants
+
+Anthracomancy
+
+Arson
+
+Ashes
+
+Burning
+
+Calefaction
+
+Causimancy
+
+Cinders
+
+Combustion
+
+Conflagration
+
+Embers
+
+Fever
+
 Fire
 
+w:5
+Flame
+
+w:5
 Flames
 
 Heat
 
-the Volcanoes
-
-the Blaze
+Hyperthermia
 
 Ignition
 
+Immolation
+
+Incandescence
+
+Incineration
+
+Kindling
+
+Lava
+
+Oxidation
+
+Phlogiston
+
+Pyromancy
+
+Pyromania
+
+Soot
+
+Sparks
+
+# Credit to Megadeth for misremembering the word "thaumatology" in "Five Magics"
+w:2
+Thermatology
+
+Wildfire
+
 the Arsonist
+
+the Blaze
+
+the Bonfire
+
+the Burn
+
+the Coals
+
+the Dragon
+
+the Inferno
+
+the Pyre
+
+the Pyromaniac
+
+the Salamander
+
+the Summer
+
+the Sun
+
+the Torch
+
+the Tropics
+
+the Volcano
 %%%%
 Hexes
 
-Hexes
+Anathema
 
-Curses
+Bad Luck
 
-Malediction
-
-the Oath
-
-Execration
-
-Enchantment
+Beguiling
 
 Bewitchment
 
-w:1
-Glamour
+Charms
 
-w:1
+Curses
+
+Doom
+
+Enchantment
+
+Ensorcelling
+
+Execration
+
 Fascination
 
-Beguiling
+Glamour
+
+Guile
+
+Hexes
+
+w:5
+Hexing
+
+Ill Luck
+
+Imprecation
+
+Interference
+
+Jinxing
+
+Malediction
+
+w:5
+Maleficia
+
+Malisons
+
+Misfortune
+
+Obstruction
+
+Spellbinding
+
+the Curse
+
+the Evil Eye
+
+w:5
+the Faeries
+
+w:5
+the Fairies
+
+w:5
+the Fair Folk
+
+the Jinx
+
+w:5
+the Maleficium
+
+the Oath
+
+the Sphinx
+
+w:2
+the Whammy
+
+the Wyrd
 %%%%
 Ice
 
-Ice
+Algor
 
-Snow
+Chilblains
 
 Cold
 
-the Snowflakes
+Congelation
+
+Cryomancy
+
+Firn
+
+Freezing
+
+Frost
+
+Frostbite
+
+Glaciation
+
+Graupel
+
+Hail
+
+Hoarfrost
+
+Hypothermia
+
+Ice
+
+Refrigeration
+
+Rime
+
+Snow
+
+the Blizzard
+
+the Chill
+
+the Crevasse
+
+the Deep Freeze
 
 the Glacier
 
-the Frostbite
+the Iceberg
+
+the Icicle
+
+the Serac
+
+the Snowflakes
+
+the Tundra
+
+the Wendigo
+
+the Winter
 %%%%
-Transmutation
+Necromancy
 
-Transmigration
+Bodies
 
-Transmutation
+Bones
 
-Transformation
+Cadavers
 
-Shape Shifting
+Corpses
 
-Changing
+Darkness
 
-Moulding
+Death
+
+Despair
+
+Diablerie
+
+Ectoplasm
+
+Evil
+
+Exhumation
+
+Gloom
+
+Lamentation
+
+Last Rites
+
+Misery
+
+Mortification
+
+Necromancy
+
+Nightshade
+
+Open Graves
+
+Rot
+
+Resurrection
+
+Sciomancy
+
+Shades
+
+Shadows
+
+Skeletons
+
+Spectres
+
+Stolen Souls
+
+Zombies
+
+the Autopsy
+
+the Catacomb
+
+the Cemetery
+
+the Charnel House
+
+the Crypt
+
+the Damned
+
+the Dead
+
+the Grave
+
+the Graveyard
+
+the Mausoleum
+
+the Morgue
+
+the Mortuary
+
+the Undead
+
+w:150
+@_Evil_adjective_@ @_Evil_noun_@
 %%%%
 # for necromantic books
 _Evil_adjective_
 
-Evil
+Abhorrent
 
-Dark
+Abominable
 
 Black
 
+Blasphemous
+
+Dark
+
+Debased
+
+Despicable
+
+Evil
+
+Iniquitous
+
+Left-Handed
+
+Maleficent
+
+Malevolent
+
+Malignant
+
+w:5
+Necromantic
+
+Profane
+
 Sinister
 
+w:2
+Spooky
+
+Unhallowed
+
 Unholy
+
+Unspeakable
+
+Wicked
 %%%%
 # also for necromantic books
 _Evil_noun_
 
-Rites
+Acts
 
 Arts
 
-Secrets
+Ceremonies
+
+Deeds
+
+Liturgies
+
+Magic
+
+w:2
+Magicks
+
+Mysteries
+
+Rites
 
 Rituals
 
-Magic
-%%%%
-Necromancy
+Secrets
 
-Necromancy
+Spells
 
-Evil
-
-Darkness
-
-Stolen Souls
-
-w:60
-@_Evil_adjective_@ @_Evil_noun_@
-%%%%
-Summoning
-
-Summoning
-
-Calling
-
-Creation
-
-the Entourage
-
-Companions
-
-the Escort
-
-w:1
-Illusion
-
-w:2
-Slavery
-%%%%
-Translocation
-
-Translocation
-
-Displacement
-
-Dislocation
-
-Orientation
-
-the Traveller
-
-the Compass
-
-the Voyage
+Words
 %%%%
 Poison
 
-Poison
+Blight
 
-Venom
+Contaminants
 
-Toxins
+Contamination
 
-Poisoning
+Corruption
 
-Intoxication
+Degeneration
+
+Effluvium
 
 Envenoming
 
-Contamination
+Filth
+
+Impurities
+
+Infection
+
+Intoxication
+
+Nausea
+
+Pestilence
+
+Poison
+
+Poisoning
+
+Pollution
+
+Putrescence
+
+Putridity
+
+Toxicants
+
+Toxicity
+
+Toxins
+
+Venin
+
+Venom
+
+Virulence
+
+Vitiation
+
+the Adder
+
+the Assassin
+
+the Bane
+
+the Black Widow
+
+the Coward
+
+the Cure
+
+the Dose
+
+# Bilingual joke; "Gift" means "poison" in German
+the Gift
+
+the Hornet
+
+the Panacea
+
+the Queen Bee
+
+the Scorpion
+
+the Snake
+
+the Spider
+
+the Stinger
+
+the Tincture
 %%%%
-Earth
+Summoning
 
-Earth
+Accompaniment
 
-Stones
+Accomplices
 
-Clay
+Adjuration
 
-the Mountains
+Allies
 
-the Rocks
+Apparitions
+
+Assembling
+
+Attendants
+
+Beckoning
+
+Bringing Forth
+
+Calling
+
+Command
+
+Companions
+
+Company
+
+Convocation
+
+Creation
+
+Formation
+
+Generation
+
+Illusion
+
+Invitation
+
+Leadership
+
+Mustering
+
+Phantasms
+
+Production
+
+Rallying
+
+Sidekicks
+
+Summoning
+
+Support
+
+the Band
+
+the Boggart
+
+the Comitatus
+
+the Commander
+
+the Congregation
+
+the Entourage
+
+the Escort
+
+the Familiar
+
+the Flock
+
+the Gang
+
+the Gathering
+
+the Legion
+
+the Mob
+
+the Retinue
+
+the Swarm
+
+the Throng
+
+the Union
 %%%%
-Air
+Translocation
 
-Air
+Angles
 
-Lightness
+Coordinates
 
-Weightlessness
+Correspondence
 
-Flight
+Direction
 
-the Birds
+Dislocation
 
-Feathers
+Displacement
+
+Distance
+
+Elsewhere
+
+w:5
+Geometries
+
+w:5
+Geometry
+
+Locality
+
+Location
+
+Movement
+
+Nonlocality
+
+Orientation
+
+Peregrination
+
+Places
+
+Points
+
+Portals
+
+Position
+
+Relocation
+
+Shifting
+
+Space
+
+w:2
+Spooky Action
+
+Superposition
+
+Topology
+
+Translocation
+
+Transportation
+
+Transposition
+
+Wanderlust
+
+the Blink Frog
+
+the Compass
+
+the Door
+
+the Excursion
+
+the Geodesic
+
+# Longer than you think!
+the Jaunt
+
+the Map
+
+the Singularity
+
+the Tesseract
+
+the Traveller
+
+the Vector
+
+the Voyage
+
+the Wayfarer
 %%%%
+Transmutation
+
+Alteration
+
+Changes
+
+Changing
+
+Composition
+
+Configuration
+
+Evolution
+
+Flesh
+
+Forms
+
+Metamorphosis
+
+Modification
+
+Moulding
+
+Permutations
+
+Reconstruction
+
+Reformation
+
+Sculpting
+
+Shapes
+
+Shapeshifting
+
+Shaping
+
+Teratogeny
+
+Therianthropy
+
+Transfiguration
+
+Transformation
+
+Transition
+
+Transmigration
+
+Transmogrification
+
+Transmutation
+
+Variation
+
+Vicissitude
+
+the Body
+
+the Gestalt
+
+the Figure
+
+the Shapeshifter
+
+the Shift
+
+the Switch
+
+the Xenotype
+%%%%
+##############################################
 # adjectives for secondary spell school
+Air adj
+
+Aerial
+
+Airy
+
+Atmospheric
+
+Breezy
+
+Charged
+
+Cloudy
+
+Electric
+
+Feathery
+
+Floating
+
+Foggy
+
+w:5
+Fulgurant
+
+w:5
+Fulgurous
+
+Fuming
+
+Galvanic
+
+Gaseous
+
+Gusty
+
+Hazy
+
+Lofty
+
+Meteoric
+
+Misty
+
+Overcast
+
+Overhead
+
+Pneumatic
+
+Shocking
+
+Stormy
+
+Turbulent
+
+Vapourous
+
+Voltaic
+
+Weathered
+
+Windy
+%%%%
 Conjuration adj
 
-Destructive
+Blasted
 
-Harmful
+Bright
+
+Brilliant
+
+Combative
+
+Conjured
+
+Coruscating
 
 Damaging
 
-Hurtful
+Destructive
+
+Dynamic
+
+Energetic
 
 Excruciating
 
-w:5
+Flashy
+
+Forceful
+
+Fulgent
+
+Harmful
+
+Hurtful
+
+Injurious
+
 Lethal
+
+Limned
+
+Luminous
+
+Kinetic
+
+Mighty
+
+Prime
+
+Puissant
+
+Radiant
+
+Ruinous
+
+Scintillating
+
+Vehement
+
+Violent
+
+Wild
 %%%%
-Charms adj
+Earth adj
 
-Helpful
+Arenous
 
-Lucky
+Ashen
 
-Assistive
+Chthonic
 
-Boosting
+Coarse
+
+Crystalline
+
+Dusty
+
+Earthen
+
+Felsic
+
+Flinty
+
+Geological
+
+# as in the draconians
+Grey
+
+Gritty
+
+Grounded
+
+Heavy
+
+Indurated
+
+Iron
+
+Ironbound
+
+Leaden
+
+Lithic
+
+Metallic
+
+Petrified
+
+Petrous
+
+Plutonic
+
+Rocky
+
+Sandy
+
+Solid
+
+Stony
+
+Tectonic
+
+Telluric
+
+Terrestrial
+
+Underground
+
+Volcanic
+%%%%
+Fire adj
+
+Blazing
+
+Blistering
+
+Burning
+
+Burnt
+
+w:5
+Calescent
+
+w:5
+Calid
+
+w:5
+Calorific
+
+Charred
+
+w:5
+Combustive
+
+w:5
+Comburant
+
+Conflagrant
+
+Exothermic
+
+Fiery
+
+Flaming
+
+Flammable
+
+Flamy
+
+Glowing
+
+Heated
+
+Hot
+
+Igneous
+
+Incandescent
+
+Incendiary
+
+Inflammable
+
+Kindled
+
+Molten
+
+Red
+
+Red-Hot
+
+Roasted
+
+Searing
+
+Scorched
+
+Scorching
+
+Singed
+
+Sizzling
+
+Smouldering
+
+w:2
+Spicy
+
+Sweltering
+
+Torrid
+
+Tropical
+
+Volatile
+
+w:2
+Well-Done
 %%%%
 Hexes adj
 
-Enchanting
+Alluring
+
+Baleful
+
+Beguiling
 
 Bewitching
 
 Captivating
 
-Fetching
+Charmed
 
-Enthralling
+Charming
 
-Ensnaring
+Cunning
 
-Entrancing
-%%%%
-Fire adj
+Cursed
 
-Fiery
-
-Scorching
-
-Burning
-
-Blistering
-
-Igneous
-
-Flamy
-
-Torrid
-%%%%
-Ice adj
-
-Glacial
-
-Freezing
-
-Icy
-
-Congealing
-
-Frigorific
-%%%%
-Transmutation adj
-
-Shifting
-
-Mutagenic
-
-w:5
-Unstable
-%%%%
-Necromancy adj
-
-Dark
-
-Evil
-
-w:5
-Lethal
+Destined
 
 Doomed
 
-Sinister
+Enchanted
 
-Unholy
+Enchanting
+
+Ensnaring
+
+Enthralling
+
+Entranced
+
+Entrancing
+
+Fateful
+
+Fetching
+
+Fey
+
+Hapless
+
+Hexing
+
+Hindering
+
+Ill-fated
+
+Ill-starred
+
+Maledictive
+
+Spellbinding
+
+Star-crossed
+
+Twinkling
+
+Unfortunate
+
+Unlucky
+
+Vexatious
+
+Vexing
+
+Weird
+%%%%
+Ice adj
+
+Algid
+
+Arctic
+
+# Like the infamous jellies
+Azure
+
+Boreal
+
+Brumal
+
+Chilled
+
+Chilling
+
+Chilly
+
+Cold
+
+Congealing
+
+Crystallized
+
+Freezing
+
+Frigid
+
+Frigorific
+
+Frore
+
+Frostbitten
+
+Frostbound
+
+Frosty
+
+Frozen
+
+Gelid
+
+Glacial
+
+Hiemal
+
+Hyperborean
+
+Icy
+
+Nival
+
+Niveous
+
+Numb
+
+Polar
+
+Shivering
+
+Snowy
+
+Snow-white
+
+Subzero
+
+# as in the draconians
+White
+
+Wintry
+%%%%
+Necromancy adj
+
+Bloody
+
+Charnel
+
+Creeping
+
+Dark
+
+Deathly
+
+Decaying
+
+Doomed
+
+Evil
 
 Ghastly
 
-w:5
+Ghoulish
+
+Grim
+
+Grisly
+
+Horrible
+
+Lethal
+
+Loathsome
+
+Macabre
+
+Morbid
+
+Mortuary
+
+Necrotic
+
+Posthumous
+
+Postmortem
+
+Rotting
+
+Sepulchral
+
+Shadowy
+
+Sinister
+
+Spectral
+
 Twisted
-%%%%
-Summoning adj
 
-Creative
+Undead
 
-Supportive
-%%%%
-Translocation adj
+Unholy
 
-Spatial
-
-Displaced
-
-Dislocated
-
-Warped
-
-w:5
-Unstable
-
-w:5
-Twisted
-
-Quantum
+Vile
 %%%%
 Poison adj
 
-Poisonous
+Baneful
 
-Venomous
-
-Toxic
+Befouled
 
 Cankerous
+
+Contaminated
+
+Disgusting
+
+Feculent
+
+Fetid
+
+Filthy
+
+Foul
+
+# as in the draconians
+Green
+
+w:2
+Gross
+
+Impure
+
+Infected
+
+Intoxicating
+
+Nasty
+
+Nauseating
 
 Nocuous
 
 Noxious
 
+Peccant
+
+Pestilent
+
+Poisonous
+
+Polluted
+
+Putrid
+
+Rancid
+
+Rank
+
+Repulsive
+
+Septic
+
+Sickening
+
+Tainted
+
+Toxic
+
+Unclean
+
+Venomous
+
+Viperous
+
+Viridian
+
 Virous
 
+Virulent
+
 Vitriolic
-
-w:1
-Viperous
 %%%%
-Earth adj
+Summoning adj
 
-Earthen
+Allied
 
-Ashen
+Amalgamated
 
-Dusty
+Amassed
+
+Assembled
+
+Assistive
+
+Called
+
+Collective
+
+Combined
+
+Congregated
+
+Cooperative
+
+Creative
+
+Familiar
+
+Friendly
+
+Gathered
+
+Generative
+
+Helpful
+
+Massed
+
+Phantasmal
+
+Productive
+
+Summoned
+
+Supportive
+
+Unified
+
+United
 %%%%
-Air adj
+Translocation adj
 
-Aerial
+# A reference to the removed Akashic Record spellbook,
+# which contained powerful Translocations spells.
+w:2
+Akashic
 
-Flying
+Blinking
 
-Floating
+Dimensional
 
-Feathery
+Discontinuous
 
-Cloudy
+Disjunct
 
-Gliding
+Dislocated
+
+Displaced
+
+Distorted
+
+Elliptic
+
+Geometric
+
+Hyperbolic
+
+Liminal
+
+Moving
+
+Non-Euclidean
+
+Planar
+
+Quantum
+
+Relocated
+
+Shifting
+
+Spatial
+
+Topological
+
+Translocated
+
+Translocational
+
+Transposed
+
+Twisted
+
+Unstable
+
+Warped
+%%%%
+Transmutation adj
+
+Altered
+
+Amorphous
+
+Changed
+
+Changing
+
+Different
+
+Evolved
+
+Evolving
+
+Fluctuating
+
+# like the shapeshifters
+Glowing
+
+Inconstant
+
+Mercurial
+
+Metamorphic
+
+Mutable
+
+Mutagenic
+
+Mutated
+
+Reformed
+
+Remoulded
+
+Reshaped
+
+Shifting
+
+Unstable
+
+Transformed
+
+Transforming
+
+Transmuted
+
+Variable
+
+Xenomorphic
 %%%%
 # potential previous owners of books
 # __NONE is parsed to the empty string
@@ -787,9 +2632,9 @@ Dispater
 %%%%
 Conjuration Earth owner
 
-Lee
-
 Lehudib
+
+__NONE
 %%%%
 highlevel Conjuration Fire owner
 
@@ -797,7 +2642,6 @@ Asmodeus
 
 Cerebov
 
-w:5
 __NONE
 %%%%
 highlevel Conjuration Necromancy owner
@@ -812,7 +2656,6 @@ Asmodeus
 
 Dispater
 
-w:5
 __NONE
 %%%%
 Earth Transmutation owner
@@ -833,6 +2676,12 @@ Asmodeus
 
 __NONE
 %%%%
+Fire Ice owner
+
+Vv
+
+__NONE
+%%%%
 highlevel Necromancy Poison owner
 
 Gloorx Vloq
@@ -842,6 +2691,14 @@ __NONE
 Necromancy Transmutation owner
 
 Cigotuvi
+
+__NONE
+%%%%
+Poison Transmutation owner
+
+Alistair
+
+Eringya
 
 __NONE
 %%%%
@@ -858,32 +2715,36 @@ Cerebov
 
 Lom Lobon
 
-Lehudib
+w:5
+Vehumet
 
-w:30
+w:20
 @Conjuration owner@
 %%%%
 Conjuration owner
 
-w:2
-Lee
-
 Lehudib
 
 Iskenderun
+
+__NONE
 %%%%
 highlevel Earth owner
 
 Dispater
 
-w:30
+w:50
 @Earth owner@
 %%%%
 Earth owner
 
+Jorgrun
+
 Lehudib
 
 Lee
+
+Leda
 
 Roxanne
 
@@ -903,11 +2764,24 @@ Ozocubu
 
 __NONE
 %%%%
+Air owner
+
+the Cloud Mage
+
+Maxwell
+
+Nikola
+
+__NONE
+%%%%
 highlevel Necromancy owner
 
 Ereshkigal
 
 Gloorx Vloq
+
+w:5
+Kikubaaqudgha
 
 w:40
 @Necromancy owner@
@@ -919,11 +2793,16 @@ Borgnjor
 Cigotuvi
 
 Khufu
+
+Zonguldrok
+
+__NONE
 %%%%
 highlevel Poison owner
 
 Gloorx Vloq
 
+w:30
 @Poison owner@
 %%%%
 Poison owner
@@ -931,6 +2810,8 @@ Poison owner
 Olgreb
 
 Alistair
+
+Eringya
 
 __NONE
 %%%%
@@ -942,19 +2823,49 @@ Dispater
 
 Mnoleg
 
+@Summoning owner@
+%%%%
+Summoning owner
+
+Mara
+
 __NONE
 %%%%
 highlevel Translocation owner
 
 Lom Lobon
 
+w:20
+@Translocation owner@
+%%%%
+Translocation owner
+
+Gell
+
+Golubria
+
 __NONE
 %%%%
 Transmutation owner
 
+Alistair
+
 Cigotuvi
 
 Roxanne
+
+Eringya
+
+__NONE
+%%%%
+Hexes owner
+
+Yara
+
+w:5
+Terpsichore
+
+Tukima
 
 __NONE
 %%%%

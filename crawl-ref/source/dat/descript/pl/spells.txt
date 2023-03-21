@@ -91,6 +91,11 @@ Ten czar uwalnia ogromne elektryczne wyładowanie które przepływa od celu do
 celu. Jeśli jednak cele nie są wystarczająco blisko siebie, piorun ten zamiast
 tego pójdzie w ziemię.
 %%%%
+Charm spell
+
+Ten czar, jeśli nie zostanie odparty, tymczasowo przejmuje kontrolę nad wybraną
+istotą.
+%%%%
 Confuse spell
 
 Ten czar, jeśli nie zostanie odparty, powoduje tymczasowe zaćmienie umysłu u
@@ -161,11 +166,6 @@ kły, pazury, nieludzko twardą skórę jak i zdolność ziania ogniem. Jeśli
 rzucający jest smokowcem, smok zamiast tego zachowa kolor jak i typ oddechu
 (np. biali smokowcy zmieniają się w lodowe smoki i zioną chłodem).
 %%%%
-Enslavement spell
-
-Ten czar, jeśli nie zostanie odparty, tymczasowo przejmuje kontrolę nad wybraną
-istotą.
-%%%%
 Fire Brand spell
 
 Ten czar tymczasowo nadaje trzymanej broni magiczną markę płomieni. Nie
@@ -180,11 +180,6 @@ powstanie wielu krótkotrwałych wirów ognia.
 Fireball spell
 
 Ten czar ciska kulę ognia która leci we wskazanie miejsce po czym wybucha.
-%%%%
-Flame Tongue spell
-
-Ten czar wyzwala parometrowy płomień. Jego długość zależy od mocy czaru, i dla
-początkujących czarodziei może dosięgnąć co najwyżej na długość ręki.
 %%%%
 Flight spell
 

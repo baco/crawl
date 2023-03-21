@@ -13,15 +13,6 @@ using namespace ui;
 static vector<formatted_scroller*> open_scrollers;
 static bool from_webtiles;
 
-static int _line_height()
-{
-#ifdef USE_TILE_LOCAL
-    return tiles.get_crt_font()->char_height();
-#else
-    return 1;
-#endif
-}
-
 void formatted_scroller::add_formatted_string(const formatted_string& fs, bool new_line)
 {
     contents += fs;
@@ -51,7 +42,7 @@ public:
 #ifdef USE_TILE_WEB
         tiles.json_open_object();
         tiles.json_write_bool("from_webtiles", from_webtiles);
-        tiles.json_write_int("scroll", y / _line_height());
+        tiles.json_write_int("scroll", y);
         tiles.ui_state_change("formatted-scroller", 1);
 #endif
         Scroller::set_scroll(y);
@@ -97,7 +88,7 @@ int formatted_scroller::show()
     m_scroller->expand_v = true;
 #endif
     auto text = make_shared<Text>();
-    formatted_string c = formatted_string::parse_string(contents.to_colour_string());
+    formatted_string c = formatted_string::parse_string(contents.to_colour_string(LIGHTGRAY));
     text->set_text(c);
     text->set_highlight_pattern(highlight, true);
     text->set_wrap_text(!(m_flags & FS_PREWRAPPED_TEXT));
@@ -120,14 +111,15 @@ int formatted_scroller::show()
     bool done = false;
     popup->on_keydown_event([&done, &text, this](const KeyEvent& ev) {
         m_lastch = ev.key();
-        done = !process_key(m_lastch);
+        const maybe_bool pkey_result = process_key(m_lastch);
+        // done = !process_key(m_lastch);
         if (m_contents_dirty)
         {
             m_contents_dirty = false;
             text->set_text(contents);
 #ifdef USE_TILE_WEB
             tiles.json_open_object();
-            tiles.json_write_string("text", contents.to_colour_string());
+            tiles.json_write_string("text", contents.to_colour_string(LIGHTGRAY));
             tiles.json_write_string("highlight", highlight);
             tiles.ui_state_change("formatted-scroller", 0);
 #endif
@@ -137,21 +129,28 @@ int formatted_scroller::show()
             m_scroll_dirty = false;
             m_scroller->set_scroll(m_scroll);
         }
-        if (done)
-            return true;
-        if (m_scroller->on_event(ev))
-            return true;
-        if (m_flags & FS_EASY_EXIT)
+        if (!pkey_result)
             return done = true;
+        else if (pkey_result == maybe_bool::maybe)
+        {
+            if (m_scroller->on_event(ev))
+                return true;
+            // only check easy exit if `process_key` hasn't intercepted the key
+            if (m_flags & FS_EASY_EXIT)
+                return done = true;
+        }
+        // key either not processed at all, or `process_key` returned true
         return true;
     });
 
 #ifdef USE_TILE_WEB
     tiles.json_open_object();
     tiles.json_write_string("tag", m_tag);
-    tiles.json_write_string("text", contents.to_colour_string());
+    tiles.json_write_string("text", contents.to_colour_string(LIGHTGRAY));
     tiles.json_write_string("highlight", highlight);
-    tiles.json_write_string("more", m_more.to_colour_string());
+    tiles.json_write_string("more", m_more.to_colour_string(LIGHTGRAY));
+    tiles.json_write_string("title", m_title.to_colour_string(LIGHTGRAY));
+    tiles.json_write_bool("easy_exit", m_flags & FS_EASY_EXIT);
     tiles.json_write_bool("start_at_end", m_flags & FS_START_AT_END);
     tiles.push_ui_layout("formatted-scroller", 2);
     popup->on_layout_pop([](){ tiles.pop_ui_layout(); });
@@ -173,16 +172,16 @@ int formatted_scroller::show()
     return m_lastch;
 }
 
-bool formatted_scroller::process_key(int ch)
+// true: key was processed, keep UI open
+// false: key was processed, close UI
+// maybe: key was not processed
+// (the polarity is awkwardly opposite how this is used and derived here, but
+// we keep it this way because all process_key functions in crawl have the
+// same meanings for T/F)
+maybe_bool formatted_scroller::process_key(int ch)
 {
-    switch (ch)
-    {
-        case CK_MOUSE_CMD:
-        CASE_ESCAPE
-            return false;
-        default:
-            return true;
-    }
+    // most keyhandling is in the scroller event handling, not here
+    return ui::key_exits_popup(ch, true) ? false : maybe_bool::maybe;
 }
 
 void formatted_scroller::set_scroll(int y)
@@ -196,16 +195,18 @@ void formatted_scroller::set_scroll(int y)
     }
 }
 
+#ifdef USE_TILE_WEB
 void recv_formatted_scroller_scroll(int line)
 {
     if (open_scrollers.size() == 0)
         return;
     formatted_scroller *scroller = open_scrollers.back();
     from_webtiles = true;
-    scroller->set_scroll(line*_line_height());
+    scroller->set_scroll(line);
     from_webtiles = false;
     // XXX: since the scroll event from webtiles is not delivered by the event
     // pumping loop in ui::pump_events, the UI system won't automatically draw
     // any changes for console spectators, so we need to force a redraw here.
     ui::force_render();
 }
+#endif

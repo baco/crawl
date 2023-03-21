@@ -16,6 +16,7 @@
 #include "rltiles/tiledef-icons.h"
 #include "tilepick.h"
 #include "tiles-build-specific.h"
+#include "tilereg-cmd.h"
 
 AbilityRegion::AbilityRegion(const TileRegionInit &init) : GridRegion(init)
 {
@@ -53,16 +54,15 @@ void AbilityRegion::draw_tag()
 int AbilityRegion::handle_mouse(wm_mouse_event &event)
 {
     unsigned int item_idx;
-    if (!place_cursor(event, item_idx))
+    if (!place_cursor(event, item_idx)
+        || tile_command_not_applicable(CMD_USE_ABILITY, true))
+    {
         return 0;
+    }
 
     const ability_type ability = (ability_type) m_items[item_idx].idx;
     if (event.button == wm_mouse_event::LEFT)
     {
-        // close tab again if using small layout
-        if (tiles.is_using_small_layout())
-            tiles.deactivate_tab();
-
         m_last_clicked_item = item_idx;
         tiles.set_need_redraw();
         // TODO get_talent returns ABIL_NON_ABILITY if you are confused,
@@ -148,9 +148,10 @@ bool AbilityRegion::update_alt_text(string &alt)
 
 int AbilityRegion::get_max_slots()
 {
-    return ABIL_MAX_INTRINSIC + (ABIL_MAX_EVOKE - ABIL_MIN_EVOKE) + 1
-           // for god abilities
-           + 6;
+    const int MAX_INTRINSICS = 3;
+    const int MAX_GOD_ABILS = 6;
+    const int MAX_EVOKES = 6; // TODO: don't hardcode this
+    return MAX_INTRINSICS + MAX_GOD_ABILS + MAX_EVOKES;
 }
 
 void AbilityRegion::pack_buffers()
@@ -192,8 +193,11 @@ static InventoryTile _tile_for_ability(ability_type ability)
     desc.idx      = (int) ability;
     desc.quantity = ability_mp_cost(ability);
 
-    if (!check_ability_possible(ability, true))
+    if (tile_command_not_applicable(CMD_USE_ABILITY, true)
+        || !check_ability_possible(ability, true))
+    {
         desc.flag |= TILEI_FLAG_INVALID;
+    }
 
     return desc;
 }

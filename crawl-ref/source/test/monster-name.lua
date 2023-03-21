@@ -79,7 +79,6 @@ end
 -- 3. Optionally, the expected item name for DESC_PLAIN or a table of
 --    item description type and expected item name.
 local name_checks = {
-  { "hippogriff", { "the", "the hippogriff" }, { "a", "a hippogriff corpse" } },
   { "kobold name:ugly name_adjective",
     { "a", "an ugly kobold" } },
   { "kobold name:ugly name_adjective",
@@ -100,3 +99,5 @@ local name_checks = {
     { "a", "a gnoll corpse of gnoll lieutenant" } },
 }
 check_names(name_checks)
+
+dgn.dismiss_monsters()

@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "activity-interrupt-type.h"
 #include "command-type.h"
 #include "enum.h"
@@ -12,6 +14,8 @@
 #include "mpr.h"
 #include "operation-types.h"
 #include "seen-context-type.h"
+
+using std::vector;
 
 class interrupt_block
 {
@@ -146,11 +150,11 @@ public:
     }
 
     /**
-     * @return whether this is a stair travel delay, which are generally
-     * uninterruptible but are interrupted by teleport. Note that no stairs
-     * are necessarily involved.
+     * @return whether this is a delay which relocates the player,
+     * which are generally uninterruptible but are interrupted by teleport.
+     * Note that no stairs are necessarily involved.
      */
-    virtual bool is_stair_travel() const
+    virtual bool is_relocation() const
     {
         return is_stairs();
     }
@@ -202,7 +206,7 @@ public:
      * If the player needs to be notified, it should also print a message.
      * @return whether to pop the delay.
      */
-    virtual bool try_interrupt()
+    virtual bool try_interrupt(bool /*force*/)
     {
         // The default is for delays to be uninterruptible once started.
         return false;
@@ -210,10 +214,9 @@ public:
 
     /**
      *@return true if the delay involves using the item in this way (and
-     * therefore the item should not be messed with). If item is nullptr,
-     * returns whether the delay type ever uses items in this way.
+     * therefore the item should not be messed with).
      */
-    virtual bool is_being_used(const item_def* /*item*/, operation_types /*oper*/) const
+    virtual bool is_being_used(const item_def& /*item*/) const
     {
         return false;
     }
@@ -237,17 +240,24 @@ class EquipOnDelay : public Delay
              equip.name(DESC_YOUR).c_str());
     }
 
+    bool invalidated() override;
+
     void finish() override;
 public:
     EquipOnDelay(int dur, item_def& item) :
                  Delay(dur), equip(item)
     { }
 
-    bool try_interrupt() override;
+    bool try_interrupt(bool force = false) override;
 
     const char* name() const override
     {
         return "armour_on";
+    }
+
+    bool is_being_used(const item_def& item) const override
+    {
+        return &item == &equip;
     }
 };
 
@@ -272,11 +282,16 @@ public:
                    Delay(dur), equip(item)
     { }
 
-    bool try_interrupt() override;
+    bool try_interrupt(bool force = false) override;
 
     const char* name() const override
     {
         return "armour_off";
+    }
+
+    bool is_being_used(const item_def& item) const override
+    {
+        return &item == &equip;
     }
 };
 
@@ -295,6 +310,11 @@ public:
     const char* name() const override
     {
         return "jewellery_on";
+    }
+
+    bool is_being_used(const item_def& item) const override
+    {
+        return &item == &jewellery;
     }
 };
 
@@ -315,7 +335,7 @@ public:
                   Delay(dur), spell{sp}
     { }
 
-    bool try_interrupt() override;
+    bool try_interrupt(bool /*force*/) override;
 
     const char* name() const override
     {
@@ -339,7 +359,12 @@ public:
                   Delay(dur), dest{pos}
     { }
 
-    bool try_interrupt() override;
+    bool try_interrupt(bool /*force*/) override;
+
+    bool is_relocation() const override
+    {
+        return true;
+    }
 
     const char* name() const override
     {
@@ -363,6 +388,11 @@ public:
     {
         return "drop_item";
     }
+
+    bool is_being_used(const item_def& item_) const override
+    {
+        return &item_ == &item;
+    }
 };
 
 struct SelItem;
@@ -377,7 +407,7 @@ public:
                   Delay(dur), items(vec)
     { }
 
-    bool try_interrupt() override;
+    bool try_interrupt(bool /*force*/) override;
 
     const char* name() const override
     {
@@ -398,7 +428,7 @@ public:
     AscendingStairsDelay(int dur) : Delay(dur)
     { }
 
-    bool try_interrupt() override;
+    bool try_interrupt(bool /*force*/) override;
 
     bool is_stairs() const override
     {
@@ -418,7 +448,7 @@ public:
     DescendingStairsDelay(int dur) : Delay(dur)
     { }
 
-    bool try_interrupt() override;
+    bool try_interrupt(bool /*force*/) override;
 
     bool is_stairs() const override
     {
@@ -457,7 +487,7 @@ public:
         return true;
     }
 
-    bool try_interrupt() override;
+    bool try_interrupt(bool /*force*/) override;
 
     BaseRunDelay() : Delay(1)
     { }
@@ -556,7 +586,7 @@ public:
     MacroDelay() : Delay(1)
     { }
 
-    bool try_interrupt() override;
+    bool try_interrupt(bool /*force*/) override;
 
     bool is_parent() const override
     {
@@ -610,9 +640,9 @@ public:
     ShaftSelfDelay(int dur) : Delay(dur)
     { }
 
-    bool try_interrupt() override;
+    bool try_interrupt(bool /*force*/) override;
 
-    bool is_stair_travel() const override
+    bool is_relocation() const override
     {
         return true;
     }
@@ -620,33 +650,6 @@ public:
     const char* name() const override
     {
         return "shaft_self";
-    }
-};
-
-class BlurryScrollDelay : public Delay
-{
-    item_def& scroll;
-    bool was_prompted = false;
-
-    void start() override;
-    bool invalidated() override;
-
-    void tick() override
-    {
-        mprf(MSGCH_MULTITURN_ACTION, "You continue reading the scroll.");
-    }
-
-    void finish() override;
-public:
-    BlurryScrollDelay(int dur, item_def& item) :
-                      Delay(dur), scroll(item)
-    { }
-
-    bool try_interrupt() override;
-
-    const char* name() const override
-    {
-        return "blurry_vision";
     }
 };
 
@@ -666,7 +669,7 @@ public:
     ExsanguinateDelay(int dur) : Delay(dur)
     { }
 
-    bool try_interrupt() override;
+    bool try_interrupt(bool force = false) override;
 
     const char* name() const override
     {
@@ -690,7 +693,7 @@ public:
     RevivifyDelay(int dur) : Delay(dur)
     { }
 
-    bool try_interrupt() override;
+    bool try_interrupt(bool force = false) override;
 
     const char* name() const override
     {
@@ -708,7 +711,7 @@ shared_ptr<Delay> start_delay(Args&&... args)
     return delay;
 }
 
-void stop_delay(bool stop_stair_travel = false);
+void stop_delay(bool stop_stair_travel = false, bool force = false);
 bool you_are_delayed();
 shared_ptr<Delay> current_delay();
 void handle_delay();

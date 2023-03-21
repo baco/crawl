@@ -50,6 +50,7 @@
 #include "spl-util.h"
 #include "state.h"
 #include "stringutil.h"
+#include "tag-version.h"
 #include "transform.h"
 #include "travel.h"
 #include "unicode.h"
@@ -88,9 +89,7 @@ static void _sdump_vault_list(dump_params &);
 static void _sdump_skill_gains(dump_params &);
 static void _sdump_action_counts(dump_params &);
 static void _sdump_separator(dump_params &);
-#ifdef CLUA_BINDINGS
 static void _sdump_lua(dump_params &);
-#endif
 static bool _write_dump(const string &fname, const dump_params &,
                         bool print_dump_path = false);
 
@@ -150,11 +149,7 @@ static dump_section_handler dump_handlers[] =
     { "",               _sdump_newline       },
     { "-",              _sdump_separator     },
 
-#ifdef CLUA_BINDINGS
     { nullptr,          _sdump_lua           }
-#else
-    { nullptr,          nullptr              }
-#endif
 };
 
 static void dump_section(dump_params &par)
@@ -221,21 +216,13 @@ static void _sdump_header(dump_params &par)
 #endif
     par.text += " character file.\n\n";
 
-    if (you.fully_seeded
-#ifdef DGAMELAUNCH
-        && (par.se // for online games, show seed for a dead char
-            || you.wizard
-            || crawl_state.type == GAME_TYPE_CUSTOM_SEED)
-#endif
-        )
-    {
+    if (you.fully_seeded && crawl_state.seed_is_known())
         par.text += seed_description() + "\n\n";
-    }
 }
 
 static void _sdump_stats(dump_params &par)
 {
-    par.text += dump_overview_screen(par.full_id);
+    par.text += dump_overview_screen();
     par.text += "\n\n";
 }
 
@@ -583,7 +570,6 @@ static void _sdump_separator(dump_params &par)
     par.text += string(79, '-') + "\n";
 }
 
-#ifdef CLUA_BINDINGS
 // Assume this is an arbitrary Lua function name, call the function and
 // dump whatever it returns.
 static void _sdump_lua(dump_params &par)
@@ -597,11 +583,10 @@ static void _sdump_lua(dump_params &par)
     else
         par.text += luatext;
 }
-#endif
 
 string chardump_desc(const item_def& item)
 {
-    string desc = get_item_description(item, false, true);
+    string desc = get_item_description(item, IDM_DUMP);
     string outs;
 
     outs.reserve(desc.length() + 32);
@@ -877,28 +862,31 @@ static void _sdump_spells(dump_params &par)
 {
     string &text(par.text);
 
-    int spell_levels = player_spell_levels();
-
     string verb = par.se? "had" : "have";
 
-    if (spell_levels == 1)
-        text += "You " + verb + " one spell level left.";
-    else if (spell_levels == 0)
+    if (!you.has_mutation(MUT_INNATE_CASTER))
     {
-        verb = par.se? "couldn't" : "cannot";
+        int spell_levels = player_spell_levels();
 
-        text += "You " + verb + " memorise any spells.";
-    }
-    else
-    {
-        if (par.se)
-            text += "You had ";
+        if (spell_levels == 1)
+            text += "You " + verb + " one spell level left.";
+        else if (spell_levels == 0)
+        {
+            verb = par.se? "couldn't" : "cannot";
+
+            text += "You " + verb + " memorise any spells.";
+        }
         else
-            text += "You have ";
-        text += make_stringf("%d spell levels left.", spell_levels);
-    }
+        {
+            if (par.se)
+                text += "You had ";
+            else
+                text += "You have ";
+            text += make_stringf("%d spell levels left.", spell_levels);
+        }
 
-    text += "\n";
+        text += "\n";
+    }
 
     if (!you.spell_no)
     {
@@ -912,7 +900,7 @@ static void _sdump_spells(dump_params &par)
 
         text += "You " + verb + " the following spells:\n\n";
 
-        text += " Your Spells              Type           Power        Failure   Level" "\n";
+        text += " Your Spells              Type           Power      Damage    Failure   Level" "\n";
 
         for (int j = 0; j < 52; j++)
         {
@@ -945,13 +933,18 @@ static void _sdump_spells(dump_params &par)
 
                 spell_line += spell_power_string(spell);
 
-                spell_line = chop_string(spell_line, 54);
+                spell_line = chop_string(spell_line, 52);
+
+                const string spell_damage = spell_damage_string(spell);
+                spell_line += spell_damage.length() ? spell_damage : "N/A";
+
+                spell_line = chop_string(spell_line, 62);
 
                 spell_line += failure_rate_to_string(raw_spell_fail(spell));
 
-                spell_line = chop_string(spell_line, 66);
+                spell_line = chop_string(spell_line, 74);
 
-                spell_line += make_stringf("%-5d", spell_difficulty(spell));
+                spell_line += make_stringf("%d", spell_difficulty(spell));
 
                 spell_line += "\n";
 
@@ -970,7 +963,7 @@ static void _sdump_spells(dump_params &par)
     {
         verb = par.se? "contained" : "contains";
         text += "Your spell library " + verb + " the following spells:\n\n";
-        text += " Spells                   Type           Power        Failure   Level" "\n";
+        text += " Spells                   Type           Power      Damage    Failure   Level" "\n";
 
         auto const library = get_sorted_spell_list(true, false);
 
@@ -1004,16 +997,21 @@ static void _sdump_spells(dump_params &par)
             else
                 spell_line += "Unusable";
 
-            spell_line = chop_string(spell_line, 54);
+            spell_line = chop_string(spell_line, 52);
+
+            const string spell_damage = spell_damage_string(spell);
+            spell_line += spell_damage.length() ? spell_damage : "N/A";
+
+            spell_line = chop_string(spell_line, 62);
 
             if (memorisable)
                 spell_line += failure_rate_to_string(raw_spell_fail(spell));
             else
                 spell_line += "N/A";
 
-            spell_line = chop_string(spell_line, 66);
+            spell_line = chop_string(spell_line, 74);
 
-            spell_line += make_stringf("%-5d", spell_difficulty(spell));
+            spell_line += make_stringf("%d", spell_difficulty(spell));
 
             spell_line += "\n";
 
@@ -1080,7 +1078,7 @@ static void _sdump_kills_by_place(dump_params &par)
 
     string header =
     "Table legend:\n"
-    " A = Kills in this place as a percentage of kills in entire the game.\n"
+    " A = Kills in this place as a percentage of kills in the entire game.\n"
     " B = Kills by you in this place as a percentage of kills by you in\n"
     "     the entire game.\n"
     " C = Kills by friends in this place as a percentage of kills by\n"
@@ -1207,33 +1205,33 @@ static string _describe_action(caction_type type)
     case CACT_MELEE:
         return "Melee";
     case CACT_FIRE:
-        return " Fire";
+        return "Fire";
     case CACT_THROW:
         return "Throw";
     case CACT_ARMOUR:
-        return "Armor"; // "Armour" is too long
+        return "Armour";
     case CACT_BLOCK:
         return "Block";
     case CACT_DODGE:
         return "Dodge";
     case CACT_CAST:
-        return " Cast";
+        return "Cast";
     case CACT_INVOKE:
-        return "Invok";
+        return "Invoke";
     case CACT_ABIL:
-        return " Abil";
+        return "Ability";
     case CACT_EVOKE:
         return "Evoke";
     case CACT_USE:
-        return "  Use";
+        return "Use";
     case CACT_STAB:
-        return " Stab";
+        return "Stab";
 #if TAG_MAJOR_VERSION == 34
     case CACT_EAT:
-        return "  Eat";
+        return "Eat";
 #endif
     case CACT_RIPOSTE:
-        return "Rpst.";
+        return "Riposte";
     default:
         return "Error";
     }
@@ -1254,7 +1252,7 @@ static const char* _stab_names[] =
     "Betrayed ally",
 };
 
-static const char* _aux_attack_names[1 + UNAT_LAST_ATTACK] =
+static const char* _aux_attack_names[] =
 {
     "No attack",
     "Constrict",
@@ -1262,11 +1260,13 @@ static const char* _aux_attack_names[1 + UNAT_LAST_ATTACK] =
     "Headbutt",
     "Peck",
     "Tailslap",
+    "Touch",
     "Punch",
     "Bite",
     "Pseudopods",
     "Tentacles",
 };
+COMPILE_CHECK(ARRAYSZ(_aux_attack_names) == NUM_UNARMED_ATTACKS);
 
 static string _describe_action_subtype(caction_type type, int compound_subtype)
 {
@@ -1394,11 +1394,10 @@ static void _sdump_action_counts(dump_params &par)
     if (max_lt)
         max_lt++;
 
-    par.text += make_stringf("%-24s", "Action");
+    par.text += make_stringf("%-26s", "Action");
     for (int lt = 0; lt < max_lt; lt++)
         par.text += make_stringf(" | %2d-%2d", lt * 3 + 1, lt * 3 + 3);
-    par.text += make_stringf(" || %5s", "total");
-    par.text += "\n-------------------------";
+    par.text += " || total\n" + string(27, '-');
     for (int lt = 0; lt < max_lt; lt++)
         par.text += "+-------";
     par.text += "++-------\n";
@@ -1425,11 +1424,11 @@ static void _sdump_action_counts(dump_params &par)
         {
             if (ac == action_vec.begin())
             {
-                par.text += _describe_action(caction_type(cact));
-                par.text += ": ";
+                const string act = _describe_action(caction_type(cact));
+                par.text += make_stringf("%7.7s: ", act.c_str());
             }
             else
-                par.text += "       ";
+                par.text.append(9, ' ');
             par.text += chop_string(_describe_action_subtype(caction_type(cact), ac->first), 17);
             for (int lt = 0; lt < max_lt; lt++)
             {
@@ -1534,7 +1533,7 @@ string morgue_directory()
     return dir;
 }
 
-void dump_map(FILE *fp, bool debug, bool dist)
+void dump_map(FILE *fp, bool debug, bool dist, bool log)
 {
     if (debug)
     {
@@ -1584,18 +1583,18 @@ void dump_map(FILE *fp, bool debug, bool dist)
                     fputc('@', fp);
                 else if (testbits(env.pgrid[x][y], FPROP_HIGHLIGHT))
                     fputc('?', fp);
-                else if (dist && grd[x][y] == DNGN_FLOOR
+                else if (dist && env.grid[x][y] == DNGN_FLOOR
                          && travel_point_distance[x][y] > 0
                          && travel_point_distance[x][y] < 10)
                 {
                     fputc('0' + travel_point_distance[x][y], fp);
                 }
-                else if (grd[x][y] >= NUM_FEATURES)
+                else if (env.grid[x][y] >= NUM_FEATURES)
                     fputc('!', fp);
                 else
                 {
                     fputs(OUTS(stringize_glyph(
-                               get_feature_def(grd[x][y]).symbol())), fp);
+                               get_feature_def(env.grid[x][y]).symbol())), fp);
                 }
             }
             fputc('\n', fp);
@@ -1615,10 +1614,14 @@ void dump_map(FILE *fp, bool debug, bool dist)
             for (int j = Y_BOUND_1; j <= Y_BOUND_2; j++)
                 if (env.map_knowledge[i][j].known())
                 {
-                    if (i > max_x) max_x = i;
-                    if (i < min_x) min_x = i;
-                    if (j > max_y) max_y = j;
-                    if (j < min_y) min_y = j;
+                    if (i > max_x)
+                        max_x = i;
+                    if (i < min_x)
+                        min_x = i;
+                    if (j > max_y)
+                        max_y = j;
+                    if (j < min_y)
+                        min_y = j;
                 }
 
         for (int y = min_y; y <= max_y; ++y)
@@ -1632,15 +1635,22 @@ void dump_map(FILE *fp, bool debug, bool dist)
             fputc('\n', fp);
         }
     }
+
+    // for debug use in scripts, e.g. placement.lua
+    if (log)
+    {
+        string the_log = get_last_messages(NUM_STORED_MESSAGES, true);
+        fprintf(fp, "\n%s", the_log.c_str());
+    }
 }
 
-void dump_map(const char* fname, bool debug, bool dist)
+void dump_map(const char* fname, bool debug, bool dist, bool log)
 {
     FILE* fp = fopen_replace(fname);
     if (!fp)
         return;
 
-    dump_map(fp, debug, dist);
+    dump_map(fp, debug, dist, log);
 
     fclose(fp);
 }
@@ -1659,9 +1669,6 @@ static bool _write_dump(const string &fname, const dump_params &par, bool quiet)
     stash_file_name = file_name;
     stash_file_name += ".lst";
     StashTrack.dump(stash_file_name.c_str(), par.full_id);
-
-    string map_file_name = file_name + ".map";
-    dump_map(map_file_name.c_str());
 
     file_name += ".txt";
     FILE *handle = fopen_replace(file_name.c_str());
@@ -1728,7 +1735,7 @@ void display_char_dump()
 #ifdef DGL_WHEREIS
 ///////////////////////////////////////////////////////////////////////////
 // whereis player
-void whereis_record(const char *status)
+void whereis_record(const xlog_fields &xl)
 {
     const string file_name = morgue_directory()
                              + strip_filename_unsafe_chars(you.your_name)
@@ -1737,9 +1744,7 @@ void whereis_record(const char *status)
     if (FILE *handle = fopen_replace(file_name.c_str()))
     {
         // no need to bother with supporting ancient charsets for DGL
-        fprintf(handle, "%s:status=%s\n",
-                xlog_status_line().c_str(),
-                status? status : "");
+        fprintf(handle, "%s\n", xl.xlog_line().c_str());
         fclose(handle);
     }
 }

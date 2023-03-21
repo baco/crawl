@@ -68,21 +68,18 @@
 # BOOL: Turn certain boolean properties of the artefact on, with the list
 # of properties separated by commas. The list includes:
 #
-# * berserk:  Lets wearer evoke berserking ability.
 # * blink:    Lets wearer evoke the blink ability.
 # * chaotic:  Is treated as a chaotic item.
 # * clarity:  Provides clarity.
 # * corrode:  Randomly causes corrosion when taking damage.
-# * curse:    Item curses itself on equip, and is generated cursed.
 # * drain:    Causes draining when unequipped.
 # * elec:     Grants electrical resistance.
 # * evil:     Is treated as an evil item.
 # * fragile:  Is destroyed when unequipped.
-# * fog:      Lets wearer use the evoke fog ability.
 # * evil:     Is treated as an evil item (hated by good gods).
 # * holy:     Is treated as a holy item.
 # * inv:      Lets wearer evoke invisibility ability.
-# * fly:      Lets wearer evoke flight ability.
+# * fly:      Grants wearer flight.
 # * mutate:   Causes high magical contamination when unequipped.
 # * nogen:    Never randomly generated.
 # * noises:   Weapon makes noises. Should be given its own set of noises
@@ -91,19 +88,39 @@
 #             lowercase.
 # * nospell:  Prevents wearer from casting spells.
 # * notelep:  Prevents wearer from teleporting or blinking.
+# * no_upgrade: Don't regenerate this item on load. Used for items with mutable
+#             state, e.g. Wyrmbane's growing enchantment.
 # * poison:   Grants poison resistance.
 # * rcorr:    Grants corrosion resistance.
 # * rmsl:     Passively repels missiles.
 # * rmut:     Grants mutation resistance.
 # * rnd_tele: Induces random teleportation.
 # * seeinv:   Lets wearer see invisible.
-# * skip_ego: The item's ego is skipped in its inscription, to be replaced by
-#             an INSCRIP: entry.
+# * skip_ego: The item's ego is skipped in its inscription and description, to
+#             be replaced by INSCRIP: and DBRAND: entries.
 # * slow:     Randomly causes slowing when taking damage.
 # * special:  Artefact is "special": can't be picked up by monsters,
 #             can't be affected by Tukima's Dance.
 # * tilerim:  Adds a black outline to the tile, see above section.
 # * unided:   Properties start unidentified.
+
+# DESCRIP: Description of powers of the artefact which are specific to this
+# artefact, not provided by the fields in this file. Use DBRAND for unusual
+# brands.
+#
+# The description of a power can be split across more than one line. The
+# subsequent lines should be just below the first one, and should start with
+# a space (with no header name).
+#
+# If there are multiple powers, subsequent powers can be added with a +.
+#
+# Example:
+# DESCRIP: It enhances your template magic.
+# + It gives you a regex malus.
+
+# DBRAND: Description of a brand which is specific to this artefact.
+#
+# The syntax for this is identical to DESCRIP.
 
 # ENUM: Forces the artefact's enumeration literal to something specific.
 # For example, "ENUM: FOO" gives the enumeration "UNRAND_FOO". The
@@ -144,11 +161,11 @@
 # FIRE:     Fire resistance/vulnerability.
 # INT:      Intelligence modifier.
 # LIFE:     Negative energy resistance/vulnerability.
-# MAGIC:    Magic resistance/vulnerability.
+# WILL:     Willpower increase/decrease.
 # MP:       Mana capacity modifier.
 # NAME:     Name of artefact when identified.
-# REGEN:    Health regeneration, in units of HP healed every 25 aut
-#           (2.5 normal turns).
+# REGEN:    Health regeneration, in units of HP healed every 12.5 aut
+#           (1.25 normal turns).
 # STEALTH:  Stealth modifier.
 # STR:      Strength modifier.
 # TILE:     The file containing the artefact's tile, with file type png.
@@ -173,12 +190,14 @@ COLOUR: BLACK
 NAME:    Singing Sword
 OBJ:     OBJ_WEAPONS/WPN_DOUBLE_SWORD
 INSCRIP: sonic wave
-PLUS:    +7
+# Let's take it to 11.
+PLUS:    +11
 COLOUR:  ETC_GOLD
 TILE:    spwpn_singing_sword
 TILE_EQ: singing_sword
 VALUE:   1000
-BRAND:   SPWPN_VORPAL
+DBRAND:  Sonic Wave: It radiates damaging sonic waves as it strikes, especially in combat
+ involving dangerous or numerous foes.
 
 NAME:    Wrath of Trog
 OBJ:     OBJ_WEAPONS/WPN_BATTLEAXE
@@ -189,7 +208,10 @@ TILE:    spwpn_wrath_of_trog
 TILE_EQ: axe_trog
 VALUE:   800
 ANGRY:   50
+BOOL:    rampage
 BRAND:   SPWPN_ANTIMAGIC
+DESCRIP: It causes slowness and exhaustion when equipped.
++It extends the wielder's berserk rage when killing foes.
 
 NAME:    mace of Variability
 OBJ:     OBJ_WEAPONS/WPN_GREAT_MACE
@@ -200,30 +222,42 @@ COLOUR:  ETC_RANDOM
 TILE:    spwpn_mace_of_variability
 TILE_EQ: mace_of_variability
 VALUE:   600
-BOOL:    skip_ego
 BRAND:   SPWPN_CHAOS
+DBRAND:  Chain Chaos: It occasionally unleashes arcs of chaos on nearby creatures upon striking a
+ foe.
 
 NAME:    glaive of Prune
 OBJ:     OBJ_WEAPONS/WPN_GLAIVE
+INSCRIP: Prune
 PLUS:    +12
 COLOUR:  LIGHTMAGENTA
 TILE:    spwpn_glaive_of_prune
 TILE_EQ: glaive_of_prune
 BOOL:    chaotic
-BRAND:   SPWPN_VORPAL
+# I have taken the plums that were in your icebox (and turned them into prunes)
+BRAND:   SPWPN_FREEZING
+DESCRIP: Prune:     It halves damage taken while paralysed, petrified or unconscious.
 
 NAME:    sword of Power
 OBJ:     OBJ_WEAPONS/WPN_GREAT_SWORD
-FB_BRAND: SPWPN_VORPAL
-PLUS:    +0 # Set on wield
+INSCRIP: lifebolt
+PLUS:    +9
 COLOUR:  RED
 TILE:    spwpn_sword_of_power
 TILE_EQ: sword_of_power
 VALUE:   800
-BOOL:    special, no_upgrade
+DBRAND:  Lifebolt:  It occasionally discharges a powerful but inaccurate bolt of energy
+ upon striking a foe, with increased chance the greater the wielder's current
+ health.
 
 NAME:    staff of Olgreb
 INSCRIP: rPois∞
+DESCRIP: It enhances your poison magic.
++It grants immunity to poison.
++It can be activated via the 'a'bility menu to radiate toxic energy, with
+ effectiveness depending on Evocations skill.
+DBRAND: If the wielder is skilled in Evocations, they can envenom those struck
+ by it, dealing poison damage which bypasses armour.
 OBJ:     OBJ_WEAPONS/WPN_STAFF
 PLUS:    +9
 COLOUR:  ETC_POISON
@@ -232,34 +266,48 @@ TILE_EQ: olgreb
 VALUE:   1000
 
 NAME:    staff of Wucad Mu
-INSCRIP: channel
+INSCRIP: *channel
 OBJ:     OBJ_WEAPONS/WPN_STAFF
 PLUS:    +9
 COLOUR:  ETC_MAGIC
 TILE:    spwpn_wucad_mu
 TILE_EQ: wucad_mu
 VALUE:   1000
+DESCRIP: *Channel:  It occasionally powers its wielder's spells, but with a chance of
+ causing confusion or draining the wielder's intelligence.
++It becomes more likely to activate and less likely to backfire with increased
+ Evocations skill.
 
 NAME:    Vampire's Tooth
 OBJ:     OBJ_WEAPONS/WPN_QUICK_BLADE
 # it's a quick blade made from a tooth -> no TYPE
 FB_BRAND: SPWPN_VAMPIRISM
-PLUS:    +12
+PLUS:    +8
+INSCRIP: megavamp
 COLOUR:  ETC_BONE
 TILE:    spwpn_vampires_tooth
 TILE_EQ: vampires_tooth
 BRAND:   SPWPN_VAMPIRISM
 VALUE:   600
+BOOL:    skip_ego
+DBRAND:  Megavamp:  It occasionally heals its wielder for the full amount of damage dealt
+ when it wounds a living foe.
 
 NAME:    scythe of Curses
-OBJ:     OBJ_WEAPONS/WPN_SCYTHE
+OBJ:     OBJ_WEAPONS/WPN_HALBERD
+FALLBACK: OBJ_WEAPONS/WPN_BARDICHE
+TYPE:    scythe
+BASE_DAM: +1
+BASE_DELAY: +5
 PLUS:    +13
+INSCRIP: curses,
 COLOUR:  ETC_DEATH
 TILE:    spwpn_scythe_of_curses
 TILE_EQ: finisher
 BRAND:   SPWPN_DRAINING
 VALUE:   800
-BOOL:    curse
+BOOL:    drain
+DBRAND:  Curses:    It inflicts powerful necromantic curses on any living foe it strikes.
 
 NAME:    sceptre of Torment
 INSCRIP: torment
@@ -271,6 +319,8 @@ TILE_EQ: sceptre_of_torment
 BRAND:   SPWPN_PAIN
 VALUE:   1200
 BOOL:    evil
+DBRAND:  Torment:   It occasionally torments all nearby living foes when it strikes in
+ combat.
 
 NAME:    sword of Zonguldrok
 OBJ:     OBJ_WEAPONS/WPN_DOUBLE_SWORD
@@ -290,20 +340,23 @@ OBJ:     OBJ_WEAPONS/WPN_GREAT_SWORD
 BASE_DAM: +1
 BASE_ACC: +1
 PLUS:    +6
+# We'd like to inscribe Hellfire here, but that messes with Cerebov's grand entry.
 COLOUR:  ETC_FIRE
 TILE:    spwpn_sword_of_cerebov
 TILE_EQ: sword_twist
 BRAND:   SPWPN_FLAMING
 BOOL:    evil, nogen
+DBRAND:  Hellfire:  It temporarily reduces the fire resistance of those it strikes.
 
-NAME:    staff of Dispater
-APPEAR:  golden staff
-OBJ:     OBJ_WEAPONS/WPN_STAFF
-PLUS:    +4
-COLOUR:  ETC_GOLD
-TILE:    spwpn_staff_of_dispater
-TILE_EQ: dispater
-BOOL:    evil, nogen
+NAME:    orb of Dispater
+OBJ:     OBJ_ARMOUR/ARM_ORB
+COLOUR:  LIGHTRED
+TILE:    urand_dispater
+TILE_EQ: orb_of_dispater
+BOOL:    evil, nogen, corrode
+AC:      5
+INSCRIP: +Damnation
+DESCRIP: +Damnation: It grants the ability to hurl damnation at the cost of health and magic, with strength depending on Evocations skill.
 
 NAME:    sceptre of Asmodeus
 APPEAR:  ruby sceptre
@@ -313,6 +366,9 @@ COLOUR:  ETC_BLOOD
 TILE:    spwpn_sceptre_of_asmodeus
 TILE_EQ: asmodeus
 BOOL:    evil, nogen
+DESCRIP: Wielding it grants the ability to summon fiery demons, with success rate depending
+ on Evocations skill. Those summoned this way will remain friendly only for a
+ limited time.
 
 # Randomised properties, fixed appearance.
 # Reserved for the Enchantress.
@@ -332,9 +388,9 @@ PLUS:    +8
 COLOUR:  ETC_DARK
 TILE:    urand_bloodbane
 TILE_EQ: bloodbane
-BRAND:   SPWPN_VORPAL
+BRAND:   SPWPN_DRAINING
 ANGRY:   5
-BOOL:    berserk, nogen
+BOOL:    nogen
 STEALTH: -1
 # end TAG_MAJOR_VERSION
 
@@ -350,7 +406,7 @@ BRAND:   SPWPN_FLAMING
 FIRE:    2
 COLD:    -1
 BOOL:    poison, skip_ego, nogen
-MAGIC:   1
+WILL:    1
 # end TAG_MAJOR_VERSION
 
 # start TAG_MAJOR_VERSION == 34
@@ -370,13 +426,15 @@ BOOL:    nogen
 NAME:    demon blade "Leech"
 OBJ:     OBJ_WEAPONS/WPN_DEMON_BLADE
 PLUS:    +8
+INSCRIP: evervamp,
 COLOUR:  ETC_DARK
 TILE:    urand_leech
 TILE_EQ: leech
 BRAND:   SPWPN_VAMPIRISM
 LIFE:    1
-ANGRY:   5
-BOOL:    berserk
+BOOL:    drain, harm, skip_ego
+DBRAND:  Evervamp:  It heals its wielder for a portion of the damage dealt every time it
+ strikes a living foe.
 
 # start TAG_MAJOR_VERSION == 34
 NAME:    dagger of Chilly Death
@@ -389,10 +447,11 @@ TILE_EQ: chilly_death
 BRAND:   SPWPN_FREEZING
 FIRE:    -1
 COLD:    2
-MAGIC:   1
+WILL:    1
 BOOL:    poison, skip_ego, nogen
 # end TAG_MAJOR_VERSION
 
+# TAG_MAJOR_VERSION == 34
 NAME:     dagger "Morg"
 OBJ:      OBJ_WEAPONS/WPN_DAGGER
 PLUS:     +4
@@ -401,21 +460,29 @@ TILE:     urand_morg
 TILE_EQ:  morg
 BRAND:    SPWPN_PAIN
 INT:      5
-MAGIC:    1
+WILL:     1
+BOOL:     nogen
+# end TAG_MAJOR_VERSION
 
 NAME:    scythe "Finisher"
-OBJ:     OBJ_WEAPONS/WPN_SCYTHE
-INSCRIP: speed, eviscerate
+OBJ:     OBJ_WEAPONS/WPN_HALBERD
+FALLBACK: OBJ_WEAPONS/WPN_BARDICHE
+TYPE:    scythe
+BASE_DAM: +1
+BASE_DELAY: +5
+INSCRIP: eviscerate
 PLUS:    +5
 COLOUR:  ETC_DARK
 TILE:    urand_finisher
 TILE_EQ: finisher
 BRAND:   SPWPN_SPEED
-BOOL:    skip_ego
+DBRAND:  Eviscerate: It may instantly slay those it strikes, especially weaker foes.
 
-NAME:    sling "Punk"
-OBJ:     OBJ_WEAPONS/WPN_FUSTIBALUS
+NAME:    greatsling "Punk"
+OBJ:     OBJ_WEAPONS/WPN_SLING
+TYPE:    greatsling
 PLUS:    +3
+BASE_DAM: +3
 COLOUR:  ETC_SLIME
 TILE:    urand_punk
 TILE_EQ: punk
@@ -439,36 +506,41 @@ OBJ:     OBJ_WEAPONS/WPN_GIANT_CLUB
 PLUS:    +3
 COLOUR:  BROWN
 TILE:    urand_skullcrusher
-TILE_EQ: giant_club_slant
+TILE_EQ: skullcrusher
 BRAND:   SPWPN_SPEED
 STR:     7
 
 NAME:     glaive of the Guard
 OBJ:      OBJ_WEAPONS/WPN_GLAIVE
 FALLBACK: OBJ_WEAPONS/WPN_BARDICHE
-PLUS:     +8
+PLUS:     +5
 COLOUR:   ETC_ELECTRICITY
 TILE:     urand_guard
 TILE_EQ:  glaive_of_the_guard
 BRAND:    SPWPN_ELECTROCUTION
 AC:       5
-BOOL:     seeinv, berserk
+INSCRIP:  spectral,
+DBRAND:   Spectral:  When it strikes, its spirit leaps out and fights alongside the wielder.
 
 ENUM:     ZEALOT_SWORD
 NAME:     zealot's sword
 OBJ:      OBJ_WEAPONS/WPN_EUDEMON_BLADE
 PLUS:     +10
+INSCRIP:  Zealotry,
 COLOUR:   ETC_HOLY
 TILE:     unrand_zealot_sword
 TILE_EQ:  zealot_sword
 # fallback places a randart eudemon blade!
 BRAND:    SPWPN_HOLY_WRATH
+FB_BRAND: SPWPN_HOLY_WRATH
 EV:       3
-ANGRY:    5
+ANGRY:    20
 LIFE:     1
+DESCRIP:  Zealotry:  Whenever the wielder enters a berserk rage, their allies are
+ berserked alongside them.
 
 NAME:    arbalest "Damnation"
-INSCRIP: damnation,
+INSCRIP: damnation
 OBJ:     OBJ_WEAPONS/WPN_ARBALEST
 FB_BRAND: SPWPN_FLAMING
 PLUS:    +6
@@ -477,6 +549,8 @@ TILE:    urand_damnation
 TILE_EQ: crossbow_fire
 VALUE:   800
 BOOL:    evil
+DBRAND:  Damnation:  Any ammunition fired from it explodes in a burst of damnation on
+ striking a foe, dealing damage which bypasses armour.
 
 # start TAG_MAJOR_VERSION == 34
 NAME:    sword of the Doom Knight
@@ -486,7 +560,7 @@ COLOUR:  BLUE
 TILE:    urand_doom_knight
 TILE_EQ: doom_knight
 BRAND:   SPWPN_PAIN
-MAGIC:   1
+WILL:    1
 BOOL:    nospell, nogen
 # end TAG_MAJOR_VERSION
 
@@ -499,6 +573,8 @@ TILE:    urand_eos
 TILE_EQ: eos
 BRAND:   SPWPN_ELECTROCUTION
 BOOL:    elec
+DESCRIP: Halo:      It grants its wielder a halo, revealing invisible creatures and
+ increasing accuracy against all within it other than the wielder.
 
 # start TAG_MAJOR_VERSION == 34
 # Was "spear of Voo-Doo". In the African origin, there is a distinction
@@ -527,7 +603,6 @@ TILE:     urand_octopus_king
 TILE_EQ:  trident_octopus_king
 BRAND:    SPWPN_VENOM
 BOOL:     elec, poison, no_upgrade
-MAGIC:    1
 
 NAME:    mithril axe "Arga"
 OBJ:     OBJ_WEAPONS/WPN_BROAD_AXE
@@ -536,7 +611,7 @@ COLOUR:  WHITE
 TILE:    urand_arga
 TILE_EQ: arga
 BRAND:   SPWPN_SPEED
-MAGIC:   1
+WILL:    1
 
 NAME:     Elemental Staff
 OBJ:      OBJ_WEAPONS/WPN_STAFF
@@ -548,21 +623,25 @@ TILE:     urand_elemental
 TILE_EQ:  elemental_staff
 FIRE:     2
 COLD:     2
-MAGIC:    2
 AC:       5
 BOOL:     elec
+DBRAND:   If the wielder is skilled in Evocations, they can discharge powerful
+ blasts of elemental energy when striking with it.
+DESCRIP:  It enhances your fire, ice, earth and air magic.
 
 NAME:     heavy crossbow "Sniper"
 OBJ:      OBJ_WEAPONS/WPN_TRIPLE_CROSSBOW
 TYPE:     heavy crossbow
-PLUS:     +9
+PLUS:     +27
 COLOUR:   ETC_DARK
 TILE:     urand_sniper
+VALUE:    800
 TILE_EQ:  sniper
-BASE_DELAY: +4
-BRAND:    SPWPN_VORPAL
+BASE_DELAY: +2
+BRAND:    SPWPN_HEAVY
 BOOL:     seeinv
 INSCRIP:  Acc+∞
+DESCRIP:  Acc+∞:     It never misses its target.
 
 # start TAG_MAJOR_VERSION == 34
 NAME:    longbow "Piercer"
@@ -594,7 +673,7 @@ BOOL:    inv, tilerim, nogen
 NAME:    lance "Wyrmbane"
 OBJ:     OBJ_WEAPONS/WPN_SPEAR
 FALLBACK: OBJ_WEAPONS/WPN_DEMON_TRIDENT
-FB_BRAND: SPWPN_VORPAL
+FB_BRAND: SPWPN_FLAMING
 INSCRIP: slay drac,
 TYPE:    lance
 BASE_DAM: +2
@@ -606,6 +685,7 @@ AC:      3
 FIRE:    1
 COLD:    1
 BOOL:    poison, no_upgrade
+DBRAND:  Slay Drac: It inflicts extra damage against dragons and draconians.
 
 NAME:     Spriggan's Knife
 OBJ:      OBJ_WEAPONS/WPN_DAGGER
@@ -617,6 +697,8 @@ TILE:     urand_spriggans_knife
 TILE_EQ:  spriggans_knife
 EV:       4
 STEALTH:  1
+DESCRIP:  Stab:     It is more effective when stabbing unaware enemies, sometimes treating
+ them as though they were completely helpless.
 
 NAME:    plutonium sword
 OBJ:     OBJ_WEAPONS/WPN_TRIPLE_SWORD
@@ -628,9 +710,12 @@ TILE_EQ: plutonium_sword
 BOOL:    mutate, chaotic
 STEALTH: -1
 VALUE:   1000
+DBRAND:  Mutate:    It occasionally inflicts wild transmutation effects on those it
+ strikes, inflicting malmutation or extra damage, or polymorphing them into a
+ new form.
 
 NAME:     great mace "Undeadhunter"
-INSCRIP:  disrupt,
+INSCRIP:  deathbane,
 OBJ:      OBJ_WEAPONS/WPN_GREAT_MACE
 FB_BRAND: SPWPN_HOLY_WRATH
 PLUS:     +7
@@ -638,6 +723,7 @@ COLOUR:   LIGHTGREY
 TILE:     urand_undeadhunter
 TILE_EQ:  undeadhunter
 LIFE:     1
+DBRAND:   Deathbane: It inflicts significantly more damage against the undead.
 
 NAME:    whip "Snakebite"
 OBJ:     OBJ_WEAPONS/WPN_WHIP
@@ -648,7 +734,9 @@ COLOUR:  DARKGREY
 TILE:    urand_snakebite
 TILE_EQ: snakebite
 BRAND:   SPWPN_VENOM
-BOOL:    poison, skip_ego
+BOOL:    poison
+DBRAND:  Curare:    It occasionally inflicts asphyxiating poison on those it strikes,
+ dealing poison damage and causing slowness.
 
 # start TAG_MAJOR_VERSION == 34
 NAME:     knife of Accuracy
@@ -684,6 +772,8 @@ COLOUR:   DARKGREY
 TILE:     urand_cutlass
 TILE_EQ:  capt_cutlass
 BRAND:    SPWPN_SPEED
+DBRAND:   Disarm:   It may disarm weapon-wielding foes when striking them, dealing
+ extra damage in the process.
 
 NAME:     storm bow
 OBJ:      OBJ_WEAPONS/WPN_LONGBOW
@@ -693,6 +783,8 @@ TILE:     urand_storm_bow
 TILE_EQ:  storm_bow
 BRAND:    SPWPN_ELECTROCUTION
 INSCRIP:  penet
+DBRAND:   Penet:    Any ammunition fired by it passes through the targets it hits,
+ potentially hitting all targets in its path until it reaches maximum range.
 
 NAME:    tower shield of Ignorance
 OBJ:     OBJ_ARMOUR/ARM_TOWER_SHIELD
@@ -716,14 +808,15 @@ DEX:     4
 NAME:     cloak of the Thief
 OBJ:      OBJ_ARMOUR/ARM_CLOAK
 FB_BRAND: SPARM_INVISIBILITY
-INSCRIP:  +Fog
+INSCRIP:  *Fog
 PLUS:     +2
 COLOUR:   ETC_DARK
 TILE:     urand_thief
 TILE_EQ:  black
 SLAY:     -2
 STEALTH:  1
-BOOL:     seeinv, fog
+BOOL:     seeinv
+DESCRIP:  *Fog:     It may release a thick cloud of smoke when the wearer is hurt.
 
 # start TAG_MAJOR_VERSION == 34
 NAME:    tower shield "Bullseye"
@@ -749,14 +842,15 @@ BOOL:    elec, seeinv
 NAME:     hat of the Bear Spirit
 OBJ:      OBJ_ARMOUR/ARM_HAT
 PLUS:     +2
+INSCRIP:  Bear,
 COLOUR:   DARKGREY
 TILE:     urand_bear
 TILE_EQ:  bear
 # TODO: why isn't this brand working on the fallback?
 BRAND:    SPARM_SPIRIT_SHIELD
-BOOL:     berserk
-MAGIC:    2
-LIFE:     1
+ANGRY:    20
+WILL:     2
+DBRAND:   Bear:     Going berserk makes the wearer tougher, and they're slowed less afterward.
 
 NAME:     robe of Misfortune
 OBJ:      OBJ_ARMOUR/ARM_ROBE
@@ -767,7 +861,7 @@ COLOUR:   LIGHTMAGENTA
 TILE:     urand_misfortune
 TILE_EQ:  robe_misfortune
 EV:       5
-BOOL:     harm, mutate, drain, slow, corrode
+BOOL:     harm, slow, corrode
 
 # start TAG_MAJOR_VERSION == 34
 NAME:     cloak of Flash
@@ -784,19 +878,22 @@ ENUM:     HOOD_ASSASSIN
 NAME:     hood of the Assassin
 OBJ:      OBJ_ARMOUR/ARM_HAT
 FB_BRAND: SPARM_SEE_INVISIBLE
-INSCRIP:  Detection Stab+
+INSCRIP:  Detect Stab+
 PLUS:     +2
 COLOUR:   BROWN
 TILE:     urand_hood_assassin
-TILE_EQ:  hood_purple
+TILE_EQ:  hood_assassin
 STEALTH:  2
 VALUE:    600
+DESCRIP:  Detect:    It allows the wearer to sense nearby creatures.
++Stab+:     It allows the wearer to make particularly effective stabbing attacks against
+ helpless or unaware enemies with any weapon.
 
 ENUM:    LEAR
 NAME:    Lear's hauberk
 OBJ:     OBJ_ARMOUR/ARM_CHAIN_MAIL
 FALLBACK: OBJ_ARMOUR/ARM_PLATE_ARMOUR
-PLUS:    27
+PLUS:    18
 COLOUR:  ETC_GOLD
 TILE:    urand_lear
 TILE_EQ: lears_hauberk
@@ -813,7 +910,8 @@ TILE:    urand_zhor
 TILE_EQ: zhor
 COLD:    3
 BOOL:    seeinv
-INSCRIP: Englaciate
+INSCRIP: *Englaciate
+DESCRIP: *Englaciate: It radiates cold, occasionally slowing all nearby creatures who are not resistant to cold.
 
 ENUM:    SALAMANDER
 NAME:    salamander hide armour
@@ -826,7 +924,9 @@ TILE_EQ: leather_red
 FIRE:    2
 COLD:    -2
 BOOL:    special
-INSCRIP: Flames
+INSCRIP: Flames, rFlCloud
+DESCRIP: Flames:    It surrounds you with flame clouds and enhances your fire magic.
++rFlCloud:  It grants immunity to flame clouds.
 
 NAME:    gauntlets of War
 OBJ:     OBJ_ARMOUR/ARM_GLOVES
@@ -842,19 +942,20 @@ PLUS:    +2
 COLOUR:  LIGHTRED
 TILE:    urand_resistance
 TILE_EQ: kite_shield_of_resistance
-FIRE:    1
-COLD:    1
-MAGIC:   1
+FIRE:    2
+COLD:    2
+WILL:    2
 
 NAME:    robe of Folly
 OBJ:     OBJ_ARMOUR/ARM_ROBE
-PLUS:    3
+PLUS:    4
 COLOUR:  LIGHTGREY
 TILE:    urand_folly
 TILE_EQ: robe_red2
-BRAND:   SPARM_ARCHMAGI
-INT:     5
-MAGIC:   -2
+INT:     8
+INSCRIP: Brill Will-∞
+DESCRIP: Brill:     It increases the power of your magical spells and halves their MP cost (rounding up).
++Will-∞:    It reduces your willpower to zero.
 
 ENUM:    MAXWELL
 NAME:    Maxwell's patent armour
@@ -863,7 +964,7 @@ PLUS:    +15
 COLOUR:  LIGHTGREEN
 TILE:    urand_maxwell
 TILE_EQ: maxwell
-MAGIC:   1
+WILL:    1
 BOOL:    nospell, notelep, elec, rCorr
 
 ENUM:    DRAGONMASK
@@ -872,7 +973,7 @@ OBJ:     OBJ_ARMOUR/ARM_HAT
 COLOUR:  ETC_SHIMMER_BLUE
 TILE:    urand_dragonmask
 TILE_EQ: art_dragonhelm
-MAGIC:   1
+WILL:    1
 SLAY:    3
 BOOL:    seeinv
 
@@ -884,9 +985,11 @@ INSCRIP:  Dark
 COLOUR:   ETC_DARK
 TILE:     urand_night
 TILE_EQ:  robe_of_night
-MAGIC:    1
+WILL:     1
 BOOL:     seeinv
 VALUE:    600
+DESCRIP:  Dark:      It shrouds the wearer in darkness, reducing the range at which they
+ can see and be seen by others.
 
 NAME:    scales of the Dragon King
 OBJ:     OBJ_ARMOUR/ARM_GOLD_DRAGON_ARMOUR
@@ -894,7 +997,7 @@ PLUS:    +9
 COLOUR:  ETC_GOLD
 TILE:    urand_dragon_king
 TILE_EQ: dragonarm_gold
-MAGIC:   1
+WILL:    1
 
 NAME:    hat of the Alchemist
 OBJ:     OBJ_ARMOUR/ARM_HAT
@@ -904,7 +1007,7 @@ TILE:    urand_alchemist
 TILE_EQ: turban_purple
 FIRE:    1
 COLD:    1
-MAGIC:   1
+WILL:    1
 LIFE:    1
 BOOL:    elec, poison, rMut, rCorr
 
@@ -918,6 +1021,8 @@ TILE:    urand_fencer
 TILE_EQ: glove_white
 DEX:     3
 VALUE:   400
+DESCRIP: Riposte:   It allows the wearer to riposte with melee
+ weapons, swiftly retaliating against missed or blocked melee attacks.
 
 NAME:     cloak of Starlight
 OBJ:      OBJ_ARMOUR/ARM_CLOAK
@@ -926,9 +1031,10 @@ COLOUR:   ETC_ICE
 TILE:     urand_starlight
 TILE_EQ:  white
 EV:       4
-COLD:     1
 STEALTH:  -2
-BOOL:     elec
+INSCRIP:  *Dazzle
+DESCRIP:  *Dazzle:   It may blind those who miss an attack against the wearer in melee
+ combat.
 
 NAME:     ratskin cloak
 OBJ:      OBJ_ARMOUR/ARM_CLOAK
@@ -942,25 +1048,30 @@ INT:      -1
 DEX:      1
 LIFE:     1
 BOOL:     poison
+DESCRIP:  *Rats:     When the wearer is hurt, rats may emerge from it to assist them.
 
 NAME:     shield of the Gong
 OBJ:      OBJ_ARMOUR/ARM_KITE_SHIELD
 FALLBACK: OBJ_ARMOUR/ARM_TOWER_SHIELD
 PLUS:     +18
+INSCRIP:  Loud
 COLOUR:   ETC_GOLD
 TILE:     urand_gong
 TILE_EQ:  kite_shield_gong
 EV:       -5
-MAGIC:    1
+WILL:     1
 LIFE:     1
-BOOL:     elec
+BOOL:     rcorr
+DESCRIP:  Loud:      It is deafeningly noisy when blocking attacks.
 
 NAME:    amulet of the Air
-OBJ:     OBJ_JEWELLERY/AMU_INACCURACY
+INSCRIP: Inacc Air
+OBJ:     OBJ_JEWELLERY/AMU_NOTHING
 COLOUR:  ETC_ELECTRICITY
 TILE:    urand_air
-EV:      5
 BOOL:    elec, fly, rmsl
+DESCRIP: Inacc:     It reduces the accuracy of your attacks and spells.
++Air:       It enhances your air magic.
 
 NAME:    ring of Shadows
 INSCRIP: Umbra
@@ -969,6 +1080,8 @@ COLOUR:  ETC_DARK
 TILE:    urand_shadows
 BOOL:    inv
 VALUE:   400
+DESCRIP: Umbra:     It surrounds you with an aura of shadow, increasing your stealth and
+ reducing the accuracy of all others within it.
 
 # start TAG_MAJOR_VERSION == 34
 NAME:    amulet of Cekugob
@@ -986,7 +1099,7 @@ OBJ:     OBJ_JEWELLERY/AMU_NOTHING
 COLOUR:  ETC_POISON
 TILE:    urand_four_winds
 LIFE:    1
-MAGIC:   3
+WILL:    3
 BOOL:    clarity
 
 NAME:    necklace of Bloodlust
@@ -994,29 +1107,29 @@ OBJ:     OBJ_JEWELLERY/AMU_NOTHING
 COLOUR:  ETC_BLOOD
 TILE:    urand_bloodlust
 INT:     -3
-MAGIC:   2
-ANGRY:   5
+WILL:    2
+ANGRY:   50
 SLAY:    6
-BOOL:    curse, berserk
+INSCRIP: Fury
+DESCRIP: Fury:      It extends the wearer's berserk rage when killing foes.
 
-NAME:    ring of Phasing
+NAME:    ring of the Hare
 OBJ:     OBJ_JEWELLERY/RING_EVASION
-PLUS:    +8
+PLUS:    +10
 COLOUR:  ETC_POISON
-TILE:    urand_phasing
+TILE:    urand_hare
 
-NAME:    ring of Robustness
+NAME:    ring of the Tortoise
 OBJ:     OBJ_JEWELLERY/RING_PROTECTION
 PLUS:    +8
 COLOUR:  ETC_GOLD
-TILE:    urand_robustness
+TILE:    urand_tortoise
 
 NAME:    ring of the Mage
 OBJ:     OBJ_JEWELLERY/RING_WIZARDRY
 COLOUR:  ETC_ENCHANT
 TILE:    urand_mage
-INT:     3
-MAGIC:   2
+BOOL:    archmagi
 
 NAME:     brooch of Shielding
 OBJ:      OBJ_JEWELLERY/AMU_GUARDIAN_SPIRIT
@@ -1026,13 +1139,15 @@ SH:       +8
 
 ENUM:     RCLOUDS
 NAME:     robe of Clouds
-INSCRIP:  +Thunder rCloud
+INSCRIP:  *Thunder rCloud
 OBJ:      OBJ_ARMOUR/ARM_ROBE
 PLUS:     +3
 COLOUR:   ETC_MIST
 TILE:     urand_clouds
 TILE_EQ:  robe_clouds
 BOOL:     elec
+DESCRIP:  *Thunder:  It occasionally creates storm clouds above nearby enemies.
++rCloud:    It grants its wearer immunity to clouds.
 
 NAME:     hat of Pondering
 OBJ:      OBJ_ARMOUR/ARM_HAT
@@ -1043,31 +1158,35 @@ TILE_EQ:  wizard_bluegreen
 BRAND:    SPARM_PONDEROUSNESS
 INT:      +5
 MP:       +10
-MAGIC:    1
+WILL:     1
 
 ENUM:     DEMON_AXE
 NAME:     obsidian axe
 OBJ:      OBJ_WEAPONS/WPN_BROAD_AXE
-PLUS:     +14
+PLUS:     +16
 COLOUR:   ETC_UNHOLY
 TILE:     spwpn_demon_axe
 TILE_EQ:  demon_axe
-BRAND:    SPWPN_VORPAL
+BRAND:    SPWPN_DRAINING
 FB_BRAND: SPWPN_PAIN
-BOOL:     evil, seeinv, fly, curse
+BOOL:     evil, seeinv, fly, drain
+INSCRIP:  demonic, Mesm
+DBRAND:   Demonic:   It occasionally summons demons to assist the wielder when it strikes
+ in combat.
+DESCRIP:  Mesm:      Its wielder is mesmerised by any visible foes, and it cannot be unequipped while any foes are visible.
 
 NAME:     lightning scales
+INSCRIP:  swift,
 OBJ:      OBJ_ARMOUR/ARM_BARDING
 PLUS:     +6
 TILE:     urand_lightning_scales
 TILE_EQ:  lightning_scales
 COLOUR:   ETC_ELECTRICITY
-BRAND:    SPARM_RUNNING
 BOOL:     elec
+DESCRIP:  Swift:     It allows the wearer to cover ground more swiftly.
 
-# start TAG_MAJOR_VERSION == 34
 ENUM:     BLACK_KNIGHT_HORSE
-NAME:     Black Knight's horse barding
+NAME:     Black Knight's barding
 OBJ:      OBJ_ARMOUR/ARM_BARDING
 PLUS:     +10
 TILE:     urand_bk_barding
@@ -1075,16 +1194,19 @@ TILE_EQ:  black_knight
 COLOUR:   ETC_UNHOLY
 BRAND:    SPARM_PONDEROUSNESS
 LIFE:     1
-BOOL:     poison, evil, nogen
-# end TAG_MAJOR_VERSION
+BOOL:     poison, evil
 
 NAME:     amulet of Vitality
-OBJ:      OBJ_JEWELLERY/AMU_REGENERATION
-HP:       +15
+OBJ:      OBJ_JEWELLERY/AMU_MANA_REGENERATION
+INSCRIP:  RegenMP++
+REGEN:    2
 COLOUR:   ETC_MUTAGENIC
+BOOL:     skip_ego, evil
+VALUE:    1000
 TILE:     urand_vitality
 
 NAME:     autumn katana
+INSCRIP:  manifold assault
 OBJ:      OBJ_WEAPONS/WPN_LONG_SWORD
 FALLBACK: OBJ_WEAPONS/WPN_DOUBLE_SWORD
 TYPE:     katana
@@ -1095,14 +1217,13 @@ PLUS:     +8
 BASE_ACC: +2
 BASE_DAM: +4
 BASE_DELAY: -2
-BOOL:     clarity
-BRAND:    SPWPN_VORPAL
+DESCRIP:  Manifold Assault: It sometimes launches melee attacks against multiple visible enemies.
 
 NAME:     shillelagh "Devastator"
 INSCRIP:  shatter
 OBJ:      OBJ_WEAPONS/WPN_CLUB
 FALLBACK: OBJ_WEAPONS/WPN_EVENINGSTAR
-FB_BRAND: SPWPN_VORPAL
+FB_BRAND: SPWPN_HEAVY
 TYPE:     shillelagh
 TILE:     urand_shillelagh
 TILE_EQ:  shillelagh
@@ -1112,6 +1233,8 @@ BOOL:     special
 # hrm, nothing fitting, shouldn't be elemental but should be marked
 COLOUR:   WHITE
 VALUE:    600
+DBRAND:   Shatter:   It releases a powerful concussive burst when it strikes, dealing
+ extra damage to the target and all other creatures adjacent to them.
 
 # Worn by Tiamat.
 ENUM:     DRAGONSKIN
@@ -1123,17 +1246,19 @@ TILE_EQ:  dragonskin
 PLUS:     +4
 COLOUR:   ETC_HEAL
 BOOL:     nogen
+# We'd like to inscribe something here ('Wyrmscale'?), but that messes with Tiamat's announcement.
+DESCRIP:  Avatar's Aegis: It grants the wearer a chance to resist fire, cold, poison,
+ electricity, acid, and negative energy.
 
 ENUM:     OCTOPUS_KING_RING
 NAME:     ring of the Octopus King
-OBJ:      OBJ_JEWELLERY/RING_ATTENTION
+OBJ:      OBJ_JEWELLERY/RING_FIRST_RING
 COLOUR:   ETC_WATER
 TILE:     urand_octoring
-AC:       1
-EV:       1
-STR:      1
-INT:      1
-DEX:      1
+AC:       +2
+EV:       +2
+SH:       +2
+HP:       +2
 BOOL:     unided, no_upgrade
 
 # Meatsprint only. The type is adjusted to the biggest two-handed axe the
@@ -1164,6 +1289,8 @@ TILE:     urand_finger
 COLOUR:   ETC_BONE
 LIFE:     1
 VALUE:    400
+INSCRIP:  Finger+
+DESCRIP:  Finger+:   It enables you to equip an extra ring.
 
 # start TAG_MAJOR_VERSION == 34
 ENUM:     SPIDER
@@ -1186,9 +1313,9 @@ TILE:     urand_dark_maul
 TILE_EQ:  dark_maul
 PLUS:     +10
 BASE_ACC: +2
-BASE_DAM: +35
-BASE_DELAY: +13
-BRAND:    SPWPN_VORPAL
+BASE_DAM: +20
+BASE_DELAY: +7
+BRAND:    SPWPN_HEAVY
 
 # start TAG_MAJOR_VERSION == 34
 ENUM:    HIGH_COUNCIL
@@ -1215,6 +1342,9 @@ TILE:     urand_arc_blade
 TILE_EQ:  arc_blade
 BOOL:     elec
 VALUE:    600
+DBRAND:   Discharge: It occasionally unleashes powerful arcs of lightning upon striking a
+ foe. These may arc to other adjacent creatures (including the wielder, but
+ dealing reduced damage to them) before grounding out.
 
 ENUM:     SPELLBINDER
 NAME:     demon whip "Spellbinder"
@@ -1224,7 +1354,10 @@ PLUS:     +5
 COLOUR:   ETC_ENCHANT
 TILE:     urand_spellbinder
 TILE_EQ:  spellbinder
-MAGIC:    1
+WILL:     1
+INSCRIP:  disrupt,
+DBRAND:   Disrupt:   It unleashes wild and unpredictable magical effects upon striking
+ a wizard or a creature with magical abilities.
 
 NAME:    lajatang of Order
 INSCRIP: silver,
@@ -1236,10 +1369,13 @@ TILE:    urand_order
 TILE_EQ: order
 PLUS:    +7
 BOOL:    rMut
+DBRAND:  Silver:     It inflicts extra damage upon those it strikes, and deals
+ substantially increased damage to chaotic, mutated and magically transformed
+ beings.
 
 ENUM:     FIRESTARTER
 NAME:     great mace "Firestarter"
-INSCRIP:  inner flame,
+INSCRIP:  inner flame, rFlCloud
 OBJ:      OBJ_WEAPONS/WPN_GREAT_MACE
 COLOUR:   RED
 TILE:     urand_firestarter
@@ -1247,7 +1383,8 @@ TILE_EQ:  firestarter
 PLUS:     +7
 BRAND:    SPWPN_FLAMING
 FIRE:     2
-BOOL:     skip_ego
+DBRAND:   Inner Flame: It fills those it strikes with an explosive inner flame.
+DESCRIP:  rFlCloud:  It grants immunity to clouds of flame.
 
 NAME:     orange crystal plate armour
 OBJ:      OBJ_ARMOUR/ARM_CRYSTAL_PLATE_ARMOUR
@@ -1262,9 +1399,9 @@ BOOL:     clarity
 
 ENUM:    MAJIN
 NAME:    Majin-Bo
-INSCRIP: Archmagi
-OBJ:     OBJ_WEAPONS/WPN_QUARTERSTAFF
+OBJ:     OBJ_WEAPONS/WPN_STAFF
 FALLBACK: OBJ_WEAPONS/WPN_LAJATANG
+INSCRIP: spellvamp,
 PLUS:    +6
 COLOUR:  ETC_UNHOLY
 TILE:    spwpn_majin
@@ -1272,6 +1409,8 @@ TILE_EQ: majin
 MP:      6
 INT:     6
 BRAND:   SPWPN_VAMPIRISM
+BOOL:    skip_ego
+DBRAND:  Spellvamp: It heals its wielder for a portion of the damage dealt when they wound a living foe with it or with a spell, but its wielder's spells cost health as well as magical power.
 
 ENUM:    GYRE
 NAME:    pair of quick blades "Gyre" and "Gimble"
@@ -1280,9 +1419,9 @@ TYPE:    pair of quick blades
 COLOUR:  ETC_ENCHANT
 TILE:    urand_gyre
 TILE_EQ: gyre
-PLUS:    7
+PLUS:    12
 BRAND:   SPWPN_PROTECTION
-FB_BRAND: SPWPN_VORPAL
+FB_BRAND: SPWPN_FREEZING
 
 # start TAG_MAJOR_VERSION == 34
 ENUM:    ETHERIC_CAGE
@@ -1308,19 +1447,20 @@ TILE:    urand_eternal_torment
 TILE_EQ: eternal_torment
 INSCRIP: rTorment HP--
 LIFE:    3
-BOOL:    evil, seeinv, nogen, curse
+BOOL:    evil, seeinv, nogen, drain
 # end TAG_MAJOR_VERSION
 
 ENUM:    VINES
 NAME:    robe of Vines
 OBJ:     OBJ_ARMOUR/ARM_ROBE
-PLUS:    +2
+PLUS:    +1
 COLOUR:  GREEN
 TILE:    urand_vines
 TILE_EQ: vines
 INSCRIP: NoPotionHeal
-REGEN:   7
+REGEN:   4
 VALUE:   800
+DESCRIP: NoPotionHeal: Its wearer cannot be healed by potions.
 
 ENUM:    KRYIAS
 NAME:    Kryia's mail coat
@@ -1332,6 +1472,7 @@ TILE_EQ: kryias
 INSCRIP: PotionHeal*2
 COLD:    1
 VALUE:   600
+DESCRIP: PotionHeal*2: Potions heal its wearer twice as much.
 
 ENUM:    FROSTBITE
 NAME:    frozen axe "Frostbite"
@@ -1343,7 +1484,8 @@ TILE:    urand_frostbite
 TILE_EQ: frostbite
 BRAND:   SPWPN_FREEZING
 COLD:    1
-BOOL:    skip_ego, fly, noises
+BOOL:    fly, noises
+DBRAND:  Freezing Cloud: It occasionally leaves clouds of freezing vapour upon striking a foe, and grants immunity to clouds of freezing vapour.
 
 # start TAG_MAJOR_VERSION == 34
 ENUM:     TALOS
@@ -1367,6 +1509,10 @@ TILE_EQ:  buckler_warlock
 COLOUR:   ETC_SILVER
 BRAND:    SPARM_REFLECTION
 VALUE:    400
+BOOL:     skip_ego
+INSCRIP:  omnireflect
+DBRAND:   Omnireflect: It can block and reflect piercing ranged attacks and magical attacks
+ against the wielder's willpower.
 
 # Fedhas sprint, to allow all species access to evocable invisibility.
 NAME:     amulet of invisibility
@@ -1378,7 +1524,10 @@ BOOL:     inv, nogen
 ENUM:     THERMIC_ENGINE
 NAME:     Maxwell's thermic engine
 OBJ:      OBJ_WEAPONS/WPN_DOUBLE_SWORD
-INSCRIP:  freeze,
+INSCRIP:  freeze, rev,
+DBRAND:  Freeze:    It freezes those it strikes, dealing additional cold damage. It can
+ also slow down cold-blooded creatures.
++Rev:       It becomes more effective when it hits something. This effect fades over time.
 PLUS:     +2
 COLOUR:   ETC_VEHUMET
 TILE:     urand_thermic_engine
@@ -1394,6 +1543,8 @@ COLOUR:   ETC_WARP
 TILE:     urand_rift
 TILE_EQ:  rift
 BRAND:    SPWPN_DISTORTION
+DBRAND:   Reach+: It can reach especially far, and its reaching attacks ignore other
+ creatures in the way.
 
 ENUM:     BATTLE
 NAME:     staff of Battle
@@ -1403,6 +1554,10 @@ COLOUR:   ETC_MAGIC
 TILE:     urand_staff_of_battle
 TILE_EQ:  battle_staff
 VALUE:    800
+DESCRIP:  It enhances your conjuration magic.
++It summons a battlesphere in combat, with strength depending on Conjurations
+ skill.
++Its strikes trigger the battlesphere's blasts.
 
 ENUM:     EMBRACE
 NAME:     Cigotuvi's embrace
@@ -1413,8 +1568,208 @@ TILE:     urand_cigotuvi
 TILE_EQ:  bplate_green
 # XXX TODO: tiles
 LIFE:     1
-INSCRIP:  rRot
+INSCRIP:  Corpsefed rMiasma
 BOOL:     drain, evil, special, no_upgrade
+DESCRIP:  Corpsefed: It gathers nearby corpses to temporarily increase the armour it
+ provides.
++rMiasma:   It protects you from foul pestilence.
+
+NAME:     seven-league boots
+OBJ:      OBJ_ARMOUR/ARM_BOOTS
+TILE:     urand_seven_league_boots
+TILE_EQ:  seven_league_boots
+PLUS:     +3
+COLOUR:   ETC_ENCHANT
+INSCRIP:  Rampage+∞
+VALUE:    400
+DESCRIP:  Rampage+∞: When moving toward enemies, its wearer moves as far as possible.
+
+ENUM:     POWER_GLOVES
+NAME:     Mad Mage's Maulers
+OBJ:      OBJ_ARMOUR/ARM_GLOVES
+PLUS:     +3
+COLOUR:   ETC_MAGIC
+TILE:     urand_power_gloves
+TILE_EQ:  glove_brown
+INSCRIP:  Infuse+∞ VampMP
+BOOL:     nospell
+VALUE:    400
+DESCRIP:  Infuse+∞:  It empowers its wearer's blows with all of their magic.
++VampMP:    Blows struck in melee replenish the wearer's magic.
+
+NAME:     dreamshard necklace
+OBJ:      OBJ_JEWELLERY/AMU_NOTHING
+COLOUR:   ETC_SILVER
+TILE:     urand_dreamshard
+INSCRIP:  *Dream
+BOOL:     drain, special
+VALUE:    2000
+DESCRIP:  *Dream:    It shatters if its wearer takes lethal or near-lethal damage,
+ preventing the blow and releasing protective dreams that heal and fight
+ for the wearer.
+
+NAME:     Delatra's gloves
+OBJ:      OBJ_ARMOUR/ARM_GLOVES
+PLUS:     +1
+COLOUR:   BLUE
+TILE:     urand_delatra
+TILE_EQ:  glove_blue
+INSCRIP:  ID++
+VALUE:    100
+DESCRIP:  ID++:      It heals its wearer when they drink unknown potions, and restores their MP when they read unknown scrolls.
+
+NAME:       woodcutter's axe
+OBJ:        OBJ_WEAPONS/WPN_BATTLEAXE
+PLUS:       5
+BASE_DELAY: -7
+COLOUR:     BROWN
+TILE:       urand_woodcutters_axe
+TILE_EQ:    axe_short
+
+NAME:       Throatcutter
+OBJ:        OBJ_WEAPONS/WPN_LONG_SWORD
+FALLBACK:   OBJ_WEAPONS/WPN_SCIMITAR
+PLUS:       7
+COLOUR:     LIGHTRED
+TILE:       urand_throatcutter
+TILE_EQ:    throatcutter
+BRAND:      SPWPN_DRAINING
+INSCRIP:    coup de grace
+DBRAND:     Coup de Grace: It may instantly kill foes which have little health.
+
+NAME:       staff of the Meek
+OBJ:        OBJ_WEAPONS/WPN_QUARTERSTAFF
+PLUS:       7
+COLOUR:     WHITE
+TILE:       urand_meek
+TILE_EQ:    staff_mage_two
+BRAND:      SPWPN_PROTECTION
+INSCRIP:    meekguard
+DBRAND:     Meekguard: It provides extra protection to wielders with little health.
+
+ENUM:     CONDEMNATION
+NAME:     trishula "Condemnation"
+OBJ:      OBJ_WEAPONS/WPN_TRISHULA
+PLUS:     8
+COLOUR:   ETC_HOLY
+BRAND:    SPWPN_HOLY_WRATH
+FB_BRAND: SPWPN_HOLY_WRATH
+LIFE:     1
+BOOL:     fly, noises
+INSCRIP:  anguish,
+DBRAND:   Anguish: it makes its victims' attacks reflect back on them.
+TILE:     urand_condemnation
+TILE_EQ:  condemnation
+
+NAME:    amulet of Elemental Vulnerability
+OBJ:     OBJ_JEWELLERY/AMU_NOTHING
+COLOUR:  ETC_VEHUMET
+TILE:    urand_elemental_vulnerability
+AC:      8
+BOOL:    poison
+FIRE:    -2
+COLD:    -2
+
+NAME:    mountain boots
+OBJ:     OBJ_ARMOUR/ARM_BOOTS
+TILE:    urand_mountain
+TILE_EQ: spider
+PLUS:    +3
+COLOUR:  ETC_MOUNTAIN
+COLD:    1
+BOOL:    special
+INSCRIP: steadfast,
+DBRAND:  Steadfast: It prevents involuntary movement, except for blinking, teleportation, or banishment.
+
+NAME:       Lochaber axe
+OBJ:        OBJ_WEAPONS/WPN_BARDICHE
+TYPE:       Lochaber axe
+TILE:       urand_lochaber_axe
+TILE_EQ:    lochaber_axe
+COLOUR:     ETC_IRON
+PLUS:       +5
+BASE_ACC:   -1
+BASE_DAM:   +1
+BASE_DELAY: +1
+BOOL:       drain
+INSCRIP:    reach-cleave, Poleaxe
+DBRAND:     Reach-Cleave: It can be evoked to extend its reach, and strikes at all foes within reach, dealing less damage to those not targeted.
+DESCRIP:    Poleaxe:   It uses either Axes or Polearms skill, whichever is higher.
+
+NAME:    Hermit's Pendant
+OBJ:     OBJ_JEWELLERY/AMU_FAITH
+COLOUR:  BROWN
+TILE:    urand_hermit_pendant
+MP:      +5
+INSCRIP: Invo=14 Evo=0
+DBRAND:  Invo=14:   It sets your Invocations skill to 14.
++Evo=0:     It sets your Evocations skill to 0.
+
+NAME:    slick slippers
+OBJ:     OBJ_ARMOUR/ARM_BOOTS
+TILE:    urand_slippers
+TILE_EQ: slippers
+PLUS:    +2
+COLOUR:  ETC_DITHMENOS
+EV:      5
+INSCRIP: slick, slippery,
+DBRAND:  Slick:     Its wearer cannot be constricted, engulfed, netted or webbed.
++Slippery:  It slips away from damaging melee attacks, pulling the attacker onward.
+
+NAME:     Force Lance
+OBJ:      OBJ_WEAPONS/WPN_SPEAR
+FALLBACK: OBJ_WEAPONS/WPN_DEMON_TRIDENT
+INSCRIP:  knockback,
+TYPE:     lance
+BASE_DAM: +2
+PLUS:     +5
+COLOUR:   ETC_DISJUNCTION
+BRAND:    SPWPN_HEAVY
+TILE:     urand_force_lance
+TILE_EQ:  force_lance
+DBRAND:   Knockback: It sometimes drives back enemies it hits.
+
+ENUM:     HOLY_AXE
+NAME:     consecrated labrys
+OBJ:      OBJ_WEAPONS/WPN_BROAD_AXE
+TYPE:     labrys
+BASE_DAM: +1
+PLUS:     +4
+COLOUR:   ETC_HOLY
+TILE:     spwpn_holy_axe
+TILE_EQ:  holy_axe
+BRAND:    SPWPN_HOLY_WRATH
+BOOL:     no_upgrade, fly, seeinv, fragile
+INSCRIP:  Valiant
+DESCRIP:  Valiant:   It becomes more powerful as more dangerous foes come into view.
+
+NAME:     toga "Victory"
+OBJ:      OBJ_ARMOUR/ARM_ROBE
+PLUS:     +0 # varies with kills and consumable use
+SLAY:     +0 # varies
+INT:      +0 # varies
+COLOUR:   LIGHTCYAN
+TILE:     urand_victor
+TILE_EQ:  arwen
+INSCRIP:  *Victory
+BOOL:     clarity, no_upgrade
+VALUE:    600
+DESCRIP:  *Victory:  When the wearer kills a threatening monster, it has a
+ chance to gain +1 AC, +1 Slay, and +1 Int, capping at +7. When the wearer uses
+ a scroll or a potion with a hostile monster in sight, its bonuses reset to +0.
+ Unequipping it also resets its bonuses to +0.
+
+ENUM:     STORM_QUEEN
+NAME:     Storm Queen's Shield
+OBJ:      OBJ_ARMOUR/ARM_KITE_SHIELD
+FALLBACK: OBJ_ARMOUR/ARM_TOWER_SHIELD
+PLUS:     +5
+COLOUR:   BLUE
+TILE:     urand_storm_queen
+TILE_EQ:  kite_shield_storm_queen
+BOOL:     elec, fly
+INSCRIP:  shock,
+DBRAND:   Shock:     When it blocks an attack, it may electrocute the attacker. This works even against foes who are a short distance away.
 
 # This entry must always be last.
 ENUM:   DUMMY2

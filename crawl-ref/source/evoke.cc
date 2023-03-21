@@ -32,6 +32,7 @@
 #include "invent.h"
 #include "item-prop.h"
 #include "items.h"
+#include "level-state-type.h"
 #include "libutil.h"
 #include "losglobal.h"
 #include "message.h"
@@ -53,10 +54,12 @@
 #include "spl-cast.h"
 #include "spl-clouds.h"
 #include "spl-damage.h"
+#include "spl-monench.h" // FASTROOT_POWER_KEY
 #include "spl-util.h"
 #include "state.h"
 #include "stepdown.h"
 #include "stringutil.h"
+#include "tag-version.h"
 #include "target.h"
 #include "terrain.h"
 #include "throw.h"
@@ -68,179 +71,15 @@
 #include "unicode.h"
 #include "view.h"
 
-static bool _reaching_weapon_attack(const item_def& wpn)
-{
-    if (you.confused())
-    {
-        canned_msg(MSG_TOO_CONFUSED);
-        return false;
-    }
-
-    if (you.caught())
-    {
-        mprf("You cannot attack while %s.", held_status());
-        return false;
-    }
-
-    bool targ_mid = false;
-    dist beam;
-    const reach_type reach_range = weapon_reach(wpn);
-
-    direction_chooser_args args;
-    args.restricts = DIR_TARGET;
-    args.mode = TARG_HOSTILE;
-    args.range = reach_range;
-    args.top_prompt = "Attack whom?";
-    args.self = confirm_prompt_type::cancel;
-
-    unique_ptr<targeter> hitfunc;
-    if (reach_range == REACH_TWO)
-        hitfunc = make_unique<targeter_reach>(&you, reach_range);
-    // Assume all longer forms of reach use smite targeting.
-    else
-    {
-        hitfunc = make_unique<targeter_smite>(&you, reach_range, 0, 0, false,
-                                              [](const coord_def& p) -> bool {
-                                              return you.pos() != p; });
-    }
-    args.hitfunc = hitfunc.get();
-
-    direction(beam, args);
-    if (!beam.isValid)
-    {
-        if (beam.isCancel)
-            canned_msg(MSG_OK);
-        return false;
-    }
-
-    if (beam.isMe())
-    {
-        canned_msg(MSG_UNTHINKING_ACT);
-        return false;
-    }
-
-    const coord_def delta = beam.target - you.pos();
-    const int x_distance  = abs(delta.x);
-    const int y_distance  = abs(delta.y);
-    monster* mons = monster_at(beam.target);
-    // don't allow targeting of submerged monsters
-    if (mons && mons->submerged())
-        mons = nullptr;
-
-    if (x_distance > reach_range || y_distance > reach_range)
-    {
-        mpr("Your weapon cannot reach that far!");
-        return false;
-    }
-
-    // Failing to hit someone due to a friend blocking is infuriating,
-    // shadow-boxing empty space is not (and would be abusable to wait
-    // with no penalty).
-    if (mons)
-        you.apply_berserk_penalty = false;
-
-    // Calculate attack delay now in case we have to apply it.
-    const int attack_delay = you.attack_delay().roll();
-
-    // Check for a monster in the way. If there is one, it blocks the reaching
-    // attack 50% of the time, and the attack tries to hit it if it is hostile.
-    if (reach_range < REACH_THREE && (x_distance > 1 || y_distance > 1))
-    {
-        const int x_first_middle = you.pos().x + (delta.x) / 2;
-        const int y_first_middle = you.pos().y + (delta.y) / 2;
-        const int x_second_middle = beam.target.x - (delta.x) / 2;
-        const int y_second_middle = beam.target.y - (delta.y) / 2;
-        const coord_def first_middle(x_first_middle, y_first_middle);
-        const coord_def second_middle(x_second_middle, y_second_middle);
-
-        if (!feat_is_reachable_past(grd(first_middle))
-            && !feat_is_reachable_past(grd(second_middle)))
-        {
-            canned_msg(MSG_SOMETHING_IN_WAY);
-            return false;
-        }
-
-        // Choose one of the two middle squares (which might be the same).
-        const coord_def middle =
-            !feat_is_reachable_past(grd(first_middle)) ? second_middle :
-            !feat_is_reachable_past(grd(second_middle)) ? first_middle :
-        random_choose(first_middle, second_middle);
-
-        bool success = true;
-        monster *midmons;
-        if ((midmons = monster_at(middle))
-            && !midmons->submerged()
-            && coinflip())
-        {
-            success = false;
-            beam.target = middle;
-            mons = midmons;
-            targ_mid = true;
-            if (mons->wont_attack())
-            {
-                // Let's assume friendlies cooperate.
-                mpr("You could not reach far enough!");
-                you.time_taken = attack_delay;
-                return true;
-            }
-        }
-
-        if (success)
-            mpr("You reach to attack!");
-        else
-        {
-            mprf("%s is in the way.",
-                 mons->observable() ? mons->name(DESC_THE).c_str()
-                                    : "Something you can't see");
-        }
-    }
-
-    if (mons == nullptr)
-    {
-        // Must return true, otherwise you get a free discovery
-        // of invisible monsters.
-        mpr("You attack empty space.");
-        you.time_taken = attack_delay;
-        return true;
-    }
-    else if (!fight_melee(&you, mons))
-    {
-        if (targ_mid)
-        {
-            // turn_is_over may have been reset to false by fight_melee, but
-            // a failed attempt to reach further should not be free; instead,
-            // charge the same as a successful attempt.
-            you.time_taken = attack_delay;
-            you.turn_is_over = true;
-        }
-        else
-            return false;
-    }
-
-    return true;
-}
-
 static bool _evoke_horn_of_geryon()
 {
     bool created = false;
 
-    if (silenced(you.pos()))
-    {
-        mpr("You can't produce a sound!");
-        return false;
-    }
-
-#if TAG_MAJOR_VERSION == 34
-    const int surge = pakellas_surge_devices();
-    surge_power(you.spec_evoke() + surge);
-#else
-    const int surge = 0;
-#endif
     mprf(MSGCH_SOUND, "You produce a hideous howling noise!");
+    noisy(15, you.pos()); // same as hell effect noise
     did_god_conduct(DID_EVIL, 3);
     int num = 1;
-    const int adjusted_power =
-        player_adjust_evoc_power(you.skill(SK_EVOCATIONS, 10), surge);
+    const int adjusted_power = you.skill(SK_EVOCATIONS, 10);
     if (adjusted_power + random2(90) > 130)
         ++num;
     if (adjusted_power + random2(90) > 180)
@@ -267,7 +106,7 @@ static bool _evoke_horn_of_geryon()
 }
 
 /**
- * Spray lightning in all directions. (Randomly: shock, lightning bolt, OoE.)
+ * Spray lightning in all directions. (Randomly lightning bolt or OoE.)
  *
  * @param range         The range of the beams. (As with all beams, eventually
  *                      capped at LOS.)
@@ -275,9 +114,8 @@ static bool _evoke_horn_of_geryon()
  */
 static void _spray_lightning(int range, int power)
 {
-    const zap_type which_zap = random_choose(ZAP_SHOCK,
-                                             ZAP_LIGHTNING_BOLT,
-                                             ZAP_ORB_OF_ELECTRICITY);
+    const zap_type zap = random_choose_weighted(3, ZAP_LIGHTNING_BOLT,
+                                                2, ZAP_ORB_OF_ELECTRICITY);
 
     bolt beam;
     // range has no tracer, so randomness is ok
@@ -287,7 +125,7 @@ static void _spray_lightning(int range, int power)
     beam.target.x += random2(13) - 6;
     beam.target.y += random2(13) - 6;
     // Non-controlleable, so no player tracer.
-    zapping(which_zap, power, beam);
+    zapping(zap, power, beam);
 }
 
 /**
@@ -296,24 +134,11 @@ static void _spray_lightning(int range, int power)
  *
  * @return  Whether anything happened.
  */
-static bool _lightning_rod()
+static bool _lightning_rod(dist *preselect)
 {
-    if (you.confused())
-    {
-        canned_msg(MSG_TOO_CONFUSED);
-        return false;
-    }
-
-#if TAG_MAJOR_VERSION == 34
-    const int surge = pakellas_surge_devices();
-    surge_power(you.spec_evoke() + surge);
-#else
-    const int surge = 0;
-#endif
-    const int power =
-        player_adjust_evoc_power(5 + you.skill(SK_EVOCATIONS, 3), surge);
-
-    const spret ret = your_spells(SPELL_THUNDERBOLT, power, false);
+    const int power = 5 + you.skill(SK_EVOCATIONS, 3);
+    const spret ret = your_spells(SPELL_THUNDERBOLT, power, false, nullptr,
+                                  preselect);
 
     if (ret == spret::abort)
         return false;
@@ -329,66 +154,54 @@ static bool _lightning_rod()
 void black_drac_breath()
 {
     const int num_shots = roll_dice(2, 1 + you.experience_level / 7);
-    const int range = you.experience_level / 3 + 5; // 5--14
-    const int power = 25 + you.experience_level; // 25-52
+    const int range = you.experience_level / 3 + 5; // 5-14
+    const int power = 25 + (you.form == transformation::dragon
+                            ? 2 * you.experience_level : you.experience_level);
     for (int i = 0; i < num_shots; ++i)
         _spray_lightning(range, power);
 }
 
 /**
- * Returns the MP cost of zapping a wand:
- *     3 if player has MP-powered wands and enough MP available,
- *     1-2 if player has MP-powered wands and only 1-2 MP left,
- *     0 otherwise.
+ * Returns the MP cost of zapping a wand, depending on the player's MP-powered wands
+ * level and their available MP (or HP, if they're a djinn).
  */
 int wand_mp_cost()
 {
+    const int cost = you.get_mutation_level(MUT_MP_WANDS) * 3;
+    if (you.has_mutation(MUT_HP_CASTING))
+        return min(you.hp - 1, cost);
     // Update mutation-data.h when updating this value.
-    return min(you.magic_points, you.get_mutation_level(MUT_MP_WANDS) * 3);
+    return min(you.magic_points, cost);
 }
 
-void zap_wand(int slot)
+int wand_power(spell_type wand_spell)
+{
+    const int cap = spell_power_cap(wand_spell);
+    if (cap == 0)
+        return -1;
+    const int mp_cost = wand_mp_cost();
+    const int pow = (15 + you.skill(SK_EVOCATIONS, 7) / 2) * (mp_cost + 9) / 9;
+    return min(pow, cap);
+}
+
+void zap_wand(int slot, dist *_target)
 {
     if (inv_count() < 1)
     {
-        canned_msg(MSG_NOTHING_CARRIED);
+        canned_msg(MSG_NOTHING_CARRIED); // why is this handled here??
         return;
     }
 
-    if (you.confused())
-    {
-        canned_msg(MSG_TOO_CONFUSED);
+    if (!evoke_check(slot))
         return;
-    }
-
-    if (you.berserk())
-    {
-        canned_msg(MSG_TOO_BERSERK);
-        return;
-    }
-
-    if (you.get_mutation_level(MUT_NO_ARTIFICE))
-    {
-        mpr("You cannot evoke magical items.");
-        return;
-    }
-
-#if TAG_MAJOR_VERSION == 34
-    if (player_under_penance(GOD_PAKELLAS))
-    {
-        simple_god_message("'s wrath prevents you from evoking devices!",
-                           GOD_PAKELLAS);
-        return;
-    }
-#endif
-
-    const int mp_cost = wand_mp_cost();
 
     int item_slot;
     if (slot != -1)
         item_slot = slot;
     else
     {
+        // TODO: move to UseItemMenu? This code path is currently unbound and
+        // it's unclear to me if anyone ever uses it
         item_slot = prompt_invent_item("Zap which item?",
                                        menu_type::invlist,
                                        OBJ_WANDS,
@@ -404,32 +217,33 @@ void zap_wand(int slot)
         mpr("You can't zap that!");
         return;
     }
-    if (item_type_removed(wand.base_type, wand.sub_type))
-    {
-        mpr("Sorry, this wand was removed!");
+
+    if (!evoke_check(slot))
         return;
-    }
+
     // If you happen to be wielding the wand, its display might change.
     if (you.equip[EQ_WEAPON] == item_slot)
         you.wield_change = true;
 
-    if (wand.charges <= 0)
-    {
-        mpr("This wand has no charges.");
-        return;
-    }
-
-    int power = (15 + you.skill(SK_EVOCATIONS, 7) / 2) * (mp_cost + 9) / 9;
-
+    const int mp_cost = wand_mp_cost();
     const spell_type spell =
         spell_in_wand(static_cast<wand_type>(wand.sub_type));
+    const int power = wand_power(spell);
+    pay_mp(mp_cost);
 
-    spret ret = your_spells(spell, power, false, &wand);
+    if (spell == SPELL_FASTROOT)
+        you.props[FASTROOT_POWER_KEY] = power; // we may cancel, but that's fine
+
+    spret ret = your_spells(spell, power, false, &wand, _target);
 
     if (ret == spret::abort)
+    {
+        refund_mp(mp_cost);
         return;
+    }
     else if (ret == spret::fail)
     {
+        refund_mp(mp_cost);
         canned_msg(MSG_NOTHING_HAPPENS);
         you.turn_is_over = true;
         return;
@@ -437,7 +251,7 @@ void zap_wand(int slot)
 
     // Spend MP.
     if (mp_cost)
-        dec_mp(mp_cost, false);
+        finalize_mp_cost();
 
     // Take off a charge.
     wand.charges--;
@@ -457,139 +271,27 @@ void zap_wand(int slot)
     you.turn_is_over = true;
 }
 
-// return a slot that has manual for given skill, or -1 if none exists
-// in case of multiple manuals the one with the fewest charges is returned
-int manual_slot_for_skill(skill_type skill)
-{
-    int slot = -1;
-    int charges = -1;
-
-    FixedVector<item_def,ENDOFPACK>::const_pointer iter = you.inv.begin();
-    for (;iter!=you.inv.end(); ++iter)
-    {
-        if (iter->base_type != OBJ_BOOKS || iter->sub_type != BOOK_MANUAL)
-            continue;
-
-        if (iter->skill != skill || iter->skill_points == 0)
-            continue;
-
-        if (slot != -1 && iter->skill_points > charges)
-            continue;
-
-        slot = iter - you.inv.begin();
-        charges = iter->skill_points;
-    }
-
-    return slot;
-}
-
-int get_all_manual_charges_for_skill(skill_type skill)
-{
-    int charges = 0;
-
-    FixedVector<item_def,ENDOFPACK>::const_pointer iter = you.inv.begin();
-    for (;iter!=you.inv.end(); ++iter)
-    {
-        if (iter->base_type != OBJ_BOOKS || iter->sub_type != BOOK_MANUAL)
-            continue;
-
-        if (iter->skill != skill || iter->skill_points == 0)
-            continue;
-
-        charges += iter->skill_points;
-    }
-
-    return charges;
-}
-
-bool skill_has_manual(skill_type skill)
-{
-    return manual_slot_for_skill(skill) != -1;
-}
-
-void finish_manual(int slot)
-{
-    item_def& manual(you.inv[slot]);
-    const skill_type skill = static_cast<skill_type>(manual.plus);
-
-    mprf("You have finished your manual of %s and toss it away.",
-         skill_name(skill));
-    dec_inv_item_quantity(slot, 1);
-}
-
-void get_all_manual_charges(vector<int> &charges)
-{
-    charges.clear();
-
-    FixedVector<item_def,ENDOFPACK>::const_pointer iter = you.inv.begin();
-    for (;iter!=you.inv.end(); ++iter)
-    {
-        if (iter->base_type != OBJ_BOOKS || iter->sub_type != BOOK_MANUAL)
-            continue;
-
-        charges.push_back(iter->skill_points);
-    }
-}
-
-void set_all_manual_charges(const vector<int> &charges)
-{
-    auto charge_iter = charges.begin();
-    for (item_def &item : you.inv)
-    {
-        if (item.base_type != OBJ_BOOKS || item.sub_type != BOOK_MANUAL)
-            continue;
-
-        ASSERT(charge_iter != charges.end());
-        item.skill_points = *charge_iter;
-        charge_iter++;
-    }
-    ASSERT(charge_iter == charges.end());
-}
-
 string manual_skill_names(bool short_text)
 {
     skill_set skills;
-
-    FixedVector<item_def,ENDOFPACK>::const_pointer iter = you.inv.begin();
-    for (;iter!=you.inv.end(); ++iter)
-    {
-        if (iter->base_type != OBJ_BOOKS
-            || iter->sub_type != BOOK_MANUAL
-            || is_useless_item(*iter))
-        {
-            continue;
-        }
-
-        skills.insert(static_cast<skill_type>(iter->plus));
-    }
+    for (skill_type sk = SK_FIRST_SKILL; sk < NUM_SKILLS; sk++)
+        if (you.skill_manual_points[sk])
+            skills.insert(sk);
 
     if (short_text && skills.size() > 1)
-    {
-        char buf[40];
-        sprintf(buf, "%lu skills", (unsigned long) skills.size());
-        return string(buf);
-    }
+        return make_stringf("%d skills", static_cast<int>(skills.size()));
     else
         return skill_names(skills);
 }
 
-static bool _box_of_beasts(item_def &box)
+static bool _box_of_beasts()
 {
-#if TAG_MAJOR_VERSION == 34
-    const int surge = pakellas_surge_devices();
-    surge_power(you.spec_evoke() + surge);
-#else
-    const int surge = 0;
-#endif
     mpr("You open the lid...");
 
     // two rolls to reduce std deviation - +-6 so can get < max even at 27 sk
     int rnd_factor = random2(7);
     rnd_factor -= random2(7);
-    const int hd_min = min(27,
-                           player_adjust_evoc_power(
-                               you.skill(SK_EVOCATIONS)
-                               + rnd_factor, surge));
+    const int hd_min = min(27, you.skill(SK_EVOCATIONS) + rnd_factor);
     const int tier = mutant_beast_tier(hd_min);
     ASSERT(tier < NUM_BEAST_TIERS);
 
@@ -612,20 +314,14 @@ static bool _box_of_beasts(item_def &box)
          mons->name(DESC_A).c_str(), mons->airborne() ? "flies" : "leaps");
     did_god_conduct(DID_CHAOS, random_range(5,10));
 
-    // After unboxing a beast, chance to break.
-    if (one_chance_in(3))
-    {
-        mpr("The now-empty box falls apart.");
-        ASSERT(in_inventory(box));
-        dec_inv_item_quantity(box.link, 1);
-    }
-
     return true;
 }
 
 static bool _make_zig(item_def &zig)
 {
-    if (feat_is_critical(grd(you.pos())))
+    if (feat_is_critical(env.grid(you.pos()))
+        || player_in_branch(BRANCH_ARENA)
+        || is_temp_terrain(you.pos()))
     {
         mpr("You can't place a gateway to a ziggurat here.");
         return false;
@@ -647,25 +343,13 @@ static bool _make_zig(item_def &zig)
     return true;
 }
 
-struct dist_sorter
-{
-    coord_def pos;
-    bool operator()(const actor* a, const actor* b)
-    {
-        return a->pos().distance_from(pos) > b->pos().distance_from(pos);
-    }
-};
-
 static int _gale_push_dist(const actor* agent, const actor* victim, int pow)
 {
     int dist = 1 + random2(pow / 20);
 
-    if (victim->airborne())
-        dist++;
-
     if (victim->body_size(PSIZE_BODY) < SIZE_MEDIUM)
         dist++;
-    else if (victim->body_size(PSIZE_BODY) > SIZE_BIG)
+    else if (victim->body_size(PSIZE_BODY) > SIZE_LARGE)
         dist /= 2;
     else if (victim->body_size(PSIZE_BODY) > SIZE_MEDIUM)
         dist -= 1;
@@ -689,7 +373,7 @@ static double _angle_between(coord_def origin, coord_def p1, coord_def p2)
     return min(fabs(ang - ang0), fabs(ang - ang0 + 2 * PI));
 }
 
-void wind_blast(actor* agent, int pow, coord_def target, bool card)
+void wind_blast(actor* agent, int pow, coord_def target)
 {
     vector<actor *> act_list;
 
@@ -697,8 +381,7 @@ void wind_blast(actor* agent, int pow, coord_def target, bool card)
 
     for (actor_near_iterator ai(agent->pos(), LOS_SOLID); ai; ++ai)
     {
-        if (ai->is_stationary()
-            || ai->pos().distance_from(agent->pos()) > radius
+        if (ai->pos().distance_from(agent->pos()) > radius
             || ai->pos() == agent->pos() // so it's never aimed_at_feet
             || !target.origin()
                && _angle_between(agent->pos(), target, ai->pos()) > PI/4.0)
@@ -709,7 +392,7 @@ void wind_blast(actor* agent, int pow, coord_def target, bool card)
         act_list.push_back(*ai);
     }
 
-    dist_sorter sorter = {agent->pos()};
+    far_to_near_sorter sorter = {agent->pos()};
     sort(act_list.begin(), act_list.end(), sorter);
 
     bolt wind_beam;
@@ -720,79 +403,24 @@ void wind_blast(actor* agent, int pow, coord_def target, bool card)
     wind_beam.range           = LOS_RADIUS;
     wind_beam.is_tracer       = true;
 
-    map<actor *, coord_def> collisions;
+    if (agent->is_player())
+    {
+        // Nemelex card only.
+        if (pow > 120)
+            mpr("A mighty gale blasts forth from the card!");
+        else
+            mpr("A fierce wind blows from the card.");
+    }
 
-    bool player_affected = false;
-    counted_monster_list affected_monsters;
+    noisy(8, agent->pos());
 
     for (actor *act : act_list)
     {
-        wind_beam.target = act->pos();
-        wind_beam.fire();
-
-        int push = _gale_push_dist(agent, act, pow);
-        bool pushed = false;
-
-        for (unsigned int j = 0; j < wind_beam.path_taken.size() - 1 && push;
-             ++j)
+        // May have died to a previous collision.
+        if (act->alive())
         {
-            if (wind_beam.path_taken[j] == act->pos())
-            {
-                coord_def newpos = wind_beam.path_taken[j+1];
-                if (!actor_at(newpos) && !cell_is_solid(newpos)
-                    && act->can_pass_through(newpos)
-                    && act->is_habitable(newpos))
-                {
-                    act->move_to_pos(newpos);
-                    if (act->is_player())
-                        stop_delay(true);
-                    --push;
-                    pushed = true;
-                }
-                else //Try to find an alternate route to push
-                {
-                    bool success = false;
-                    for (adjacent_iterator di(newpos); di; ++di)
-                    {
-                        if (adjacent(*di, act->pos())
-                            && di->distance_from(agent->pos())
-                                == newpos.distance_from(agent->pos())
-                            && !actor_at(*di) && !cell_is_solid(*di)
-                            && act->can_pass_through(*di)
-                            && act->is_habitable(*di))
-                        {
-                            act->move_to_pos(*di);
-                            if (act->is_player())
-                                stop_delay(true);
-
-                            --push;
-                            pushed = true;
-
-                            // Adjust wind path for moved monster
-                            wind_beam.target = *di;
-                            wind_beam.fire();
-                            success = true;
-                            break;
-                        }
-                    }
-
-                    // If no luck, they slam into something.
-                    if (!success)
-                        collisions.insert(make_pair(act, newpos));
-                }
-            }
-        }
-
-        if (pushed)
-        {
-            if (act->is_monster())
-            {
-                act->as_monster()->speed_increment -= random2(6) + 4;
-                if (you.can_see(*act))
-                    affected_monsters.add(act->as_monster());
-            }
-            else
-                player_affected = true;
+            const int push = _gale_push_dist(agent, act, pow);
+            act->knockback(*agent, push, pow, "gust of wind");
         }
     }
 
@@ -859,90 +487,44 @@ void wind_blast(actor* agent, int pow, coord_def target, bool card)
             }
         }
     }
-
-    if (agent->is_player())
-    {
-        const string source = card ? "card" : "fan";
-
-        if (pow > 120)
-            mprf("A mighty gale blasts forth from the %s!", source.c_str());
-        else
-            mprf("A fierce wind blows from the %s.", source.c_str());
-    }
-
-    noisy(8, agent->pos());
-
-    if (player_affected)
-        mpr("You are blown backwards!");
-
-    if (!affected_monsters.empty())
-    {
-        const string message =
-            make_stringf("%s %s blown away by the wind.",
-                         affected_monsters.describe().c_str(),
-                         conjugate_verb("be", affected_monsters.count() > 1).c_str());
-        if (strwidth(message) < get_number_of_cols() - 2)
-            mpr(message);
-        else
-            mpr("The monsters around you are blown away!");
-    }
-
-    for (auto it : collisions)
-        if (it.first->alive())
-            it.first->collide(it.second, agent, pow);
 }
 
-static bool _phial_of_floods()
+static bool _phial_of_floods(dist *target)
 {
-    if (you.confused())
-    {
-        canned_msg(MSG_TOO_CONFUSED);
-        return false;
-    }
-
-    dist target;
+    dist target_local;
+    if (!target)
+        target = &target_local;
     bolt beam;
 
-    if (you.confused())
-    {
-        canned_msg(MSG_TOO_CONFUSED);
-        return false;
-    }
-
-    const int base_pow = 10 + you.skill(SK_EVOCATIONS, 4); // placeholder?
-    zappy(ZAP_PRIMAL_WAVE, base_pow, false, beam);
+    const int power = 10 + you.skill(SK_EVOCATIONS, 4);
+    zappy(ZAP_PRIMAL_WAVE, power, false, beam);
     beam.range = LOS_RADIUS;
     beam.aimed_at_spot = true;
 
+    // TODO: this needs a custom targeter
     direction_chooser_args args;
     args.mode = TARG_HOSTILE;
     args.top_prompt = "Aim the phial where?";
 
-    if (spell_direction(target, beam, &args)
-        && player_tracer(ZAP_PRIMAL_WAVE, base_pow, beam))
+    if (spell_direction(*target, beam, &args)
+        && player_tracer(ZAP_PRIMAL_WAVE, power, beam))
     {
-#if TAG_MAJOR_VERSION == 34
-        const int surge = pakellas_surge_devices();
-        surge_power(you.spec_evoke() + surge);
-#else
-        const int surge = 0;
-#endif
-        const int power = player_adjust_evoc_power(base_pow, surge);
-        // use real power to recalc hit/dam
         zappy(ZAP_PRIMAL_WAVE, power, false, beam);
         beam.fire();
-
         return true;
     }
 
     return false;
 }
 
-static spret _phantom_mirror()
+static spret _phantom_mirror(dist *target)
 {
     bolt beam;
     monster* victim = nullptr;
-    dist spd;
+    dist target_local;
+    if (!target)
+        target = &target_local;
+
     targeter_smite tgt(&you, LOS_RADIUS, 0, 0);
 
     direction_chooser_args args;
@@ -951,7 +533,7 @@ static spret _phantom_mirror()
     args.self = confirm_prompt_type::cancel;
     args.top_prompt = "Aiming: <white>Phantom Mirror</white>";
     args.hitfunc = &tgt;
-    if (!spell_direction(spd, beam, &args))
+    if (!spell_direction(*target, beam, &args))
         return spret::abort;
     victim = monster_at(beam.target);
     if (!victim || !you.can_see(*victim))
@@ -972,26 +554,15 @@ static spret _phantom_mirror()
         return spret::abort;
     }
 
-#if TAG_MAJOR_VERSION == 34
-    const int surge = pakellas_surge_devices();
-    surge_power(you.spec_evoke() + surge);
-#else
-    const int surge = 0;
-#endif
-
     monster* mon = clone_mons(victim, true, nullptr, ATT_FRIENDLY);
     if (!mon)
     {
         canned_msg(MSG_NOTHING_HAPPENS);
         return spret::fail;
     }
-    const int power = player_adjust_evoc_power(5 + you.skill(SK_EVOCATIONS, 3),
-                                               surge);
-    int dur = min(6, max(1,
-                         player_adjust_evoc_power(
-                             you.skill(SK_EVOCATIONS, 1) / 4 + 1,
-                             surge)
-                         * (100 - victim->check_res_magic(power)) / 100));
+    const int power = 5 + you.skill(SK_EVOCATIONS, 3);
+    int dur = min(6, max(1, (you.skill(SK_EVOCATIONS, 1) / 4 + 1)
+                         * (100 - victim->check_willpower(&you, power)) / 100));
 
     mon->mark_summoned(dur, true, SPELL_PHANTOM_MIRROR);
 
@@ -1005,10 +576,17 @@ static spret _phantom_mirror()
     mon->behaviour = BEH_SEEK;
     set_nearest_monster_foe(mon);
 
-    mprf("You reflect %s with the mirror, and the mirror shatters!",
+    mprf("You reflect %s with the mirror!",
          victim->name(DESC_THE).c_str());
 
     return spret::success;
+}
+
+static bool _valid_tremorstone_target(const monster &m)
+{
+    return !mons_is_firewood(m)
+        && !god_protects(&m)
+        && !always_shoot_through_monster(&you, m);
 }
 
 /**
@@ -1027,7 +605,7 @@ static coord_def _find_tremorstone_target(bool& see_targets)
 
     for (radius_iterator ri(you.pos(), LOS_NO_TRANS); ri; ++ri)
     {
-        if (monster_at(*ri) && !mons_is_firewood(*monster_at(*ri)))
+        if (monster_at(*ri) && _valid_tremorstone_target(*monster_at(*ri)))
         {
             com += *ri;
             see_targets = see_targets || you.can_see(*monster_at(*ri));
@@ -1062,6 +640,27 @@ static coord_def _find_tremorstone_target(bool& see_targets)
             target = *ri;
     }
 
+    // It's possible to not find any targets at radius 3 if e.g. we're in fog.
+    if (!target.origin())
+        return target;
+
+    // Be very careless for this rare case.
+    for (radius_iterator ri(you.pos(), 2, C_SQUARE, LOS_NO_TRANS, true); ri; ++ri)
+    {
+        if (ri->distance_from(you.pos()) == 2
+            && !cell_is_solid(*ri)
+            && one_chance_in(++ties))
+        {
+            target = *ri;
+        }
+    }
+
+    if (!target.origin())
+        return target;
+
+    for (adjacent_iterator ai(you.pos()); ai; ++ai)
+        if (!cell_is_solid(*ai) && one_chance_in(++ties))
+            target = *ai;
     return target;
 }
 
@@ -1103,45 +702,37 @@ static int _tremorstone_count(int pow)
  */
 static spret _tremorstone()
 {
-    if (you.confused())
-    {
-        canned_msg(MSG_TOO_CONFUSED);
-        return spret::abort;
-    }
-
     bool see_target;
-    bolt beam;
-
-    static const int RADIUS = 2;
-    static const int SPREAD = 1;
-    static const int RANGE = RADIUS + SPREAD;
-    const int pow = 15 + you.skill(SK_EVOCATIONS);
-    const int adjust_pow = player_adjust_evoc_power(pow);
-    const int num_explosions = _tremorstone_count(adjust_pow);
-
-    beam.source_id  = MID_PLAYER;
-    beam.thrower    = KILL_YOU;
-    zappy(ZAP_TREMORSTONE, pow, false, beam);
-    beam.range = RANGE;
-    beam.ex_size = RADIUS;
-    beam.target = _find_tremorstone_target(see_target);
+    const coord_def center = _find_tremorstone_target(see_target);
 
     targeter_radius hitfunc(&you, LOS_NO_TRANS);
     auto vulnerable = [](const actor *act) -> bool
     {
-        return !(have_passive(passive_t::shoot_through_plants)
-                 && fedhas_protects(act->as_monster()));
+        return act && _valid_tremorstone_target(*act->as_monster());
     };
     if ((!see_target
-        && !yesno("You can't see anything, throw a tremorstone anyway?",
+        && !yesno("You can't see anything, release a tremorstone anyway?",
                  true, 'n'))
-        || stop_attack_prompt(hitfunc, "throw a tremorstone", vulnerable))
+        || stop_attack_prompt(hitfunc, "release a tremorstone", vulnerable))
     {
         return spret::abort;
     }
 
     mpr("The tremorstone explodes into fragments!");
-    const coord_def center = beam.target;
+
+    static const int RADIUS = 2;
+    static const int SPREAD = 1;
+    static const int RANGE = RADIUS + SPREAD;
+    const int pow = 15 + you.skill(SK_EVOCATIONS);
+    const int num_explosions = _tremorstone_count(pow);
+
+    bolt beam;
+    beam.source_id  = MID_PLAYER;
+    beam.thrower    = KILL_YOU;
+    zappy(ZAP_TREMORSTONE, pow, false, beam);
+    beam.range = RANGE;
+    beam.ex_size = RADIUS;
+    beam.target = center;
 
     for (int i = 0; i < num_explosions; i++)
     {
@@ -1153,39 +744,269 @@ static spret _tremorstone()
     return spret::success;
 }
 
-bool evoke_check(int slot, bool quiet)
+static const vector<random_pick_entry<cloud_type>> condenser_clouds =
 {
-    const bool reaching = slot != -1 && slot == you.equip[EQ_WEAPON]
-                          && !you.melded[EQ_WEAPON]
-                          && weapon_reach(*you.weapon()) > REACH_NONE;
+  { 0,   50, 200, FALL, CLOUD_MEPHITIC },
+  { 0,  100, 125, PEAK, CLOUD_FIRE },
+  { 0,  100, 125, PEAK, CLOUD_COLD },
+  { 0,  100, 125, PEAK, CLOUD_POISON },
+  { 0,  110, 50, RISE, CLOUD_NEGATIVE_ENERGY },
+  { 0,  110, 50, RISE, CLOUD_STORM },
+  { 0,  110, 50, RISE, CLOUD_ACID },
+};
 
-    if (you.berserk() && !reaching)
+static spret _condenser()
+{
+    const int pow = 15 + you.skill(SK_EVOCATIONS, 7) / 2;
+
+    random_picker<cloud_type, NUM_CLOUD_TYPES> cloud_picker;
+    cloud_type cloud = cloud_picker.pick(condenser_clouds, pow, CLOUD_NONE);
+
+    vector<coord_def> target_cells;
+    bool see_targets = false;
+
+    for (radius_iterator di(you.pos(), LOS_NO_TRANS); di; ++di)
     {
-        if (!quiet)
-            canned_msg(MSG_TOO_BERSERK);
-        return false;
+        monster *mons = monster_at(*di);
+
+        if (!mons || mons->wont_attack() || !mons_is_threatening(*mons))
+            continue;
+
+        if (you.can_see(*mons))
+            see_targets = true;
+
+        for (adjacent_iterator ai(mons->pos(), false); ai; ++ai)
+        {
+            actor * act = actor_at(*ai);
+            if (!cell_is_solid(*ai) && you.see_cell(*ai) && !cloud_at(*ai)
+                && !(act && act->wont_attack()))
+            {
+                target_cells.push_back(*ai);
+            }
+        }
     }
-    return true;
+
+    if (!see_targets
+        && !yesno("You can't see anything. Try to condense clouds anyway?",
+                  true, 'n'))
+    {
+        canned_msg(MSG_OK);
+        return spret::abort;
+    }
+
+    if (target_cells.empty())
+    {
+        canned_msg(MSG_NOTHING_HAPPENS);
+        return spret::fail;
+    }
+
+    for (auto p : target_cells)
+    {
+        const int cloud_power = 5
+            + random2avg(12 + div_rand_round(pow * 3, 4), 3);
+        place_cloud(cloud, p, cloud_power, &you);
+    }
+
+    mprf("Clouds of %s condense around you!", cloud_type_name(cloud).c_str());
+
+    return spret::success;
 }
 
-bool evoke_item(int slot)
+static bool _xoms_chessboard()
 {
+    vector<monster *> targets;
+    bool see_target = false;
+
+    for (monster_near_iterator mi(&you, LOS_NO_TRANS); mi; ++mi)
+    {
+        if (mi->friendly() || mi->neutral() && !mi->has_ench(ENCH_INSANE))
+            continue;
+        if (mons_is_firewood(**mi))
+            continue;
+        if (you.can_see(**mi))
+            see_target = true;
+
+        targets.emplace_back(*mi);
+    }
+
+    if (!see_target
+        && !yesno("You can't see anything. Try to make a move anyway?",
+                  true, 'n'))
+    {
+        canned_msg(MSG_OK);
+        return false;
+    }
+
+    const int power = 15 + you.skill(SK_EVOCATIONS, 7) / 2;
+
+    mpr("You make a move on Xom's chessboard...");
+
+    if (targets.empty())
+    {
+        canned_msg(MSG_NOTHING_HAPPENS);
+        return true;
+    }
+
+    bolt beam;
+    const monster * target = *random_iterator(targets);
+    beam.source = target->pos();
+    beam.target = target->pos();
+    beam.set_agent(&you);
+
+    // List of possible effects. Mostly debuffs, a few buffs to keep it
+    // exciting
+    zap_type zap = random_choose_weighted(5, ZAP_HASTE,
+                                          5, ZAP_INVISIBILITY,
+                                          5, ZAP_MIGHT,
+                                          10, ZAP_CORONA,
+                                          15, ZAP_SLOW,
+                                          15, ZAP_MALMUTATE,
+                                          15, ZAP_PETRIFY,
+                                          10, ZAP_PARALYSE,
+                                          10, ZAP_CONFUSE,
+                                          10, ZAP_SLEEP);
+    beam.origin_spell = SPELL_NO_SPELL; // let zapping reset this
+
+    return zapping(zap, power, beam, false) == spret::success;
+}
+
+static bool _player_has_zigfig()
+{
+    // does the player have a zigfig? used to override sac artiface
+    // a bit ugly...this thing could probably be goldified or converted to an
+    // ability trigger
+    for (const item_def &s : you.inv)
+        if (s.defined() && s.base_type == OBJ_MISCELLANY
+                                 && s.sub_type == MISC_ZIGGURAT)
+        {
+            return true;
+        }
+    return false;
+}
+
+/// Does the item only serve to produce summons or allies?
+static bool _evoke_ally_only(const item_def &item)
+{
+    if (item.base_type == OBJ_WANDS)
+        return item.sub_type == WAND_CHARMING;
+    else if (item.base_type == OBJ_MISCELLANY)
+    {
+        switch (item.sub_type)
+        {
+        case MISC_PHANTOM_MIRROR:
+        case MISC_HORN_OF_GERYON:
+        case MISC_BOX_OF_BEASTS:
+            return true;
+        default:
+            return false;
+        }
+    }
+    return false;
+}
+
+string cannot_evoke_item_reason(const item_def *item, bool temp)
+{
+    // id is not at issue here
+    if (temp && you.berserk())
+        return "You are too berserk!";
+
+    if (temp && you.confused())
+        return "You are too confused!";
+
+    // historically allowed under confusion/berserk, but why?
+    if (item && item->base_type == OBJ_MISCELLANY
+                                            && item->sub_type == MISC_ZIGGURAT
+        || !item && _player_has_zigfig())
+    {
+        // override sac artifice for zigfigs, including a general check
+        // TODO: zigfig has some terrain/level constraints that aren't handled
+        // here
+        return "";
+    }
+
+    if (you.get_mutation_level(MUT_NO_ARTIFICE))
+        return "You cannot evoke magical items.";
+
+    // all generic checks passed
+    if (!item)
+        return "";
+
+    // is this really necessary?
+    if (item_type_removed(item->base_type, item->sub_type))
+        return "Sorry, this item was removed!";
+    if (item->base_type != OBJ_WANDS && item->base_type != OBJ_MISCELLANY)
+        return "You can't evoke that!";
+
+#if TAG_MAJOR_VERSION == 34
+    if (is_known_empty_wand(*item))
+        return "This wand has no charges.";
+#endif
+
+    if (_evoke_ally_only(*item) && you.allies_forbidden())
+        return "That item cannot be used by those who cannot gain allies!";
+
+    if (temp
+        && item->base_type == OBJ_MISCELLANY
+        && item->sub_type == MISC_CONDENSER_VANE
+        && (env.level_state & LSTATE_STILL_WINDS))
+    {
+        return "The air is too still for clouds to form.";
+    }
+
+    if (temp
+        && item->base_type == OBJ_MISCELLANY
+        && item->sub_type == MISC_HORN_OF_GERYON
+        && silenced(you.pos()))
+    {
+        return "You can't produce a sound!";
+
+    }
+
+    if (temp && is_xp_evoker(*item) && evoker_charges(item->sub_type) <= 0)
+    {
+        // DESC_THE prints "The tin of tremorstones (inert) is presently inert."
+        return make_stringf("The %s is presently inert.",
+                                            item->name(DESC_DBNAME).c_str());
+    }
+
+    return "";
+}
+
+// for historical reasons, we have both item_is_evokable and evoke_check. They
+// are now both interfaces on cannot_evoke_item_reason.
+// TODO: unify the api?
+bool item_is_evokable(const item_def &item, bool msg)
+{
+    const string err = cannot_evoke_item_reason(&item, false);
+    if (!err.empty() && msg)
+        mpr(err);
+    return err.empty();
+}
+
+// Is there anything that would prevent a player from evoking?
+// If slot == -1, it asks this question in general.
+// If slot is a particular item, it asks this question for that item.
+bool evoke_check(int slot, bool quiet)
+{
+    item_def *i = nullptr;
+    if (slot >= 0 && slot < ENDOFPACK && you.inv[slot].defined())
+        i = &you.inv[slot];
+
+    // TODO: menu for zigfig under sac artiface
+    const string err = cannot_evoke_item_reason(i, true);
+    if (!err.empty() && !quiet)
+        mpr(err);
+    return err.empty();
+}
+
+bool evoke_item(int slot, dist *preselect)
+{
+    ASSERT_RANGE(slot, 0, ENDOFPACK);
     if (!evoke_check(slot))
         return false;
 
-    if (slot == -1)
-    {
-        slot = prompt_invent_item("Evoke which item? (* to show all)",
-                                   menu_type::invlist,
-                                   OSEL_EVOKABLE, OPER_EVOKE);
-
-        if (prompt_failed(slot))
-            return false;
-    }
-    else if (!check_warning_inscriptions(you.inv[slot], OPER_EVOKE))
+    if (!check_warning_inscriptions(you.inv[slot], OPER_EVOKE))
         return false;
-
-    ASSERT(slot >= 0);
 
 #ifdef ASSERTS // Used only by an assert
     const bool wielded = (you.equip[EQ_WEAPON] == slot);
@@ -1193,108 +1014,31 @@ bool evoke_item(int slot)
 
     item_def& item = you.inv[slot];
     // Also handles messages.
-    if (!item_is_evokable(item, true, false, true))
+    if (!item_is_evokable(item, true) || !evoke_check(slot))
         return false;
 
     bool did_work   = false;  // "Nothing happens" message
     bool unevokable = false;
 
-    const unrandart_entry *entry = is_unrandom_artefact(item)
-        ? get_unrand_entry(item.unrand_idx) : nullptr;
-
-    if (entry && entry->evoke_func)
-    {
-        ASSERT(item_is_equipped(item));
-
-        if (you.confused())
-        {
-            canned_msg(MSG_TOO_CONFUSED);
-            return false;
-        }
-
-        bool qret = entry->evoke_func(&item, &did_work, &unevokable);
-
-        if (!unevokable)
-            count_action(CACT_EVOKE, item.unrand_idx);
-
-        // what even _is_ this return value?
-        if (qret)
-            return did_work;
-    }
-    else switch (item.base_type)
+    switch (item.base_type)
     {
     case OBJ_WANDS:
-        zap_wand(slot);
+        zap_wand(slot, preselect);
         return true;
 
     case OBJ_WEAPONS:
+    {
         ASSERT(wielded);
+        dist targ_local;
+        if (!preselect)
+            preselect = &targ_local;
 
-        if (weapon_reach(item) > REACH_NONE)
-        {
-            if (_reaching_weapon_attack(item))
-                did_work = true;
-            else
-                return false;
-        }
-        else
-            unevokable = true;
-        break;
-
-    case OBJ_STAVES:
-        ASSERT(wielded);
-        if (item.sub_type != STAFF_ENERGY)
-        {
-            unevokable = true;
-            break;
-        }
-
-        if (you.confused())
-        {
-            canned_msg(MSG_TOO_CONFUSED);
-            return false;
-        }
-
-        if (you.magic_points >= you.max_magic_points)
-        {
-            canned_msg(MSG_FULL_MAGIC);
-            return false;
-        }
-        else if (x_chance_in_y(apply_enhancement(
-                                   you.skill(SK_EVOCATIONS, 100) + 1100,
-                                   you.spec_evoke()),
-                               4000))
-        {
-            mpr("You channel some magical energy.");
-            inc_mp(1 + random2(3));
-            did_work = true;
-            practise_evoking(1);
-            count_action(CACT_EVOKE, STAFF_ENERGY, OBJ_STAVES);
-
-            did_god_conduct(DID_WIZARDLY_ITEM, 10);
-            did_god_conduct(DID_CHANNEL, 1, true);
-        }
-        break;
+        quiver::get_primary_action()->trigger(*preselect);
+        return you.turn_is_over;
+    }
 
     case OBJ_MISCELLANY:
         did_work = true; // easier to do it this way for misc items
-
-        if (item.sub_type != MISC_ZIGGURAT)
-        {
-            if (you.get_mutation_level(MUT_NO_ARTIFICE))
-            {
-                mpr("You cannot evoke magical items.");
-                return false;
-            }
-#if TAG_MAJOR_VERSION == 34
-            if (player_under_penance(GOD_PAKELLAS))
-            {
-                simple_god_message("'s wrath prevents you from evoking "
-                                   "devices!", GOD_PAKELLAS);
-                return false;
-            }
-#endif
-        }
 
         switch (item.sub_type)
         {
@@ -1317,12 +1061,7 @@ bool evoke_item(int slot)
 #endif
 
         case MISC_PHIAL_OF_FLOODS:
-            if (!evoker_charges(item.sub_type))
-            {
-                mpr("That is presently inert.");
-                return false;
-            }
-            if (_phial_of_floods())
+            if (_phial_of_floods(preselect))
             {
                 expend_xp_evoker(item.sub_type);
                 practise_evoking(3);
@@ -1332,11 +1071,6 @@ bool evoke_item(int slot)
             break;
 
         case MISC_HORN_OF_GERYON:
-            if (!evoker_charges(item.sub_type))
-            {
-                mpr("That is presently inert.");
-                return false;
-            }
             if (_evoke_horn_of_geryon())
             {
                 expend_xp_evoker(item.sub_type);
@@ -1347,8 +1081,13 @@ bool evoke_item(int slot)
             break;
 
         case MISC_BOX_OF_BEASTS:
-            if (_box_of_beasts(item))
+            if (_box_of_beasts())
+            {
+                expend_xp_evoker(item.sub_type);
+                if (!evoker_charges(item.sub_type))
+                    mpr("The box is emptied!");
                 practise_evoking(1);
+            }
             break;
 
 #if TAG_MAJOR_VERSION == 34
@@ -1362,12 +1101,7 @@ bool evoke_item(int slot)
 #endif
 
         case MISC_LIGHTNING_ROD:
-            if (!evoker_charges(item.sub_type))
-            {
-                mpr("That is presently inert.");
-                return false;
-            }
-            if (_lightning_rod())
+            if (_lightning_rod(preselect))
             {
                 practise_evoking(1);
                 expend_xp_evoker(item.sub_type);
@@ -1387,15 +1121,16 @@ bool evoke_item(int slot)
             break;
 
         case MISC_PHANTOM_MIRROR:
-            switch (_phantom_mirror())
+            switch (_phantom_mirror(preselect))
             {
                 default:
                 case spret::abort:
                     return false;
 
                 case spret::success:
-                    ASSERT(in_inventory(item));
-                    dec_inv_item_quantity(item.link, 1);
+                    expend_xp_evoker(item.sub_type);
+                    if (!evoker_charges(item.sub_type))
+                        mpr("The mirror clouds!");
                     // deliberate fall-through
                 case spret::fail:
                     practise_evoking(1);
@@ -1409,11 +1144,6 @@ bool evoke_item(int slot)
             break;
 
         case MISC_TIN_OF_TREMORSTONES:
-            if (!evoker_charges(item.sub_type))
-            {
-                mpr("That is presently inert.");
-                return false;
-            }
             switch (_tremorstone())
             {
                 default:
@@ -1428,6 +1158,35 @@ bool evoke_item(int slot)
                     practise_evoking(1);
                     break;
             }
+            break;
+
+        case MISC_CONDENSER_VANE:
+            switch (_condenser())
+            {
+                default:
+                case spret::abort:
+                    return false;
+
+                case spret::success:
+                    expend_xp_evoker(item.sub_type);
+                    if (!evoker_charges(item.sub_type))
+                        mpr("The condenser dries out!");
+                case spret::fail:
+                    practise_evoking(1);
+                    break;
+            }
+            break;
+
+        case MISC_XOMS_CHESSBOARD:
+            if (_xoms_chessboard())
+            {
+                expend_xp_evoker(item.sub_type);
+                if (!evoker_charges(item.sub_type))
+                    mpr("The chess piece greys!");
+                practise_evoking(1);
+            }
+            else
+                return false;
             break;
 
         default:

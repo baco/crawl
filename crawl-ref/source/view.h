@@ -5,10 +5,14 @@
 
 #pragma once
 
+#include <vector>
+
 #include "defines.h"
 #include "options.h"
 #include "player.h" // player_stealth()
 #include "viewgeom.h"
+
+using std::vector;
 
 bool mon_enemies_around(const monster* mons);
 void seen_monsters_react(int stealth = player_stealth());
@@ -18,7 +22,6 @@ string describe_monsters_condensed(const vector<monster*>& monsters);
 bool magic_mapping(int map_radius, int proportion, bool suppress_msg,
                    bool force = false, bool deterministic = false,
                    coord_def origin = coord_def(-1, -1));
-void fully_map_level();
 
 string screenshot();
 
@@ -31,6 +34,8 @@ static inline void scaled_delay(unsigned int ms)
 {
     delay(ms * Options.view_delay / DEFAULT_VIEW_DELAY);
 }
+
+void animation_delay(unsigned int ms, bool do_refresh);
 
 // beware, flash_view is broken for USE_TILE_LOCAL
 void flash_view(use_animation_type a, colour_t colour,
@@ -79,9 +84,8 @@ public:
 #ifdef USE_TILE
 void view_add_tile_overlay(const coord_def &gc, tileidx_t tile);
 #endif
-#ifndef USE_TILE_LOCAL
 void view_add_glyph_overlay(const coord_def &gc, cglyph_t glyph);
-#endif
+
 void view_clear_overlays();
 
 void run_animation(animation_type anim, use_animation_type type,

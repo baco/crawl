@@ -11,11 +11,11 @@
 #include "act-iter.h"
 #include "areas.h"
 #include "beam.h"
-#include "branch.h" // for zot clock key
 #include "cloud.h"
 #include "coordit.h"
 #include "corpse.h"
 #include "database.h"
+#include "delay.h"
 #include "dgn-shoals.h"
 #include "dgn-event.h"
 #include "env.h"
@@ -46,6 +46,7 @@
 #include "spl-clouds.h"
 #include "spl-miscast.h"
 #include "stringutil.h"
+#include "tag-version.h"
 #include "teleport.h"
 #include "terrain.h"
 #include "tileview.h"
@@ -54,182 +55,13 @@
 #include "viewchar.h"
 #include "unwind.h"
 
-/**
- * Choose a random, spooky hell effect message, print it, and make a loud noise
- * if appropriate. (1/6 chance of loud noise.)
- */
-static void _hell_effect_noise()
-{
-    const bool loud = one_chance_in(6) && !silenced(you.pos());
-    string msg = getMiscString(loud ? "hell_effect_noisy"
-                                    : "hell_effect_quiet");
-    if (msg.empty())
-        msg = "Something hellishly buggy happens.";
-
-    mprf(MSGCH_HELL_EFFECT, "%s", msg.c_str());
-    if (loud)
-        noisy(15, you.pos());
-}
-
-/**
- * Choose a random miscast effect (from a weighted list) & apply it to the
- * player.
- */
-static void _random_hell_miscast()
-{
-    const spschool which_miscast
-        = random_choose_weighted(8, spschool::necromancy,
-                                 4, spschool::summoning,
-                                 2, spschool::conjuration,
-                                 2, spschool::hexes);
-
-    miscast_effect(you, nullptr, {miscast_source::hell_effect}, which_miscast,
-                   5, random2avg(40, 3), "the effects of Hell");
-}
-
-/// The thematically appropriate hell effects for a given hell branch.
-struct hell_effect_spec
-{
-    /// The type of greater demon to spawn from hell effects.
-    vector<monster_type> fiend_types;
-    /// The appropriate theme of miscast effects to toss at the player.
-    spschool miscast_type;
-    /// A weighted list of lesser creatures to spawn.
-    vector<pair<monster_type, int>> minor_summons;
-};
-
-/// Hell effects for each branch of hell
-static map<branch_type, hell_effect_spec> hell_effects_by_branch =
-{
-    { BRANCH_DIS, { {RANDOM_DEMON_GREATER}, spschool::earth, {
-        { RANDOM_MONSTER, 100 }, // TODO
-    }}},
-    { BRANCH_GEHENNA, { {MONS_BRIMSTONE_FIEND}, spschool::fire, {
-        { RANDOM_MONSTER, 100 }, // TODO
-    }}},
-    { BRANCH_COCYTUS, { {MONS_ICE_FIEND, MONS_SHARD_SHRIKE}, spschool::ice, {
-        // total weight 100
-        { MONS_ZOMBIE, 15 },
-        { MONS_SKELETON, 10 },
-        { MONS_SIMULACRUM, 10 },
-        { MONS_FREEZING_WRAITH, 10 },
-        { MONS_FLYING_SKULL, 10 },
-        { MONS_TORMENTOR, 10 },
-        { MONS_REAPER, 10 },
-        { MONS_BONE_DRAGON, 5 },
-        { MONS_ICE_DRAGON, 5 },
-        { MONS_BLIZZARD_DEMON, 5 },
-        { MONS_ICE_DEVIL, 5 },
-    }}},
-    { BRANCH_TARTARUS, { {MONS_TZITZIMITL}, spschool::necromancy, {
-        { RANDOM_MONSTER, 100 }, // TODO
-    }}},
-};
-
-/**
- * Either dump a fiend or a hell-appropriate miscast effect on the player.
- *
- * 40% chance of fiend, 60% chance of miscast.
- */
-static void _themed_hell_summon_or_miscast()
-{
-    const hell_effect_spec *spec = map_find(hell_effects_by_branch,
-                                            you.where_are_you);
-    if (!spec)
-        die("Attempting to call down a hell effect in a non-hellish branch.");
-
-    if (x_chance_in_y(2, 5))
-    {
-        const monster_type fiend
-            = spec->fiend_types[random2(spec->fiend_types.size())];
-        create_monster(
-                       mgen_data::hostile_at(fiend, true, you.pos())
-                       .set_non_actor_summoner("the effects of Hell"));
-    }
-    else
-    {
-        miscast_effect(you, nullptr, {miscast_source::hell_effect},
-                      spec->miscast_type, 5, random2avg(40, 3),
-                      "the effects of Hell");
-    }
-}
-
-/**
- * Try to summon at some number of random spawns from the current branch, to
- * harass the player & give them easy xp/TSO piety. Occasionally, to kill them.
- *
- * Min zero, max five, average 1.67.
- *
- * Can and does summon bands as individual spawns.
- */
-static void _minor_hell_summons()
-{
-    hell_effect_spec *spec = map_find(hell_effects_by_branch,
-                                      you.where_are_you);
-    if (!spec)
-        die("Attempting to call down a hell effect in a non-hellish branch.");
-
-    // Try to summon at least one and up to five random monsters. {dlb}
-    mgen_data mg;
-    mg.pos = you.pos();
-    mg.foe = MHITYOU;
-    mg.non_actor_summoner = "the effects of Hell";
-    create_monster(mg);
-
-    for (int i = 0; i < 4; ++i)
-    {
-        if (one_chance_in(3))
-        {
-            monster_type *type
-                = random_choose_weighted(spec->minor_summons);
-            ASSERT(type);
-            mg.cls = *type;
-            create_monster(mg);
-        }
-    }
-}
-
-/// Nasty things happen to people who spend too long in Hell.
-static void _hell_effects(int /*time_delta*/)
-{
-    if (!player_in_hell())
-        return;
-
-    // 50% chance at max piety
-    if (have_passive(passive_t::resist_hell_effects)
-        && x_chance_in_y(you.piety, MAX_PIETY * 2) || is_sanctuary(you.pos()))
-    {
-        simple_god_message("'s power protects you from the chaos of Hell!");
-        return;
-    }
-
-    _hell_effect_noise();
-
-    if (one_chance_in(3))
-        _random_hell_miscast();
-    else if (x_chance_in_y(5, 9))
-        _themed_hell_summon_or_miscast();
-
-    if (one_chance_in(3))   // NB: No "else"
-        _minor_hell_summons();
-}
-
 static void _apply_contam_over_time()
 {
     int added_contamination = 0;
 
-    //Increase contamination each turn while invisible
-    if (you.duration[DUR_INVIS])
-        added_contamination += INVIS_CONTAM_PER_TURN;
     //If not invisible, normal dissipation
-    else
+    if (!you.duration[DUR_INVIS])
         added_contamination -= 75;
-
-    // The Orb halves dissipation (well a bit more, I had to round it),
-    // but won't cause glow on its own -- otherwise it'd spam the player
-    // with messages about contamination oscillating near zero.
-    if (you.magic_contamination && player_has_orb())
-        added_contamination += 38;
 
     // Scaling to turn length
     added_contamination = div_rand_round(added_contamination * you.time_taken,
@@ -332,13 +164,13 @@ static void _jiyva_effects(int /*time_delta*/)
             {
                 newpos = random_in_bounds();
             }
-            while (grd(newpos) != DNGN_FLOOR
-                       && grd(newpos) != DNGN_SHALLOW_WATER
+            while (env.grid(newpos) != DNGN_FLOOR
+                       && env.grid(newpos) != DNGN_SHALLOW_WATER
                    || monster_at(newpos)
                    || cloud_at(newpos)
                    || testbits(env.pgrid(newpos), FPROP_NO_JIYVA));
 
-            mgen_data mg(MONS_JELLY, BEH_STRICT_NEUTRAL, newpos);
+            mgen_data mg(MONS_JELLY, BEH_GOOD_NEUTRAL, newpos);
             mg.god = GOD_JIYVA;
             mg.non_actor_summoner = "Jiyva";
 
@@ -365,44 +197,37 @@ static void _jiyva_effects(int /*time_delta*/)
         }
     }
 
-    if (have_passive(passive_t::fluid_stats)
-        && x_chance_in_y(you.piety / 4, MAX_PIETY)
-        && !player_under_penance() && one_chance_in(4))
-    {
-        jiyva_stat_action();
-    }
-
     if (have_passive(passive_t::jelly_eating) && one_chance_in(25))
         jiyva_eat_offlevel_items();
 }
 
 static void _evolve(int /*time_delta*/)
 {
-    if (int lev = you.get_mutation_level(MUT_EVOLUTION))
-        if (one_chance_in(2 / lev)
-            && you.attribute[ATTR_EVOL_XP] * (1 + random2(10))
-               > (int)exp_needed(you.experience_level + 1))
-        {
-            you.attribute[ATTR_EVOL_XP] = 0;
-            mpr("You feel a genetic drift.");
-            bool evol = one_chance_in(5) ?
-                delete_mutation(RANDOM_BAD_MUTATION, "evolution", false) :
-                mutate(random_choose(RANDOM_GOOD_MUTATION, RANDOM_MUTATION),
-                       "evolution", false, false, false, false, MUTCLASS_NORMAL);
-            // it would kill itself anyway, but let's speed that up
-            if (one_chance_in(10)
-                && (!you.rmut_from_item()
-                    || one_chance_in(10)))
-            {
-                const string reason = (you.get_mutation_level(MUT_EVOLUTION) == 1)
-                                    ? "end of evolution"
-                                    : "decline of evolution";
-                evol |= delete_mutation(MUT_EVOLUTION, reason, false);
-            }
-            // interrupt the player only if something actually happened
-            if (evol)
-                more();
-        }
+    const bool malignant = you.has_mutation(MUT_DEVOLUTION);
+    if (!malignant && !you.has_mutation(MUT_EVOLUTION))
+        return;
+
+    if (you.attribute[ATTR_EVOL_XP] > 0)
+        return;
+    set_evolution_mut_xp(malignant);
+
+    mpr("You feel a genetic drift.");
+    const mutation_type typ = malignant ? RANDOM_BAD_MUTATION : RANDOM_GOOD_MUTATION;
+    const char* const reason = malignant ? "hidden defects" : "hidden potential";
+    if (!mutate(typ, reason, false, false, false, false, MUTCLASS_NORMAL))
+        return;
+
+    int &muts = you.props[EVOLUTION_MUTS_KEY].get_int();
+    ++muts;
+    if (muts >= 2)
+    {
+        muts -= 2;
+        if (malignant)
+            delete_mutation(MUT_DEVOLUTION, "hidden defects expressed", false);
+        else
+            delete_mutation(MUT_EVOLUTION, "hidden potential expressed", false);
+    }
+    more();
 }
 
 // Get around C++ dividing integers towards 0.
@@ -425,8 +250,8 @@ struct timed_effect
 static struct timed_effect timed_effects[] =
 {
     { rot_corpses,               200,   200, true  },
-    { _hell_effects,                 200,   600, false },
 #if TAG_MAJOR_VERSION == 34
+    { nullptr,                         0,     0, false },
     { nullptr,                         0,     0, false },
 #endif
     { _check_contamination_effects,   70,   200, false },
@@ -444,7 +269,7 @@ static struct timed_effect timed_effects[] =
 #endif
     { _abyss_speed,                  100,   300, false },
     { _jiyva_effects,                100,   300, false },
-    { _evolve,                      5000, 15000, false },
+    { _evolve,                       100,   300, false },
 #if TAG_MAJOR_VERSION == 34
     { nullptr,                         0,     0, false },
 #endif
@@ -464,9 +289,14 @@ void handle_time()
     {
         spawn_random_monsters();
         if (player_in_branch(BRANCH_ABYSS))
-          for (int i = 1; i < you.depth; ++i)
+        {
+            // Ramp up spawn rate dramatically after Abyss:5.
+            const int chances = you.depth < 5 ? you.depth
+                                              : 5 + (you.depth - 5) * 5;
+            for (int i = 1; i < chances; ++i)
                 if (x_chance_in_y(i, 5))
                     spawn_random_monsters();
+        }
     }
 
     // Abyss maprot.
@@ -573,7 +403,7 @@ static void _catchup_monster_move(monster* mon, int moves)
             break;
 
         const coord_def next(pos + inc);
-        const dungeon_feature_type feat = grd(next);
+        const dungeon_feature_type feat = env.grid(next);
         if (feat_is_solid(feat)
             || monster_at(next)
             || !monster_habitable_grid(mon, feat))
@@ -631,6 +461,26 @@ static void _catchup_monster_moves(monster* mon, int turns)
         return;
     }
 
+    // Yred & animate dead zombies crumble on floor change
+    if (mon->friendly()
+        && (is_yred_undead_slave(*mon) && !mons_bound_soul(*mon)
+            || mon->props.exists(ANIMATE_DEAD_KEY)))
+    {
+        if (turns > 2)
+            monster_die(*mon, KILL_DISMISSED, NON_MONSTER);
+        else
+        {
+            // handle expiration messages if the player was quick
+            // doing it this way so the mesages are kept consistent with
+            // corresponding non-yred derived undead
+            mon_enchant abj(ENCH_FAKE_ABJURATION, 0, 0, 1);
+            mon->add_ench(abj);
+            abj.duration = 0;
+            mon->update_ench(abj);
+        }
+        return;
+    }
+
     // Don't move non-land or stationary monsters around.
     if (mons_primary_habitat(*mon) != HT_LAND
         || mons_is_zombified(*mon)
@@ -651,7 +501,9 @@ static void _catchup_monster_moves(monster* mon, int turns)
     if (mon->asleep() || mon->paralysed())
         return;
 
-
+    // Don't shift towards timestepped players.
+    if (mon->target.origin())
+        return;
 
     const int mon_turns = (turns * mon->speed) / 10;
     const int moves = min(mon_turns, 50);
@@ -721,6 +573,9 @@ void monster::timeout_enchantments(int levels)
     const mon_enchant_list ec = enchantments;
     for (auto &entry : ec)
     {
+        if (entry.second.duration >= INFINITE_DURATION)
+            continue;
+
         switch (entry.first)
         {
         case ENCH_POISON: case ENCH_CORONA:
@@ -729,8 +584,8 @@ void monster::timeout_enchantments(int levels)
         case ENCH_CHARM: case ENCH_SLEEP_WARY: case ENCH_SICK:
         case ENCH_PARALYSIS: case ENCH_PETRIFYING:
         case ENCH_PETRIFIED: case ENCH_SWIFT: case ENCH_SILENCE:
-        case ENCH_LOWERED_MR: case ENCH_SOUL_RIPE: case ENCH_ANTIMAGIC:
-        case ENCH_FEAR_INSPIRING: case ENCH_REGENERATION: case ENCH_RAISED_MR:
+        case ENCH_LOWERED_WL: case ENCH_SOUL_RIPE: case ENCH_ANTIMAGIC:
+        case ENCH_REGENERATION: case ENCH_STRONG_WILLED:
         case ENCH_MIRROR_DAMAGE: case ENCH_LIQUEFYING:
         case ENCH_SILVER_CORONA: case ENCH_DAZED: case ENCH_FAKE_ABJURATION:
         case ENCH_BREATH_WEAPON: case ENCH_WRETCHED:
@@ -740,7 +595,8 @@ void monster::timeout_enchantments(int levels)
         case ENCH_BLACK_MARK: case ENCH_SAP_MAGIC: case ENCH_NEUTRAL_BRIBED:
         case ENCH_FRIENDLY_BRIBED: case ENCH_CORROSION: case ENCH_GOLD_LUST:
         case ENCH_RESISTANCE: case ENCH_HEXED: case ENCH_IDEALISED:
-        case ENCH_BOUND_SOUL: case ENCH_STILL_WINDS: case ENCH_RING_OF_THUNDER:
+        case ENCH_BOUND_SOUL: case ENCH_STILL_WINDS: case ENCH_DRAINED:
+        case ENCH_ANGUISH: case ENCH_FIRE_VULN:
             lose_ench_levels(entry.second, levels);
             break;
 
@@ -766,8 +622,10 @@ void monster::timeout_enchantments(int levels)
         case ENCH_INSANE:
         case ENCH_BERSERK:
         case ENCH_INNER_FLAME:
+        case ENCH_ROLLING:
         case ENCH_MERFOLK_AVATAR_SONG:
         case ENCH_INFESTATION:
+        case ENCH_HELD:
             del_ench(entry.first);
             break;
 
@@ -788,10 +646,6 @@ void monster::timeout_enchantments(int levels)
             // pacified monster leave the level.
             if (alive() && !is_stationary())
                 monster_blink(this, true);
-            break;
-
-        case ENCH_HELD:
-            del_ench(entry.first);
             break;
 
         case ENCH_TIDE:
@@ -1048,7 +902,7 @@ void timeout_malign_gateways(int duration)
                     dur *= 10;
                     mon_enchant kduration = mon_enchant(ENCH_PORTAL_PACIFIED, 4,
                         caster, dur);
-                    tentacle->props["base_position"].get_coord()
+                    tentacle->props[BASE_POSITION_KEY].get_coord()
                                         = tentacle->pos();
                     tentacle->add_ench(kduration);
 
@@ -1082,7 +936,7 @@ void timeout_tombs(int duration)
             _drop_tomb(cmark->pos, empty_tomb, zin);
 
             monster* mon_src =
-                !invalid_monster_index(cmark->source) ? &menv[cmark->source]
+                !invalid_monster_index(cmark->source) ? &env.mons[cmark->source]
                                                       : nullptr;
             // A monster's Tomb of Doroklohe spell.
             if (mon_src
@@ -1114,7 +968,7 @@ void timeout_terrain_changes(int duration, bool force)
             marker->duration -= duration;
 
         if (marker->change_type == TERRAIN_CHANGE_DOOR_SEAL
-            && !feat_is_sealed(grd(marker->pos)))
+            && !feat_is_sealed(env.grid(marker->pos)))
         {
             // TODO: could this be done inside `revert_terrain_change`? The
             // two things to test are corrupting sealed doors, and destroying
@@ -1131,10 +985,10 @@ void timeout_terrain_changes(int duration, bool force)
             marker->duration = 0;
         }
 
-        monster* mon_src = monster_by_mid(marker->mon_num);
+        actor* src = actor_by_mid(marker->mon_num);
         if (marker->duration <= 0
             || (marker->mon_num != 0
-                && (!mon_src || !mon_src->alive() || mon_src->pacified())))
+                && (!src || !src->alive() || (src->is_monster() && src->as_monster()->pacified()))))
         {
             if (you.see_cell(marker->pos))
                 num_seen[marker->change_type]++;
@@ -1169,7 +1023,7 @@ void setup_environment_effects()
             if (!in_bounds(x, y))
                 continue;
 
-            const int grid = grd[x][y];
+            const int grid = env.grid[x][y];
             if (grid == DNGN_LAVA
                     || (grid == DNGN_SHALLOW_WATER
                         && player_in_branch(BRANCH_SWAMP)))
@@ -1184,7 +1038,7 @@ void setup_environment_effects()
 
 static void apply_environment_effect(const coord_def &c)
 {
-    const dungeon_feature_type grid = grd(c);
+    const dungeon_feature_type grid = env.grid(c);
     // Don't apply if if the feature doesn't want it.
     if (testbits(env.pgrid(c), FPROP_NO_CLOUD_GEN))
         return;
@@ -1254,122 +1108,4 @@ int speed_to_duration(int speed)
         speed = 100;
 
     return div_rand_round(100, speed);
-}
-
-// Returns -1 if the player hasn't been in this branch before.
-static int& _zot_clock_for(branch_type br)
-{
-    CrawlHashTable &branch_clock = you.props["ZOT_CLOCK"];
-    const string branch_name = branches[br].abbrevname;
-    // When entering a new branch, start with an empty clock.
-    // (You'll get the usual time when you finish entering.)
-    if (!branch_clock.exists(branch_name))
-        branch_clock[branch_name].get_int() = -1;
-    return branch_clock[branch_name].get_int();
-}
-
-static int& _zot_clock()
-{
-    return _zot_clock_for(you.where_are_you);
-}
-
-static bool _zot_clock_active_in(branch_type br)
-{
-    return br != BRANCH_ABYSS && !player_has_orb();
-}
-
-// Is the zot clock running, or is it paused or stopped altogether?
-bool zot_clock_active()
-{
-    return _zot_clock_active_in(you.where_are_you);
-}
-
-static bool _over_zot_threshold(branch_type br)
-{
-    return _zot_clock_for(br) >= MAX_ZOT_CLOCK - BEZOTTING_THRESHOLD;
-}
-
-// If the player was in the given branch, would they suffer penalties for
-// nearing the end of the zot clock?
-bool bezotted_in(branch_type br)
-{
-    return _zot_clock_active_in(br) && _over_zot_threshold(br);
-}
-
-// Is the player suffering penalties from nearing the end of the zot clock?
-bool bezotted()
-{
-    return bezotted_in(you.where_are_you);
-}
-
-// How many times should the player have been drained by Zot?
-int bezotting_level()
-{
-    if (!bezotted())
-        return 0;
-    const int MAX_ZOTS = 5;
-    const int TURNS_PER_ZOT = BEZOTTING_THRESHOLD / MAX_ZOTS;
-    const int over_thresh = _zot_clock() - (MAX_ZOT_CLOCK - BEZOTTING_THRESHOLD);
-    return over_thresh / TURNS_PER_ZOT + 1;
-}
-
-// Decrease the zot clock when the player enters a new level.
-void decr_zot_clock()
-{
-    if (!zot_clock_active())
-        return;
-    int &zot = _zot_clock();
-    if (zot == -1)
-    {
-        // new branch
-        zot = MAX_ZOT_CLOCK - ZOT_CLOCK_PER_FLOOR;
-    } else {
-        // old branch, new floor
-        if (bezotted())
-            mpr("As you enter the new level, Zot loses track of you.");
-        zot = max(0, zot - ZOT_CLOCK_PER_FLOOR);
-    }
-}
-
-// Odds of the zot clock incrementing every aut, expressed as odds
-// out of 1000 (aka 10x a percent chance).
-static unsigned _zot_clock_odds()
-{
-    const int base_odds = 100; // 10% per aut, aka on average 1/turn
-    if (have_passive(passive_t::slow_zot))
-    {
-        // down to 6.7% at full piety, aka once every 1.5 turns. (only movement
-        // (is slowed, not all actions, so we shouldn't give double clock!)
-        return base_odds - div_rand_round(you.piety, 6);
-    }
-    return base_odds;
-}
-
-void incr_zot_clock()
-{
-    const int clock_incr = binomial(you.time_taken, _zot_clock_odds(), 1000);
-    const int old_lvl = bezotting_level();
-    _zot_clock() += clock_incr;
-    if (!bezotted())
-        return;
-
-    if (_zot_clock() >= MAX_ZOT_CLOCK)
-    {
-        mpr("Zot has found you!");
-        ouch(INSTANT_DEATH, KILLED_BY_ZOT);
-        return;
-    }
-
-    if (!old_lvl)
-    {
-        mpr("You have lingered too long in familiar places. Zot approaches. Travel to new levels before it's too late!");
-        drain_player(150, true, true);
-        take_note(Note(NOTE_MESSAGE, 0, 0, "Touched by the power of Zot."));
-    }
-    else if (bezotting_level() > old_lvl)
-    {
-        mpr("Zot draws near...");
-        drain_player(75, true, true);
-        take_note(Note(NOTE_MESSAGE, 0, 0, "Touched by the power of Zot."));
-    }
 }

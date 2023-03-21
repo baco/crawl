@@ -12,6 +12,8 @@
 #include "deck-type.h"
 #include "ability-type.h"
 #include "enum.h"
+#include "spl-cast.h"
+#include "tag-version.h"
 
 #define NEMELEX_TRIPLE_DRAW_KEY "nemelex_triple_draw"
 #define NEMELEX_STACK_KEY       deck_name(DECK_STACK)
@@ -38,9 +40,11 @@ enum card_type
     CARD_ELIXIR,              // restoration of hp and mp
     CARD_SUMMON_DEMON,        // dual demons
     CARD_SUMMON_WEAPON,       // a dance partner
-    CARD_SUMMON_FLYING,       // swarms from the swamp
+    CARD_SUMMON_BEE,          // swarm of bees
     CARD_WILD_MAGIC,          // miscasts for everybody
-    CARD_STAIRS,              // moves stairs around
+#if TAG_MAJOR_VERSION == 34
+    CARD_STAIRS_REMOVED,      // moved stairs around
+#endif
     CARD_WRATH,               // random godly wrath
     CARD_WRAITH,              // drain XP
 #if TAG_MAJOR_VERSION == 34
@@ -67,9 +71,9 @@ void reset_cards();
 string deck_summary();
 
 bool deck_draw(deck_type deck);
-bool deck_triple_draw();
-bool deck_deal();
-bool deck_stack();
+spret deck_triple_draw(bool fail);
+spret deck_deal(bool fail);
+spret deck_stack(bool fail);
 
 bool draw_three();
 bool stack_five(int slot);
@@ -84,6 +88,7 @@ string deck_name(deck_type deck);
 string deck_description(deck_type deck);
 const string stack_top();
 const string stack_contents();
+bool card_is_removed(card_type card);
 
 #if TAG_MAJOR_VERSION == 34
 bool is_deck_type(uint8_t type);

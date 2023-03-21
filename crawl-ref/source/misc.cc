@@ -6,6 +6,7 @@
 #include "AppHdr.h"
 
 #include "misc.h"
+#include "mpr.h"
 
 #include <algorithm>
 #include <cstdio>
@@ -20,15 +21,11 @@
 #include "items.h"
 #include "libutil.h"
 #include "monster.h"
+#include "options.h" // tile_grinch
 #include "state.h"
 #include "terrain.h"
 #include "tileview.h"
 #include "traps.h"
-
-string weird_glowing_colour()
-{
-    return getMiscString("glowing_colour_name");
-}
 
 // Make the player swap positions with a given monster.
 void swap_with_monster(monster* mon_to_swap)
@@ -96,7 +93,7 @@ void swap_with_monster(monster* mon_to_swap)
                 mpr("You become entangled in the net!");
             else
                 mpr("You get stuck in the web!");
-            you.redraw_quiver = true; // Account for being in a net.
+            quiver::set_needs_redraw();
             you.redraw_evasion = true;
         }
 
@@ -124,6 +121,12 @@ unsigned int breakpoint_rank(int val, const int breakpoints[],
         ++result;
 
     return result;
+}
+
+counted_monster_list::counted_monster_list(vector<monster *> ms)
+{
+    for (auto mon : ms)
+        add(mon);
 }
 
 void counted_monster_list::add(const monster* mons)
@@ -196,35 +199,31 @@ bool today_is_halloween()
     return date->tm_mon == 9 && date->tm_mday == 31;
 }
 
-bool tobool(maybe_bool mb, bool def)
+/// It's beginning to feel an awful lot like Christmas.
+/// Or Hannukah, maybe..? Who can say.
+bool december_holidays()
 {
-    switch (mb)
-    {
-    case MB_TRUE:
-        return true;
-    case MB_FALSE:
+    // Currently, this customization only applies to tiles mode.
+    // If that changes, we should move this check to the appropriate
+    // call sites of this function, or add a wrapper.
+#ifndef USE_TILE
+    return false;
+#else
+    if (Options.tile_grinch)
         return false;
-    case MB_MAYBE:
-    default:
-        return def;
-    }
+    const time_t curr_time = time(nullptr);
+    const struct tm *date = TIME_FN(&curr_time);
+    // Give em two weeks before Christmas and then until New Year's.
+    // (tm_mon is zero-based.)
+    return date->tm_mon == 11 && date->tm_mday > 10;
+#endif
 }
 
-maybe_bool frombool(bool b)
+bool now_is_morning()
 {
-    return b ? MB_TRUE : MB_FALSE;
-}
-
-const string maybe_to_string(const maybe_bool mb)
-{
-    switch (mb)
-    {
-    case MB_TRUE:
-        return "true";
-    case MB_FALSE:
-        return "false";
-    case MB_MAYBE:
-    default:
-        return "maybe";
-    }
+    const time_t curr_time = time(nullptr);
+    const tm *date = TIME_FN(&curr_time);
+    // Assume 'morning' starts at 6 AM and ends at 6 PM.
+    dprf("hr %d", date->tm_hour);
+    return date->tm_hour >= 6 && date->tm_hour < 18;
 }

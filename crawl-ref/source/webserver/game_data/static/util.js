@@ -31,29 +31,78 @@ function () {
 
     function formatted_string_to_html(str)
     {
-        var other_open = false;
-        var filtered = str.replace(/<?<(\/?[a-z]*)>?|>|&/ig, function (str, p1) {
+        // this is a bit weird because the crawl binary never closes color
+        // tags in auto-generated format_string text (which is a valid color
+        // string), but we don't want the crazy arbitrary nesting of spans
+        // this can lead to. So it ensures that only one fg and one bg span
+        // are involved at any time.
+        var cur_fg = [];
+        var bg_open = false; // XX nesting bg tags not handled
+        var filtered = str.replace(/<?<(\/?(bg:)?[a-z]*)>?|>|&/ig, function (str, p1) {
             if (p1 === undefined)
                 p1 = "";
             var closing = false;
+            var bg = false;
             if (p1.match(/^\//))
             {
                 p1 = p1.substr(1);
                 closing = true;
             }
+            if (p1.match(/^bg:/))
+            {
+                bg = true;
+                p1 = p1.substr(3);
+            }
             if (p1 in cols && !str.match(/^<</) && str.match(/>$/))
             {
                 if (closing)
                 {
-                    other_open = false;
-                    return "</span>";
+                    if (bg && bg_open)
+                    {
+                        bg_open = false;
+                        return "</span>";
+                    }
+                    else if (cur_fg.length > 0)
+                    {
+                        cur_fg.pop();
+                        if (cur_fg.length > 0)
+                        {
+                            // restart the previous color
+                            return "</span><span class='fg"
+                                        + cur_fg[cur_fg.length - 1] + "'>";
+                        }
+                        else
+                            return "</span>";
+                    }
+                    // mismatched close tag
+                    return "";
+                }
+                else if (bg)
+                {
+                    var text = "<span class='bg" + cols[p1] + "'>";
+                    if (bg_open)
+                        text = "</span>" + text;
+                    // if a fg span is currently open, close it before the
+                    // new background span, and reopen it inside that span.
+                    // This ensures that fg spans are always nested inside
+                    // bg spans.
+                    if (cur_fg.length > 0)
+                    {
+                        text = "</span>" + text
+                                + "<span class='fg"
+                                + cur_fg[cur_fg.length - 1] + "'>";
+                    }
+                    bg_open = true;
+                    return text;
                 }
                 else
                 {
-                    var text = "<span class='fg" + cols[p1] + "'>";
-                    if (other_open)
+                    var text = "<span class='fg" + cols[p1] + "'>"
+                    // close out a currently open fg span, to keep only one
+                    // at a time
+                    if (cur_fg.length > 0)
                         text = "</span>" + text;
-                    other_open = true;
+                    cur_fg.push(cols[p1]);
                     return text;
                 }
             }
@@ -62,22 +111,33 @@ function () {
                 if (str.match(/^<</))
                     return escape_html(str.substr(1));
                 else
-                {
                     return escape_html(str);
-                }
             }
         });
-        if (other_open)
+        if (cur_fg.length > 0)
             filtered += "</span>";
+        if (bg_open)
+            filtered += "</span>";
+        // TODO: eliminate empty spans?
         return filtered;
     }
 
     function init_canvas(element, w, h) {
-        var ratio = window.devicePixelRatio;
-        element.width = w;
-        element.height = h;
-        element.style.width = (w / ratio) + 'px';
-        element.style.height = (h / ratio) + 'px';
+        // in an ideal world, we might be able to just apply a scale by ratio
+        // here and be done with it. However, fractional pixel snapping is
+        // very dicey and varied across browsers. So the scale by ratio will
+        // mostly need to be manually applied when a canvas created by this
+        // function is used. Things might be simpler if this value consistently
+        // represented just the device vs logical pixel ratio, but aside from
+        // safari, it also factors in browser zoom.
+        const ratio = window.devicePixelRatio;
+        element.width = Math.floor(w * ratio);
+        element.height = Math.floor(h * ratio);
+        // var ctx = element.getContext('2d');
+        // ctx.resetTransform();
+        // ctx.scale(ratio, ratio);
+        element.style.width = w + 'px';
+        element.style.height = h + 'px';
     }
 
     function make_key(x, y) {

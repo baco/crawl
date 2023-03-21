@@ -15,9 +15,7 @@
 #include "hints.h"
 #include "initfile.h"
 #include "libutil.h"
-#ifdef WIZARD
- #include "luaterp.h"
-#endif
+#include "luaterp.h"
 #include "menu.h"
 #include "monster.h"
 #include "mon-util.h"
@@ -29,6 +27,7 @@
 #include "state.h"
 #include "stringutil.h"
 #include "tiles-build-specific.h"
+#include "tag-version.h"
 #include "unwind.h"
 #include "view.h"
 
@@ -528,8 +527,10 @@ public:
 
     void resize()
     {
+        // if this is resized to 0, bad crashes will happen. N.b. I have no idea
+        // if this issue is what the following note is about:
         // XXX: broken (why?)
-        lines.resize(height());
+        lines.resize(max(height(), 1));
     }
 
     unsigned int out_width() const
@@ -592,6 +593,10 @@ public:
     // write to screen (without refresh)
     void show()
     {
+        // skip if there is no layout yet
+        if (width() <= 0)
+            return;
+
         // XXX: this should not be necessary as formatted_string should
         //      already do it
         textcolour(LIGHTGREY);
@@ -889,7 +894,8 @@ public:
 #ifdef USE_TILE_WEB
     void send()
     {
-        if (unsent == 0 || (send_ignore_one && unsent == 1)) return;
+        if (unsent == 0 || (send_ignore_one && unsent == 1))
+            return;
 
         if (client_rollback > 0)
         {
@@ -937,8 +943,22 @@ void webtiles_send_messages()
     tiles.json_close_object(true);
     tiles.finish_message();
 }
+
+void webtiles_send_more_text(string txt)
+{
+    if (!crawl_state.io_inited || !crawl_state.game_started)
+        return;
+    tiles.json_open_object();
+    tiles.json_write_string("msg", "msgs");
+    tiles.json_treat_as_empty();
+    tiles.json_write_bool("more", txt.size());
+    tiles.json_write_string("more_text", txt);
+    tiles.json_close_object(true);
+    tiles.finish_message();
+}
+
 #else
-void webtiles_send_messages() { }
+void webtiles_send_more_text(string) { }
 #endif
 
 static FILE* _msg_dump_file = nullptr;
@@ -953,7 +973,7 @@ namespace msg
 {
     static bool suppress_messages = false;
     static unordered_set<tee *> current_message_tees;
-    static maybe_bool _msgs_to_stderr = MB_MAYBE;
+    static maybe_bool _msgs_to_stderr = maybe_bool::maybe;
 
     static bool _suppressed()
     {
@@ -963,9 +983,9 @@ namespace msg
     /**
      * RAII logic for controlling echoing to stderr.
      * @param f the new state:
-     *   MB_TRUE: always echo to stderr (mainly used for debugging)
-     *   MB_MAYBE: use default logic, based on mode, io state, etc
-     *   MB_FALSE: never echo to stderr (for suppressing error echoing during
+     *   true: always echo to stderr (mainly used for debugging)
+     *   maybe_bool::maybe: use default logic, based on mode, io state, etc
+     *   false: never echo to stderr (for suppressing error echoing during
      *             startup, e.g. for first-pass initfile processing)
      */
     force_stderr::force_stderr(maybe_bool f)
@@ -982,11 +1002,10 @@ namespace msg
 
     bool uses_stderr(msg_channel_type channel)
     {
-        if (_msgs_to_stderr == MB_TRUE)
-            return true;
-        else if (_msgs_to_stderr == MB_FALSE)
-            return false;
-        // else, MB_MAYBE:
+        if (_msgs_to_stderr.is_bool())
+            return bool(_msgs_to_stderr);
+
+        // else, maybe_bool::maybe:
 
         if (channel == MSGCH_ERROR)
         {
@@ -1010,10 +1029,16 @@ namespace msg
         current_message_tees.insert(this);
     }
 
-    tee::~tee()
+    void tee::force_update()
     {
         if (target)
             *target += get_store();
+        store.clear();
+    }
+
+    tee::~tee()
+    {
+        force_update();
         current_message_tees.erase(this);
     }
 
@@ -1181,7 +1206,6 @@ static msg_colour_type channel_to_msgcol(msg_channel_type channel, int param)
 
         case MSGCH_PLAIN:
         case MSGCH_FRIEND_ACTION:
-        case MSGCH_ROTTEN_MEAT:
         case MSGCH_EQUIPMENT:
         case MSGCH_EXAMINE:
         case MSGCH_EXAMINE_FILTER:
@@ -1389,7 +1413,6 @@ static void _debug_channel_arena(msg_channel_type channel)
     case MSGCH_RECOVERY:
     case MSGCH_INTRINSIC_GAIN:
     case MSGCH_MUTATION:
-    case MSGCH_ROTTEN_MEAT:
     case MSGCH_EQUIPMENT:
     case MSGCH_FLOOR_ITEMS:
     case MSGCH_MULTITURN_ACTION:
@@ -1458,6 +1481,19 @@ void msgwin_set_temporary(bool temp)
     }
 }
 
+msgwin_temporary_mode::msgwin_temporary_mode()
+    : previous(_temporary)
+{
+    msgwin_set_temporary(true);
+}
+
+msgwin_temporary_mode::~msgwin_temporary_mode()
+{
+    // RAII behaviour: embedding instances of this class within each other
+    // will only reset the mode once they are all cleared.
+    msgwin_set_temporary(previous);
+}
+
 void msgwin_clear_temporary()
 {
     buffer.roll_back();
@@ -1469,10 +1505,12 @@ static int _last_msg_turn = -1; // Turn of last message.
 static void _mpr(string text, msg_channel_type channel, int param, bool nojoin,
                  bool cap)
 {
+    static bool _doing_c_message_hook = false;
+
     rng::generator rng(rng::UI);
 
     if (_msg_dump_file != nullptr)
-        fprintf(_msg_dump_file, "%s\n", text.c_str());
+        fprintf(_msg_dump_file, "%s\n", text.c_str()); // should this strip color tags?
 
     if (crawl_state.game_crashed)
         return;
@@ -1482,11 +1520,11 @@ static void _mpr(string text, msg_channel_type channel, int param, bool nojoin,
 
 #ifdef DEBUG_FATAL
     if (channel == MSGCH_ERROR)
-        die_noline("%s", text.c_str());
+        die_noline("%s", formatted_string::parse_string(text).tostring().c_str());
 #endif
 
     if (msg::uses_stderr(channel))
-        fprintf(stderr, "%s\n", text.c_str());
+        fprintf(stderr, "%s\n", formatted_string::parse_string(text).tostring().c_str());
 
     // Flush out any "comes into view" monster announcements before the
     // monster has a chance to give any other messages.
@@ -1509,7 +1547,10 @@ static void _mpr(string text, msg_channel_type channel, int param, bool nojoin,
     msg_colour_type colour = prepare_message(text, channel, param);
 
     string col = colour_to_str(colour_msg(colour));
-    text = "<" + col + ">" + text + "</" + col + ">"; // XXX
+    // lack of a closing tag is intentional: this is a valid color string and
+    // makes fewer assumptions about `text` this way.
+    // TODO: this doesn't override any opening color in `text`...
+    text = "<" + col + ">" + text; // XXX
 
     msg::_append_to_tees(text + "\n", channel);
 
@@ -1518,6 +1559,16 @@ static void _mpr(string text, msg_channel_type channel, int param, bool nojoin,
         if (channel == MSGCH_PROMPT)
             msgwin.show();
         return;
+    }
+
+    // TODO: running this hook from here is still pretty crazy, maybe it should
+    // be batched and done in the main game loop? But doing it this way at least
+    // does let us directly detect recursion.
+    if (!_doing_c_message_hook)
+    {
+        unwind_bool no_reentry(_doing_c_message_hook, true);
+        clua.callfn("c_message", "ss", text.c_str(),
+                                        channel_to_str(channel).c_str());
     }
 
     bool domore = _check_more(text, channel);
@@ -1593,11 +1644,7 @@ void msgwin_got_input()
 int msgwin_get_line(string prompt, char *buf, int len,
                     input_history *mh, const string &fill)
 {
-#ifdef TOUCH_UI
-    bool use_popup = true;
-#else
     bool use_popup = !crawl_state.need_save || ui::has_layout();
-#endif
 
     int ret;
     if (use_popup)
@@ -1624,11 +1671,14 @@ int msgwin_get_line(string prompt, char *buf, int len,
         vbox->add_child(input);
 
         popup->on_hotkey_event([&](const ui::KeyEvent& ev) {
-            switch (ev.key())
+            const int lastch = ev.key();
+            if (ui::key_exits_popup(lastch, false))
             {
-            CASE_ESCAPE
-                ret = CK_ESCAPE;
+                ret = CK_ESCAPE; // XX hardcoding
                 return done = true;
+            }
+            switch (lastch)
+            {
             case CK_ENTER:
                 ret = 0;
                 return done = true;
@@ -1639,7 +1689,7 @@ int msgwin_get_line(string prompt, char *buf, int len,
 
 #ifdef USE_TILE_WEB
         tiles.json_open_object();
-        tiles.json_write_string("prompt", colour_prompt.to_colour_string());
+        tiles.json_write_string("prompt", colour_prompt.to_colour_string(colour_msg(colour)));
         tiles.push_ui_layout("msgwin-get-line", 0);
         popup->on_layout_pop([](){ tiles.pop_ui_layout(); });
 #endif
@@ -1809,6 +1859,7 @@ void clear_messages(bool force)
 
     msgwin.got_input(); // Consider old messages as read.
 
+    // TODO: this doesn't seem to be implemented on webtiles?
     if (Options.clear_messages || force)
         msgwin.clear();
 
@@ -1844,12 +1895,9 @@ static void readkey_more(bool user_forced)
         }
     }
     while (keypress != ' ' && keypress != '\r' && keypress != '\n'
+           && keypress != CK_NUMPAD_ENTER
            && !key_is_escape(keypress)
-#ifdef TOUCH_UI
-           && keypress != CK_MOUSE_CLICK);
-#else
            && (user_forced || keypress != CK_MOUSE_CLICK));
-#endif
 
     if (key_is_escape(keypress))
         set_more_autoclear(true);
@@ -1927,7 +1975,7 @@ void canned_msg(canned_message_type which_message)
             crawl_state.cancel_cmd_repeat();
             break;
         case MSG_TOO_CONFUSED:
-            mpr("You're too confused!");
+            mpr("You are too confused!");
             break;
         case MSG_PRESENT_FORM:
             mpr("You can't do that in your present form.");
@@ -1969,7 +2017,7 @@ void canned_msg(canned_message_type which_message)
         {
             const char* when =
             (which_message == MSG_EMPTY_HANDED_ALREADY ? "already" : "now");
-            if (you.species == SP_FELID)
+            if (you.has_mutation(MUT_NO_GRASPING))
                 mprf("Your mouth is %s empty.", when);
             else if (you.has_usable_claws(true))
                 mprf("You are %s empty-clawed.", when);
@@ -1996,9 +2044,6 @@ void canned_msg(canned_message_type which_message)
             break;
         case MSG_DISORIENTED:
             mpr("You feel momentarily disoriented.");
-            break;
-        case MSG_TOO_HUNGRY:
-            mpr("You're too hungry.");
             break;
         case MSG_DETECT_NOTHING:
             mpr("You detect nothing.");
@@ -2031,8 +2076,13 @@ void canned_msg(canned_message_type which_message)
             mpr("You feel your power returning.");
             break;
         case MSG_MAGIC_DRAIN:
-            mprf(MSGCH_WARN, "You suddenly feel drained of magical energy!");
+        {
+            if (you.has_mutation(MUT_HP_CASTING))
+                mpr("You feel momentarily drained.");
+            else
+                mprf(MSGCH_WARN, "You suddenly feel drained of magical energy!");
             break;
+        }
         case MSG_SOMETHING_IN_WAY:
             mpr("There's something in the way.");
             break;
@@ -2135,23 +2185,6 @@ string get_last_messages(int mcount, bool full)
     if (!text.empty())
         text += "\n";
     return text;
-}
-
-void get_recent_messages(vector<string> &mess,
-                         vector<msg_channel_type> &chan)
-{
-    flush_prev_message();
-
-    const store_t& msgs = buffer.get_store();
-    int mcount = NUM_STORED_MESSAGES;
-    for (int i = -1; mcount > 0; --i, --mcount)
-    {
-        const message_line msg = msgs[i];
-        if (!msg)
-            break;
-        mess.push_back(msg.pure_text_with_repeats());
-        chan.push_back(msg.channel);
-    }
 }
 
 bool recent_error_messages()
@@ -2279,6 +2312,8 @@ void set_msg_dump_file(FILE* file)
     _msg_dump_file = file;
 }
 
+// XX unclear why we have both this and an overload of mpr that takes a
+// formatted_string
 void formatted_mpr(const formatted_string& fs,
                    msg_channel_type channel, int param)
 {

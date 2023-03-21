@@ -9,6 +9,7 @@
 #include "spl-other.h"
 
 #include "act-iter.h"
+#include "coordit.h"
 #include "delay.h"
 #include "env.h"
 #include "god-companions.h"
@@ -16,7 +17,9 @@
 #include "message.h"
 #include "mon-place.h"
 #include "mon-util.h"
+#include "movement.h" // passwall
 #include "place.h"
+#include "potion.h"
 #include "religion.h"
 #include "spl-util.h"
 #include "terrain.h"
@@ -29,7 +32,7 @@ spret cast_sublimation_of_blood(int pow, bool fail)
         mpr("You can't draw power from your own body while in death's door.");
     else if (!you.can_bleed())
     {
-        if (you.species == SP_VAMPIRE)
+        if (you.has_mutation(MUT_VAMPIRISM))
             mpr("You don't have enough blood to draw power from your own body.");
         else
             mpr("Your body is bloodless.");
@@ -70,10 +73,54 @@ spret cast_death_channel(int pow, god_type god, bool fail)
     fail_check();
     mpr("Malign forces permeate your being, awaiting release.");
 
-    you.increase_duration(DUR_DEATH_CHANNEL, 30 + random2(1 + 2*pow/3), 200);
+    you.increase_duration(DUR_DEATH_CHANNEL,
+                          30 + random2(1 + div_rand_round(2 * pow, 3)), 200);
 
     if (god != GOD_NO_GOD)
         you.attribute[ATTR_DIVINE_DEATH_CHANNEL] = static_cast<int>(god);
+
+    return spret::success;
+}
+
+static bool _dismiss_dead()
+{
+    bool found = false;
+    for (monster_iterator mi; mi; ++mi)
+    {
+        if (!*mi)
+            continue;
+
+        monster &mon = **mi;
+        if (!mon.alive()
+            || !mon.friendly()
+            || mon.type != MONS_ZOMBIE
+            || mon.is_summoned()
+            || is_yred_undead_slave(mon))
+        {
+            continue;
+        }
+
+        // crumble into dust...
+        mon_enchant abj(ENCH_FAKE_ABJURATION, 0, 0, 1);
+        mon.add_ench(abj);
+        abj.duration = 0;
+        mon.update_ench(abj);
+        found = true;
+    }
+    return found;
+}
+
+spret cast_animate_dead(int pow, bool fail)
+{
+    fail_check();
+
+    if (_dismiss_dead())
+        mpr("You dismiss your zombies and call upon the dead to rise afresh.");
+    else
+        mpr("You call upon the dead to rise.");
+
+    you.increase_duration(DUR_ANIMATE_DEAD, 20 + random2(1 + pow), 100);
+    you.props[ANIMATE_DEAD_POWER_KEY] = pow;
 
     return spret::success;
 }
@@ -232,6 +279,14 @@ static bool _feat_is_passwallable(dungeon_feature_type feat)
     }
 }
 
+bool passwall_simplified_check(const actor &act)
+{
+    for (adjacent_iterator ai(act.pos(), true); ai; ++ai)
+        if (_feat_is_passwallable(env.grid(*ai)))
+            return true;
+    return false;
+}
+
 passwall_path::passwall_path(const actor &act, const coord_def& dir, int max_range)
     : start(act.pos()), delta(dir.sgn()),
       range(max_range),
@@ -249,7 +304,7 @@ passwall_path::passwall_path(const actor &act, const coord_def& dir, int max_ran
         path.emplace_back(pos);
         if (in_bounds(pos))
         {
-            if (!_feat_is_passwallable(grd(pos)))
+            if (!_feat_is_passwallable(env.grid(pos)))
             {
                 if (!dest_found)
                 {
@@ -352,9 +407,9 @@ bool passwall_path::check_moveto() const
     // assumes is_valid()
 
     string terrain_msg;
-    if (grd(actual_dest) == DNGN_DEEP_WATER)
+    if (env.grid(actual_dest) == DNGN_DEEP_WATER)
         terrain_msg = "You sense a deep body of water on the other side of the rock.";
-    else if (grd(actual_dest) == DNGN_LAVA)
+    else if (env.grid(actual_dest) == DNGN_LAVA)
         terrain_msg = "You sense an intense heat on the other side of the rock.";
 
     // Pre-confirm exclusions in unseen squares as well as the actual dest
@@ -371,6 +426,14 @@ bool passwall_path::check_moveto() const
 
 spret cast_passwall(const coord_def& c, int pow, bool fail)
 {
+    // prompt player to end position-based ice spells
+    if (cancel_harmful_move(false))
+        return spret::abort;
+
+    // held away from the wall
+    if (you.is_constricted())
+        return spret::abort;
+
     coord_def delta = c - you.pos();
     passwall_path p(you, delta, spell_range(SPELL_PASSWALL, pow));
     string fail_msg;
@@ -416,8 +479,7 @@ static int _intoxicate_monsters(coord_def where, int pow, bool tracer)
     monster* mons = monster_at(where);
     if (mons == nullptr
         || mons_intel(*mons) < I_HUMAN
-        || !(mons->holiness() & MH_NATURAL)
-        || mons->check_clarity()
+        || mons->clarity()
         || mons->res_poison() >= 3)
     {
         return 0;
@@ -429,7 +491,7 @@ static int _intoxicate_monsters(coord_def where, int pow, bool tracer)
     if (!tracer && monster_resists_this_poison(*mons))
         return 0;
 
-    if (!tracer && x_chance_in_y(40 + pow/3, 100))
+    if (!tracer && x_chance_in_y(40 + div_rand_round(pow, 3), 100))
     {
         mons->add_ench(mon_enchant(ENCH_CONFUSION, 0, &you));
         simple_monster_message(*mons, " looks rather confused.");

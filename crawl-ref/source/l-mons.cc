@@ -19,6 +19,7 @@
 #include "monster.h"
 #include "mon-util.h"
 #include "stringutil.h"
+#include "tag-version.h"
 
 #define WRAPPED_MONSTER(ls, name)                                       \
     MonsterWrap *___mw = clua_get_userdata< MonsterWrap >(ls, MONS_METATABLE); \
@@ -599,6 +600,7 @@ static const char *_monster_behaviour_names[] =
 #endif
     "retreat",
     "withdraw",
+    "batty",
 };
 
 static const char* _behaviour_name(beh_type beh)

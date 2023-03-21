@@ -22,6 +22,7 @@ public:
     // font loading
     virtual bool load_font(const char *font_name, unsigned int font_size) = 0;
     virtual bool configure_font() = 0;
+    virtual bool resize(unsigned int size) = 0;
 
     // render just text
     virtual void render_textblock(unsigned int x, unsigned int y,
@@ -44,6 +45,9 @@ public:
     // FontBuffer helper functions
     virtual void store(FontBuffer &buf, float &x, float &y,
                        const string &s, const VColour &c) = 0;
+    virtual void store(FontBuffer &buf, float &x, float &y,
+                       const string &s,
+                       const VColour &fg, const VColour &bg) = 0;
     virtual void store(FontBuffer &buf, float &x, float &y,
                        const formatted_string &fs) = 0;
     virtual void store(FontBuffer &buf, float &x, float &y, char32_t c,

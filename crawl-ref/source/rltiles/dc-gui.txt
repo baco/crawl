@@ -23,6 +23,8 @@ high_scores STARTUP_HIGH_SCORES
 %include dc-abilities.txt
 %include dc-invocations.txt
 
+%include dc-mutations.txt
+
 misc/todo TODO
 misc/error ERROR
 
@@ -182,13 +184,14 @@ Ar JOB_RECOMMENDED_ARTIFICER
 Wn JOB_RECOMMENDED_WANDERER
 De JOB_RECOMMENDED_DELVER
 Be JOB_RECOMMENDED_BERSERKER
-AK JOB_RECOMMENDED_ABYSSAL_KNIGHT
 CK JOB_RECOMMENDED_CHAOS_KNIGHT
+CA JOB_RECOMMENDED_CINDER_ACOLYTE
 Tm JOB_RECOMMENDED_TRANSMUTER
-AM JOB_RECOMMENDED_ARCANE_MARKSMAN
+HS JOB_RECOMMENDED_HEXSLINGER
+Re JOB_RECOMMENDED_REAVER
 Wr JOB_RECOMMENDED_WARPER
 En JOB_RECOMMENDED_ENCHANTER
-Wz JOB_RECOMMENDED_WIZARD
+HW JOB_RECOMMENDED_HEDGE_WIZARD
 Cj JOB_RECOMMENDED_CONJURER
 Su JOB_RECOMMENDED_SUMMONER
 Ne JOB_RECOMMENDED_NECROMANCER
@@ -209,13 +212,14 @@ Ar JOB_ARTIFICER
 Wn JOB_WANDERER
 De JOB_DELVER
 Be JOB_BERSERKER
-AK JOB_ABYSSAL_KNIGHT
 CK JOB_CHAOS_KNIGHT
+CA JOB_CINDER_ACOLYTE
 Tm JOB_TRANSMUTER
-AM JOB_ARCANE_MARKSMAN
+HS JOB_HEXSLINGER
+Re JOB_REAVER
 Wr JOB_WARPER
 En JOB_ENCHANTER
-Wz JOB_WIZARD
+HW JOB_HEDGE_WIZARD
 Cj JOB_CONJURER
 Su JOB_SUMMONER
 Ne JOB_NECROMANCER
@@ -230,17 +234,10 @@ VM JOB_VENOM_MAGE
 %texture none
 felids/cat3 SP_RECOMMENDED_FELID
 %start
-%compose base/centaur_lightgrey_f
+%compose base/armataur
 %compose body/animal_skin
 %compose hair/short_black
-%compose boots/hooves
-%finish SP_RECOMMENDED_PALENTONGA
-%start
-%compose base/deep_dwarf_m
-%compose body/animal_skin
-%compose hair/short_white
-%compose beard/garibaldi_white
-%finish SP_RECOMMENDED_DEEP_DWARF
+%finish SP_RECOMMENDED_ARMATAUR
 %start
 %compose base/deep_elf_f
 %compose body/animal_skin
@@ -256,9 +253,8 @@ felids/cat3 SP_RECOMMENDED_FELID
 %compose body/animal_skin
 %finish SP_RECOMMENDED_DEMONSPAWN
 %start
-%compose base/draconian_f
+%compose base/draconian
 %compose body/animal_skin
-%compose drchead/drchead_brown
 %finish SP_RECOMMENDED_BASE_DRACONIAN
 %start
 %compose base/formicid
@@ -280,11 +276,6 @@ felids/cat3 SP_RECOMMENDED_FELID
 %compose base/gnoll_m
 %compose body/animal_skin
 %finish SP_RECOMMENDED_GNOLL
-%start
-%compose base/halfling_m
-%compose body/animal_skin
-%compose hair/short_black
-%finish SP_RECOMMENDED_HALFLING
 %start
 %compose base/human_f
 %compose body/animal_skin
@@ -345,13 +336,21 @@ base/octopode1 SP_RECOMMENDED_OCTOPODE
 %compose base/vine_stalker_f
 %compose body/animal_skin
 %finish SP_RECOMMENDED_VINE_STALKER
+%start
+%compose base/djinni_f
+%compose body/animal_skin
+%compose hair/part2_red
+%finish SP_RECOMMENDED_DJINNI
+%start
+%compose base/meteoran_f
+%compose body/animal_skin
+%finish SP_RECOMMENDED_METEORAN
 %syn LAST_RECOMMENDED_SPECIES
 
 %sdir gui/backgrounds
 %texture disabled-fg
 enum:SP_RECOMMENDED_FELID SP_FELID
-enum:SP_RECOMMENDED_PALENTONGA SP_PALENTONGA
-enum:SP_RECOMMENDED_DEEP_DWARF SP_DEEP_DWARF
+enum:SP_RECOMMENDED_ARMATAUR SP_ARMATAUR
 enum:SP_RECOMMENDED_DEEP_ELF SP_DEEP_ELF
 enum:SP_RECOMMENDED_DEMIGOD SP_DEMIGOD
 enum:SP_RECOMMENDED_DEMONSPAWN SP_DEMONSPAWN
@@ -361,7 +360,6 @@ enum:SP_RECOMMENDED_BARACHI SP_BARACHI
 enum:SP_RECOMMENDED_GARGOYLE SP_GARGOYLE
 enum:SP_RECOMMENDED_GHOUL SP_GHOUL
 enum:SP_RECOMMENDED_GNOLL SP_GNOLL
-enum:SP_RECOMMENDED_HALFLING SP_HALFLING
 enum:SP_RECOMMENDED_HUMAN SP_HUMAN
 enum:SP_RECOMMENDED_KOBOLD SP_KOBOLD
 enum:SP_RECOMMENDED_MERFOLK SP_MERFOLK
@@ -376,4 +374,6 @@ enum:SP_RECOMMENDED_TENGU SP_TENGU
 enum:SP_RECOMMENDED_TROLL SP_TROLL
 enum:SP_RECOMMENDED_VAMPIRE SP_VAMPIRE
 enum:SP_RECOMMENDED_VINE_STALKER SP_VINE_STALKER
+enum:SP_RECOMMENDED_DJINNI SP_DJINNI
+enum:SP_RECOMMENDED_METEORAN SP_METEORAN
 %syn LAST_SPECIES

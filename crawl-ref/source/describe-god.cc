@@ -18,21 +18,21 @@
 #include "describe.h"
 #include "english.h"
 #include "env.h"
-#include "eq-type-flags.h"
 #include "god-abil.h"
 #include "god-companions.h"
 #include "god-conduct.h"
 #include "god-passive.h"
 #include "god-type.h"
+#include "items.h"
 #include "item-name.h"
 #include "libutil.h"
 #include "menu.h"
 #include "message.h"
-#include "potion.h" // you_drinkless for pakellas compat
 #include "religion.h"
 #include "skills.h"
 #include "spl-util.h"
 #include "stringutil.h"
+#include "tag-version.h"
 #include "terrain.h"
 #include "tilepick.h"
 #include "unicode.h"
@@ -79,7 +79,7 @@ int god_favour_rank(god_type which_god)
 {
     if (which_god == GOD_GOZAG)
         return _gold_level();
-    else if (which_god == GOD_USKAYAW)
+    else if (which_god == GOD_USKAYAW || which_god == GOD_YREDELEMNUL)
         return _invocations_level();
     else
         return _piety_level(you.piety);
@@ -159,8 +159,8 @@ static const char *divine_title[][8] =
         "Traumaturge",        "Battlemage",            "Warlock",                  "Luminary of Lethal Lore"},
 
     // Okawaru -- battle theme.
-    {"Coward",             "Struggler",             "Combatant",                "Warrior",
-        "Knight",             "Warmonger",             "Commander",                "Victor of a Thousand Battles"},
+    {"Coward",             "Struggler",             "Combatant",                "@Genus@-At-Arms",
+        "Knight",             "Myrmidon",             "Warmonger",                "Victor of a Thousand Battles"},
 
     // Makhleb -- chaos theme.
     {"Orderly",            "Spawn of Chaos",        "Disciple of Destruction",  "Fanfare of Bloodshed",
@@ -203,8 +203,8 @@ static const char *divine_title[][8] =
      "Contemplative",         "Epochal",               "Timeless",                 "@Adj@ Aeon"},
 
     // Ashenzari -- divination theme
-    {"Star-crossed",       "Cursed",                "Initiated",                "Soothsayer",
-        "Seer",               "Oracle",                "Illuminatus",              "Omniscient"},
+    {"Star-crossed",       "Cursed",                "Initiated",                "Seer",
+        "Oracle",            "Illuminatus",            "Prince of Secrets",        "Omniscient"},
 
     // Dithmenos -- darkness theme
     {"Ember",              "Gloomy",                "Darkened",                 "Extinguished",
@@ -239,6 +239,10 @@ static const char *divine_title[][8] =
     // Wu Jian -- animal/chinese martial arts monk theme
     {"Wooden Rat",          "Young Dog",             "Young Crane",              "Young Tiger",
         "Young Dragon",     "Red Sash",               "Golden Sash",              "Sifu"},
+
+    // Ignis -- fire/candles theme
+    {"Extinguished",          "Last Ember",             "Glowing Coal",              "Thurifer",
+        "Hearthfire",     "Furnace",               "Raging Flame",              "Inferno"},
 };
 COMPILE_CHECK(ARRAYSZ(divine_title) == NUM_GODS);
 
@@ -247,7 +251,7 @@ string god_title(god_type which_god, species_type which_species, int piety)
     string title;
     if (player_under_penance(which_god))
         title = divine_title[which_god][0];
-    else if (which_god == GOD_USKAYAW)
+    else if (which_god == GOD_USKAYAW || which_god == GOD_YREDELEMNUL)
         title = divine_title[which_god][_invocations_level()];
     else if (which_god == GOD_GOZAG)
         title = divine_title[which_god][_gold_level()];
@@ -256,85 +260,56 @@ string god_title(god_type which_god, species_type which_species, int piety)
 
     const map<string, string> replacements =
     {
-        { "Adj", species_name(which_species, SPNAME_ADJ) },
-        { "Genus", species_name(which_species, SPNAME_GENUS) },
-        { "Walking", species_walking_verb(which_species) + "ing" },
-        { "Walker", species_walking_verb(which_species) + "er" },
+        { "Adj", species::name(which_species, species::SPNAME_ADJ) },
+        { "Genus", species::name(which_species, species::SPNAME_GENUS) },
+        { "Walking", species::walking_verb(which_species) + "ing" },
+        { "Walker", species::walking_verb(which_species) + "er" },
     };
 
     return replace_keys(title, replacements);
 }
 
+static string _describe_item_curse(const item_def& item)
+{
+    if (!item.props.exists(CURSE_KNOWLEDGE_KEY))
+        return "None";
+
+    const CrawlVector &curses = item.props[CURSE_KNOWLEDGE_KEY].get_vector();
+
+    if (curses.empty())
+        return "None";
+
+    return comma_separated_fn(curses.begin(), curses.end(),
+            curse_name, ", ", ", ");
+}
+
 static string _describe_ash_skill_boost()
 {
-    if (!you.bondage_level)
-    {
-        return "Ashenzari won't support your skills until you bind yourself "
-               "with cursed items.";
-    }
-
-    static const char* bondage_parts[NUM_ET] = { "Weapon hand", "Shield hand",
-                                                 "Armour", "Jewellery" };
-    static const char* bonus_level[3] = { "Low", "Medium", "High" };
     ostringstream desc;
     desc.setf(ios::left);
     desc << "<white>";
-    desc << setw(18) << "Bound part";
-    desc << setw(30) << "Boosted skills";
-    desc << "Bonus\n";
-    desc << "</white>";
+    desc << setw(40) << "Bound item";
+    desc << setw(30) << "Curse bonuses";
+    desc << "</white>\n";
 
-    for (int i = ET_WEAPON; i < NUM_ET; i++)
+    for (int j = EQ_FIRST_EQUIP; j < NUM_EQUIP; j++)
     {
-        if (you.bondage[i] <= 0 || i == ET_SHIELD && you.bondage[i] == 3)
-            continue;
-
-        desc << setw(18);
-        if (i == ET_WEAPON && you.bondage[i] == 3)
-            desc << "Hands";
-        else
-            desc << bondage_parts[i];
-
-        string skills;
-        map<skill_type, int8_t> boosted_skills = ash_get_boosted_skills(eq_type(i));
-        const int8_t bonus = boosted_skills.begin()->second;
-        auto it = boosted_skills.begin();
-
-        // First, we keep only one magic school skill (conjuration).
-        // No need to list all of them since we boost all or none.
-        while (it != boosted_skills.end())
+        const equipment_type i = static_cast<equipment_type>(j);
+        if (you.equip[i] != -1)
         {
-            if (it->first > SK_CONJURATIONS && it->first <= SK_LAST_MAGIC)
+            const item_def& item = you.inv[you.equip[i]];
+            const bool meld = item_is_melded(item);
+            if (item.cursed())
             {
-                boosted_skills.erase(it);
-                it = boosted_skills.begin();
+                desc << (meld ? "<darkgrey>" : "<lightred>");
+                desc << setw(40) << item.name(DESC_QUALNAME, true, false, false);
+                desc << setw(30) << (meld ? "melded" : _describe_item_curse(item));
+                desc << (meld ? "</darkgrey>" : "</lightred>");
+                desc << "\n";
             }
-            else
-                ++it;
         }
-
-        it = boosted_skills.begin();
-        while (!boosted_skills.empty())
-        {
-            // For now, all the bonuses from the same bounded part have
-            // the same level.
-            ASSERT(bonus == it->second);
-            if (it->first == SK_CONJURATIONS)
-                skills += "Magic schools";
-            else
-                skills += skill_name(it->first);
-
-            if (boosted_skills.size() > 2)
-                skills += ", ";
-            else if (boosted_skills.size() == 2)
-                skills += " and ";
-
-            boosted_skills.erase(it++);
-        }
-
-        desc << setw(30) << skills;
-        desc << bonus_level[bonus -1] << "\n";
     }
+
 
     return desc.str();
 }
@@ -574,7 +549,8 @@ static formatted_string _beogh_extra_description()
     bool has_named_followers = false;
     for (auto mons : followers)
     {
-        if (!mons->is_named()) continue;
+        if (!mons->is_named())
+            continue;
         has_named_followers = true;
 
         desc += mons->full_name(DESC_PLAIN);
@@ -598,7 +574,7 @@ static formatted_string _beogh_extra_description()
             {
                 desc.cprintf(" (");
 
-                item_def &gift = mitm[mons->inv[slot]];
+                item_def &gift = env.item[mons->inv[slot]];
                 desc += formatted_string::parse_string(
                                     menu_colour_item_name(gift,DESC_PLAIN));
                 desc.cprintf(")");
@@ -639,7 +615,7 @@ static formatted_string _god_extra_description(god_type which_god)
             if (have_passive(passive_t::bondage_skill_boost))
             {
                 desc.cprintf("\n");
-                _add_par(desc, "Ashenzari supports the following skills because of your curses:");
+                _add_par(desc, "Ashenzari supports the following skill groups because of your curses:");
                 _add_par(desc,  _describe_ash_skill_boost());
             }
             break;
@@ -688,10 +664,8 @@ static string _get_god_misc_info(god_type which_god)
         case SK_INVOCATIONS:
             break;
         case SK_NONE:
-            if (which_god == GOD_GOZAG || which_god == GOD_WU_JIAN)
-                break; // XXX: no space for details
             info += uppercase_first(apostrophise(god_name(which_god))) +
-                    " powers are based on piety instead of Invocations skill.";
+                " powers are not affected by the Invocations skill.";
             break;
         default:
             info += uppercase_first(apostrophise(god_name(which_god))) +
@@ -753,7 +727,11 @@ static string _raw_penance_message(god_type which_god)
     if (penance > initial_penance / 4)
         return "%s's wrath is beginning to fade.";
     if (penance > 0)
+    {
+        if (which_god == GOD_IGNIS)
+            return "%s' wrath will not burn much longer.";
         return "%s is almost ready to forgive your sins.";
+    }
     return "%s is neutral towards you.";
 }
 
@@ -803,40 +781,28 @@ static formatted_string _describe_god_powers(god_type which_god)
 
     // mv: Some gods can protect you from harm.
     // The god isn't really protecting the player - only sometimes saving
-    // his life.
-    if (have_passive(passive_t::protect_from_harm))
+    // their life.
+    if (god_gives_passive(which_god, passive_t::protect_from_harm)
+        || god_gives_passive(which_god, passive_t::lifesaving))
     {
         have_any = true;
 
-        int prot_chance = 10 + piety/10; // chance * 100
-        const char *when = "";
+        const char *how = "";
 
-        if (which_god == GOD_ELYVILON)
+        if (god_gives_passive(which_god, passive_t::lifesaving))
         {
-            switch (elyvilon_lifesaving())
-            {
-                case lifesaving_chance::sometimes:
-                    when = ", especially when called upon";
-                    prot_chance += 100 - 3000/piety;
-                    break;
-                case lifesaving_chance::always:
-                    when = ", and always does so when called upon";
-                    prot_chance = 100;
-                    break;
-                default:
-                    break;
-            }
+            how = (piety >= piety_breakpoint(5)) ? "carefully " :
+                  (piety >= piety_breakpoint(3)) ? "often " :
+                  (piety >= piety_breakpoint(1)) ? "sometimes "
+                                                 : "occasionally ";
         }
+        else
+            how = (piety >= piety_breakpoint(5)) ? "sometimes "
+                                                 : "occasionally ";
 
-        const char *how = (prot_chance >= 85) ? "carefully" :
-                          (prot_chance >= 55) ? "often" :
-                          (prot_chance >= 25) ? "sometimes"
-                                              : "occasionally";
-
-        desc.cprintf("%s %s watches over you%s.\n",
+        desc.cprintf("%s %sguards your life.\n",
                 uppercase_first(god_name(which_god)).c_str(),
-                how,
-                when);
+                how);
     }
 
     switch (which_god)
@@ -851,6 +817,14 @@ static formatted_string _describe_god_powers(god_type which_god)
                                              "occasionally";
 
         desc.cprintf("%s %s shields you from chaos.\n",
+                uppercase_first(god_name(which_god)).c_str(), how);
+
+        how =
+            (piety >= piety_breakpoint(5)) ? "often" :
+            (piety >= piety_breakpoint(3)) ? "sometimes" :
+            (piety >= piety_breakpoint(1)) ? "occasionally" :
+                                             "rarely";
+        desc.cprintf("%s %s shields you from Hell.\n",
                 uppercase_first(god_name(which_god)).c_str(), how);
         break;
     }
@@ -885,28 +859,21 @@ static formatted_string _describe_god_powers(god_type which_god)
         break;
     }
 
-    case GOD_JIYVA:
-        have_any = true;
-        if (have_passive(passive_t::slime_feed))
-            desc.textcolour(god_colour(which_god));
-        else
-            desc.textcolour(DARKGREY);
-
-        if (have_passive(passive_t::slime_hp))
-            desc.cprintf("You gain magic and health when your fellow slimes consume items.\n");
-        else if (have_passive(passive_t::slime_mp))
-            desc.cprintf("You gain magic when your fellow slimes consume items.\n");
-
-        break;
-
     case GOD_FEDHAS:
         have_any = true;
         desc.cprintf("You can walk through plants and fire through allied plants.\n");
         break;
 
-    case GOD_ASHENZARI:
+    case GOD_JIYVA:
         have_any = true;
-        desc.cprintf("You are provided with a bounty of information.\n");
+        if (!have_passive(passive_t::jelly_regen))
+            desc.textcolour(DARKGREY);
+        else
+            desc.textcolour(god_colour(which_god));
+        desc.cprintf("Your health and magic regeneration is %saccelerated.\n",
+                     piety >= piety_breakpoint(5) ? "very greatly " :
+                     piety >= piety_breakpoint(3) ? "greatly " :
+                                                    "");
         break;
 
     case GOD_CHEIBRIADOS:
@@ -934,7 +901,7 @@ static formatted_string _describe_god_powers(god_type which_god)
                                : "some of Vehumet's most lethal spells";
             desc.cprintf("You can memorise %s.\n", offer);
         }
-        else
+        else if (!you.has_mutation(MUT_INNATE_CASTER))
         {
             desc.textcolour(DARKGREY);
             desc.cprintf("You can memorise some of Vehumet's spells.\n");
@@ -966,36 +933,35 @@ static formatted_string _describe_god_powers(god_type which_god)
         break;
 
     case GOD_HEPLIAKLQANA:
+        // XXX: move this logic back into the usual religion.cc god_powers block?
         have_any = true;
-        desc.cprintf("Your life essence is reduced. (-10%% HP)\n");
-        break;
-
-#if TAG_MAJOR_VERSION == 34
-    case GOD_PAKELLAS:
     {
-        have_any = true;
-        desc.cprintf("%s prevents your magic from regenerating.\n",
-                uppercase_first(god_name(which_god)).c_str());
-        desc.cprintf("%s identifies device charges for you.\n",
-                uppercase_first(god_name(which_god)).c_str());
-        if (!you_drinkless(false))
-        {
-            if (have_passive(passive_t::bottle_mp))
-                desc.textcolour(god_colour(which_god));
-            else
-                desc.textcolour(DARKGREY);
-
-            desc.cprintf("%s will collect and distill excess magic from your "
-                    "kills.\n",
-                    uppercase_first(god_name(which_god)).c_str());
-        }
-        break;
+        const auto textcol = have_passive(passive_t::frail) ? god_colour(which_god) : DARKGREY;
+        // We need to set textcolour before each line so that it'll display
+        // correctly in webtiles. (It works fine locally regardless.)
+        // Feature request: not this.
+        desc.textcolour(textcol);
+        desc.cprintf("Your life essence is reduced. (-10%% HP)\n");
+        desc.textcolour(textcol);
+        desc.cprintf("Your ancestor manifests to aid you.\n");
     }
-#endif
+        break;
 
     case GOD_LUGONU:
         have_any = true;
         desc.cprintf("You are protected from the effects of unwielding distortion weapons.\n");
+        break;
+
+    case GOD_OKAWARU:
+        have_any = true;
+        desc.cprintf("%s requires that you fight alone, and prevents you from "
+                     "gaining allies.\n",
+                uppercase_first(god_name(which_god)).c_str());
+        break;
+
+    case GOD_IGNIS:
+        have_any = true;
+        desc.cprintf("You are resistant to fire.\n");
         break;
 
     default:
@@ -1006,8 +972,8 @@ static formatted_string _describe_god_powers(god_type which_god)
     {
         // hack: don't mention the necronomicon alone unless it
         // wasn't already mentioned by the other description
-        if (power.abil == ABIL_KIKU_GIFT_NECRONOMICON
-            && you.species != SP_FELID)
+        if (power.abil == ABIL_KIKU_GIFT_CAPSTONE_SPELLS
+            && !you.has_mutation(MUT_NO_GRASPING))
         {
             continue;
         }
@@ -1074,11 +1040,7 @@ static formatted_string _god_overview_description(god_type which_god)
     if (!you_worship(which_god))
         desc.cprintf("%s", _god_penance_message(which_god).c_str());
     else
-    {
         desc.cprintf("%s", _describe_favour(which_god).c_str());
-        if (which_god == GOD_ASHENZARI)
-            desc.cprintf("\n%s", ash_describe_bondage(ETF_ALL, true).c_str());
-    }
     desc += _describe_god_powers(which_god);
     desc.cprintf("\n\n");
 
@@ -1122,26 +1084,20 @@ static void build_partial_god_ui(god_type which_god, shared_ptr<ui::Popup>& popu
         _god_extra_description(which_god)
     };
 
-#ifdef USE_TILE_LOCAL
-# define MORE_PREFIX "[<w>!</w>/<w>^</w>" "|<w>Right-click</w>" "]: "
-#else
-# define MORE_PREFIX "[<w>!</w>/<w>^</w>" "]: "
-#endif
-
     int mores_index = descs[3].empty() ? 0 : 1;
     const char* mores[2][4] =
     {
         {
-            MORE_PREFIX "<w>Overview</w>|Powers|Wrath",
-            MORE_PREFIX "Overview|<w>Powers</w>|Wrath",
-            MORE_PREFIX "Overview|Powers|<w>Wrath</w>",
-            MORE_PREFIX "Overview|Powers|Wrath"
+            "[<w>!</w>]: <w>Overview</w>|Powers|Wrath",
+            "[<w>!</w>]: Overview|<w>Powers</w>|Wrath",
+            "[<w>!</w>]: Overview|Powers|<w>Wrath</w>",
+            "[<w>!</w>]: Overview|Powers|Wrath"
         },
         {
-            MORE_PREFIX "<w>Overview</w>|Powers|Wrath|Extra",
-            MORE_PREFIX "Overview|<w>Powers</w>|Wrath|Extra",
-            MORE_PREFIX "Overview|Powers|<w>Wrath</w>|Extra",
-            MORE_PREFIX "Overview|Powers|Wrath|<w>Extra</w>"
+            "[<w>!</w>]: <w>Overview</w>|Powers|Wrath|Extra",
+            "[<w>!</w>]: Overview|<w>Powers</w>|Wrath|Extra",
+            "[<w>!</w>]: Overview|Powers|<w>Wrath</w>|Extra",
+            "[<w>!</w>]: Overview|Powers|Wrath|<w>Extra</w>"
         }
     };
 
@@ -1209,23 +1165,19 @@ static void _send_god_ui(god_type god, bool is_altar)
 
     tiles.json_write_string("description", getLongDescription(god_name(god)));
     if (you_worship(god))
-    {
         tiles.json_write_string("title", god_title(god, you.species, you.piety));
-        if (god == GOD_ASHENZARI)
-            tiles.json_write_string("bondage", ash_describe_bondage(ETF_ALL, true));
-    }
     tiles.json_write_string("favour", you_worship(god) ?
             _describe_favour(god) : _god_penance_message(god));
     tiles.json_write_string("powers_list",
-            _describe_god_powers(god).to_colour_string());
+            _describe_god_powers(god).to_colour_string(LIGHTGREY));
     tiles.json_write_string("info_table", "");
 
     tiles.json_write_string("powers",
-            _detailed_god_description(god).to_colour_string());
+            _detailed_god_description(god).to_colour_string(LIGHTGREY));
     tiles.json_write_string("wrath",
-            _god_wrath_description(god).to_colour_string());
+            _god_wrath_description(god).to_colour_string(LIGHTGREY));
     tiles.json_write_string("extra",
-            _god_extra_description(god).to_colour_string());
+            _god_extra_description(god).to_colour_string(LIGHTGREY));
     tiles.json_write_string("service_fee",
             _god_service_fee_description(god));
     tiles.push_ui_layout("describe-god", 1);
@@ -1248,7 +1200,7 @@ void describe_god(god_type which_god)
     bool done = false;
     popup->on_keydown_event([&](const KeyEvent& ev) {
         const auto key = ev.key();
-        if (key == '!' || key == CK_MOUSE_CMD || key == '^')
+        if (key == '!' || key == '^')
         {
             int n = (desc_sw->current() + 1) % desc_sw->num_children();
             desc_sw->current() = more_sw->current() = n;
@@ -1259,7 +1211,7 @@ void describe_god(god_type which_god)
 #endif
             return true;
         }
-        return done = !desc_sw->current_widget()->on_event(ev);
+        return done = ui::key_exits_popup(key, false);
     });
 
 #ifdef USE_TILE_WEB
@@ -1325,9 +1277,9 @@ bool describe_god_with_join(god_type which_god)
         const auto keyin = ev.key();
 
         // Always handle escape and pane-switching keys the same way
-        if (keyin == CK_ESCAPE)
+        if (ui::key_exits_popup(keyin, false))
             return done = true;
-        if (keyin == '!' || keyin == CK_MOUSE_CMD || keyin == '^')
+        if (keyin == '!' || keyin == '^')
         {
             int n = (desc_sw->current() + 1) % desc_sw->num_children();
             desc_sw->current() = n;
@@ -1348,8 +1300,8 @@ bool describe_god_with_join(god_type which_god)
         // Next, allow child widgets to handle scrolling keys
         // NOTE: these key exceptions are also specified in ui-layouts.js
         if (keyin != 'J' && keyin != CK_ENTER)
-        if (desc_sw->current_widget()->on_event(ev))
-            return true;
+            if (desc_sw->current_widget()->on_event(ev))
+                return true;
 
         if (step == ABANDON)
         {

@@ -1,10 +1,20 @@
 #pragma once
 
+#include <vector>
+
+#include "externs.h"
 #include "god-type.h"
 #include "spl-cast.h"
 
+using std::vector;
+
+#define ANIMATE_DEAD_POWER_KEY "animate_dead_power"
+
+class actor;
+
 spret cast_sublimation_of_blood(int pow, bool fail);
 spret cast_death_channel(int pow, god_type god, bool fail);
+spret cast_animate_dead(int pow, bool fail);
 
 enum class recall_t
 {
@@ -37,5 +47,6 @@ bool try_recall(mid_t mid);
 void do_recall(int time);
 void end_recall();
 
+bool passwall_simplified_check(const actor &act);
 spret cast_passwall(const coord_def& delta, int pow, bool fail);
 spret cast_intoxicate(int pow, bool fail, bool tracer = false);

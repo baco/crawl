@@ -5,12 +5,18 @@
 
 #pragma once
 
+#include <vector>
+
 #include "item-prop-enum.h"
 #include "mon-flags.h"
 #include "random.h"
+#include "tag-version.h"
+
+using std::vector;
 
 #define CORPSE_NAME_KEY      "corpse_name_key"
 #define CORPSE_NAME_TYPE_KEY "corpse_name_type_key"
+#define IDENTIFIED_ALL_KEY   "identified_all_key"
 
 struct item_kind
 {
@@ -120,6 +126,9 @@ bool is_bad_item(const item_def &item);
 bool is_dangerous_item(const item_def& item, bool temp = false);
 bool is_useless_item(const item_def &item, bool temp = false,
                      bool ident = false);
+string cannot_read_item_reason(const item_def *item=nullptr, bool temp=true, bool ident=false);
+string cannot_drink_item_reason(const item_def *item=nullptr,
+                                bool temp=true, bool use_check=false, bool ident = false);
 
 string make_name(uint32_t seed = rng::get_uint32(),
                  makename_type name_type = MNAME_DEFAULT);
@@ -132,11 +141,12 @@ const char* armour_ego_name(const item_def& item, bool terse);
 const char* missile_brand_name(const item_def& item, mbn_type t);
 
 bool item_type_has_ids(object_class_type base_type);
+void check_if_everything_is_identified();
 bool get_ident_type(const item_def &item);
 bool get_ident_type(object_class_type basetype, int subtype);
-bool set_ident_type(item_def &item, bool identify);
-bool set_ident_type(object_class_type basetype, int subtype, bool identify);
-void pack_item_identify_message(int base_type, int sub_type);
+bool set_ident_type(item_def &item, bool identify, bool check_last=true);
+bool set_ident_type(object_class_type basetype, int subtype, bool identify,
+                    bool check_last=true);
 
 string item_prefix(const item_def &item, bool temp = true);
 string menu_colour_item_name(const item_def &item,

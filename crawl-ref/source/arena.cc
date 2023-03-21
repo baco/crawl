@@ -30,15 +30,18 @@
 #include "mon-tentacle.h"
 #include "newgame-def.h"
 #include "ng-init.h"
+#include "prompt.h"
 #include "spl-miscast.h"
 #include "state.h"
 #include "stringutil.h"
+#include "syscalls.h"
 #include "teleport.h"
 #include "terrain.h"
 #ifdef USE_TILE
  #include "tileview.h"
 #endif
 #include "unicode.h"
+#include "unique-creature-list-type.h"
 #include "version.h"
 #include "view.h"
 #include "ui.h"
@@ -116,44 +119,6 @@ namespace msg
 }
 
 extern void world_reacts();
-
-static void _results_popup(string msg, bool error=false)
-{
-    // TODO: shared code here with end.cc
-    linebreak_string(msg, 79);
-
-#ifdef USE_TILE_WEB
-    tiles_crt_popup show_as_popup;
-    tiles.set_ui_state(UI_CRT);
-#endif
-
-    if (error)
-    {
-        msg = string("Arena error:\n\n<lightred>")
-                       + replace_all(msg, "<", "<<");
-        msg += "</lightred>";
-    }
-    else
-        msg = string("Arena results:\n\n") + msg;
-
-    msg += "\n\n<cyan>Hit any key to continue, "
-                 "ctrl-p for the full log.</cyan>";
-
-    auto prompt_ui = make_shared<Text>(
-            formatted_string::parse_string(msg));
-    bool done = false;
-    prompt_ui->on_hotkey_event([&](const KeyEvent& ev) {
-        if (ev.key() == CONTROL('P'))
-            replay_messages();
-        else
-            done = true;
-        return done;
-    });
-
-    mouse_control mc(MOUSE_MODE_MORE);
-    auto popup = make_shared<ui::Popup>(prompt_ui);
-    ui::run_layout(move(popup), done);
-}
 
 namespace arena
 {
@@ -293,7 +258,7 @@ namespace arena
 
         for (int iidx : items)
         {
-            item_def &item = mitm[iidx];
+            item_def &item = env.item[iidx];
             fprintf(file, "        %s\n",
                     item.name(DESC_PLAIN, false, true).c_str());
         }
@@ -315,14 +280,13 @@ namespace arena
                 if (!in_bounds(loc))
                     break;
 
-                const monster* mon = dgn_place_monster(spec,
-                                                       loc, false, true, false);
+                const monster* mon = dgn_place_monster(spec, loc, false, true, false);
                 if (!mon)
                 {
                     game_ended_with_error(
                         make_stringf(
-                            "Failed to create monster at (%d,%d) grd: %s",
-                            loc.x, loc.y, dungeon_feature_name(grd(loc))));
+                            "Failed to create monster at (%d,%d) env.grid: %s",
+                            loc.x, loc.y, dungeon_feature_name(env.grid(loc))));
                 }
                 list_eq(mon);
                 to_respawn[mon->mindex()] = i;
@@ -360,7 +324,7 @@ namespace arena
 
         for (int x = 0; x < GXM; ++x)
             for (int y = 0; y < GYM; ++y)
-                grd[x][y] = DNGN_ROCK_WALL;
+                env.grid[x][y] = DNGN_ROCK_WALL;
 
         unwind_bool gen(crawl_state.generating_level, true);
 
@@ -533,8 +497,7 @@ namespace arena
         for (int i = 0; i < MAX_MONSTERS; i++)
             to_respawn[i] = -1;
 
-        unwind_var< FixedBitVector<NUM_MONSTERS> >
-            uniq(you.unique_creatures);
+        unwind_var<unique_creature_list> uniq(you.unique_creatures);
 
         place_a = dgn_find_feature_marker(DNGN_STONE_STAIRS_UP_I);
         place_b = dgn_find_feature_marker(DNGN_STONE_STAIRS_DOWN_I);
@@ -727,14 +690,14 @@ namespace arena
 
         for (int idx : a_spawners)
         {
-            menv[idx].speed_increment *= faction_b.active_members;
-            menv[idx].speed_increment /= faction_a.active_members;
+            env.mons[idx].speed_increment *= faction_b.active_members;
+            env.mons[idx].speed_increment /= faction_a.active_members;
         }
 
         for (int idx : b_spawners)
         {
-            menv[idx].speed_increment *= faction_a.active_members;
-            menv[idx].speed_increment /= faction_b.active_members;
+            env.mons[idx].speed_increment *= faction_a.active_members;
+            env.mons[idx].speed_increment /= faction_b.active_members;
         }
     }
 
@@ -759,8 +722,10 @@ namespace arena
 
     static void handle_keypress(int ch)
     {
-        if (key_is_escape(ch) || toalower(ch) == 'q')
+        if (key_is_escape(ch) || toalower(ch) == 'q' || ch == CK_MOUSE_CMD)
         {
+            // XX with some timings, this results in a delay on a blank screen
+            // -- not sure why
             contest_cancelled = true;
             return;
         }
@@ -883,18 +848,21 @@ namespace arena
                 do_respawn(faction_a);
                 do_respawn(faction_b);
                 balance_spawners();
-                ui::delay(Options.view_delay);
+                if (!contest_cancelled)
+                    ui::delay(Options.view_delay);
                 clear_messages();
                 ASSERT(you.pet_target == MHITNOT);
             }
-            viewwindow();
-            update_screen();
+            if (!contest_cancelled)
+            {
+                viewwindow();
+                update_screen();
+            }
         }
 
         if (contest_cancelled)
         {
-            mpr("Canceled contest at user request");
-            ui::delay(Options.view_delay);
+            mpr("Cancelling contest at user request");
             clear_messages();
             return;
         }
@@ -1050,6 +1018,7 @@ namespace arena
             };
             virtual void _render() override {};
             virtual void _allocate_region() override {
+                // XX sometimes this gets called spuriously?
                 show_fight_banner();
                 viewwindow();
                 update_screen();
@@ -1082,23 +1051,34 @@ namespace arena
             }
             do_fight();
 
-            if (trials_done < total_trials)
+            if (!contest_cancelled && trials_done < total_trials)
                 ui::delay(Options.view_delay * 5);
         }
         while (!contest_cancelled && trials_done < total_trials);
 
-        ui::delay(Options.view_delay * 5);
+        // why extra delay?
+        if (!contest_cancelled)
+            ui::delay(Options.view_delay * 5);
 
-        if (total_trials > 0)
+        if (trials_done > 0)
         {
             string outcome = make_stringf(
                 "Final score: %s (%d); %s (%d) [%d ties]",
                  faction_a.desc.c_str(), team_a_wins,
                  faction_b.desc.c_str(), trials_done - team_a_wins - ties,
                  ties);
-            mpr(outcome);
+            if (contest_cancelled)
+            {
+                outcome += make_stringf("\n(Cancelled after %d trial%s)",
+                    trials_done, trials_done > 1 ? "s" : "");
+            }
+
+            mpr("---- Contest finished ----\n" + outcome);
             if (!skipped_arena_ui)
-                _results_popup(outcome);
+            {
+                ui::message(outcome, "Arena results:",
+                    "<cyan>Hit any key to continue, ctrl-p for the full log.</cyan>");
+            }
         }
 
         ui::pop_layout();
@@ -1392,8 +1372,8 @@ int arena_cull_items()
 
     for (int i = 0; i < MAX_ITEMS; i++)
     {
-        // All items in mitm[] are valid when we're called.
-        const item_def &item(mitm[i]);
+        // All items in env.item[] are valid when we're called.
+        const item_def &item(env.item[i]);
 
         // We want floor items.
         if (!in_bounds(item.pos))
@@ -1412,7 +1392,7 @@ int arena_cull_items()
 
     for (int idx : items)
     {
-        const item_def &item(mitm[idx]);
+        const item_def &item(env.item[idx]);
 
         // If the drop time is 0 then this is probably thrown ammo.
         if (arena::item_drop_times[idx] == 0)
@@ -1487,8 +1467,9 @@ static void _choose_arena_teams(newgame_def& choice,
     arena::skipped_arena_ui = false;
     clear_message_store();
 
+    auto text = make_shared<Text>("Enter your choice of teams:\n ");
     auto vbox = make_shared<Box>(ui::Widget::VERT);
-    vbox->add_child(make_shared<Text>("Enter your choice of teams:\n "));
+    vbox->add_child(text);
     vbox->set_cross_alignment(Widget::Align::STRETCH);
     auto teams_input = make_shared<ui::TextEntry>();
     teams_input->set_sync_id("teams");
@@ -1508,7 +1489,8 @@ static void _choose_arena_teams(newgame_def& choice,
         return done = (ev.key() == CK_ENTER);
     });
     popup->on_keydown_event([&](const KeyEvent& ev) {
-        return done = cancel = key_is_escape(ev.key());
+        done = cancel = key_is_escape(ev.key()) || ev.key() == CK_MOUSE_CMD;
+        return done;
     });
 
     ui::run_layout(move(popup), done, teams_input);
@@ -1534,7 +1516,7 @@ NORETURN void run_arena(const newgame_def& choice, const string &default_arena_t
         end(0, false, "Results file already open");
     // would be more elegant if arena_tee handled file open/close, but
     // that would need a bunch of refactoring of how the file is handled here.
-    arena::file = fopen("arena.result", "w");
+    arena::file = fopen_u("arena.result", "w");
     msg::arena_tee log(&arena::file);
 
     do
@@ -1566,8 +1548,7 @@ NORETURN void run_arena(const newgame_def& choice, const string &default_arena_t
             }
             else
             {
-                mprf(MSGCH_ERROR, "%s", error.what());
-                _results_popup(error.what(), true);
+                ui::error(error.what());
                 last_teams = arena_choice.arena_teams;
                 arena_choice.arena_teams = "";
                 // fallthrough

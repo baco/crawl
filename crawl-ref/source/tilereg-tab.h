@@ -1,8 +1,12 @@
 #ifdef USE_TILE_LOCAL
 #pragma once
 
+#include <vector>
+
 #include "command-type.h"
 #include "tilereg-grid.h"
+
+using std::vector;
 
 // A region that contains multiple region, selectable by tabs.
 class TabbedRegion : public GridRegion
@@ -34,6 +38,7 @@ public:
     int find_tab(string tab_name) const;
 
     void set_small_layout(bool use_small_layout, const coord_def &windowsz);
+    void toggle_tab_icons();
 
     virtual void update() override;
     virtual void clear() override;
@@ -73,12 +78,16 @@ protected:
         int min_y;
         int max_y;
         int height;
+        int orig_dx;
+        int orig_dy;
         bool enabled;
     };
     vector<TabInfo> m_tabs;
 
 private:
     int _push_tab(GridRegion *reg, command_type cmd, tileidx_t tile_tab);
+    int _icon_width;
+    bool _show_tab_icons;
 };
 
 #endif

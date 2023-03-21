@@ -73,11 +73,15 @@ Pakellas the Inventive
 %%%%
 Uskayaw lastname
 
-Uskayaw the Reveler
+Uskayaw the Reveller
 %%%%
 Hepliaklqana lastname
 
 Hepliaklqana the Forgotten
+%%%%
+Ignis lastname
+
+Ignis, the Dying Flame
 %%%%
 Wu Jian lastname
 
@@ -87,6 +91,9 @@ Xom lastname
 
 w:280
 Xom of Chaos
+
+w:20
+Xom the Chaotic
 
 w:5
 Xom the Random

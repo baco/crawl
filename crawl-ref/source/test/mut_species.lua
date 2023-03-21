@@ -2,9 +2,9 @@
 -- the most important case to test here is demonspawn.
 
 local silent = true -- change to false to look at the result of stress tests
-local ds_mut_iterations = 1000 -- mutate each try this many times
+local ds_mut_iterations = 250 -- mutate each try this many times
 local ds_tries = 30
-local mut_iterations = 500
+local mut_iterations = 100
 local tries = 5
 
 local chance_temporary = 10 -- in 100.
@@ -112,6 +112,14 @@ species = {"hill orc", "minotaur", "merfolk", "gargoyle", "draconian", "halfling
             "vine stalker", "vampire", "demigod", "formicid", "naga", "octopode", "felid", "barachi",
             "mummy", "gnoll"}
 
+local you_x, you_y = you.pos() -- probably out of bounds
+-- move to a guaranteed real position. This is because losing some mutations
+-- can trigger things like landing the player, which will crash if out of
+-- bounds.
+local place = dgn.point(20, 20)
+dgn.grid(place.x, place.y, "floor")
+you.moveto(place.x, place.y) -- assumes other tests have properly cleaned up...
+
 test_random_mutations_species("demonspawn", ds_tries, ds_mut_iterations, chance_temporary, chance_clear)
 random_level_change("demonspawn", ds_tries, ds_mut_iterations, chance_temporary, chance_clear)
 test_random_mutations_slime("demonspawn", ds_tries, ds_mut_iterations, chance_temporary, chance_clear)
@@ -125,3 +133,4 @@ end
 you.delete_all_mutations("Species mutation test")
 assert(you.change_species("human")) -- should clean up any innate mutatinos
 assert(you.set_xl(1, false))
+you.moveto(you_x, you_y) -- restore original player pos

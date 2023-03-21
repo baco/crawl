@@ -15,12 +15,17 @@ def run(cmd: List[str], max_retries: int = 1) -> None:
     while True:
         print("%s: Running '%s'..." % (sys.argv[0], " ".join(cmd)))
         try:
-            subprocess.check_call(cmd)
-        except Exception as e:
+            subprocess.check_output(cmd, text=True, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
             print(
                 "%s: Command failed (%s) (attempt %s of %s)"
                 % (sys.argv[0], e, attempt, max_retries),
             )
+            if e.output is not None:
+                print(
+                    "%s: Above command failed with the following output:\n%s"
+                    % (sys.argv[0], e.output)
+                )
             attempt += 1
             if attempt > max_retries:
                 raise
@@ -63,7 +68,7 @@ def _packages_to_install(args: argparse.Namespace) -> Set[str]:
                 "libsdl2-dev",
                 "libfreetype6-dev",
                 "libpng-dev",
-                "ttf-dejavu-core",
+                "fonts-dejavu",
             ]
         )
     if "FULLDEBUG" in args.debug_opts:
@@ -76,6 +81,8 @@ def _packages_to_install(args: argparse.Namespace) -> Set[str]:
     if args.compiler == "clang":
         # dependencies for llvm.sh
         packages.update(["lsb-release", "wget", "software-properties-common"])
+    if args.debian_packages:
+        packages.update(["cowbuilder", "debhelper"])
     return packages
 
 
@@ -89,15 +96,16 @@ def install_llvm() -> None:
     run(["sudo", "bash", "/tmp/llvm.sh"])
     for binary in os.scandir("/usr/bin"):
         if binary.name.startswith("clang-") or binary.name.startswith("clang++-"):
-            run(
-                [
-                    "sudo",
-                    "ln",
-                    "-s",
-                    "/usr/bin/ccache",
-                    os.path.join("/usr/lib/ccache/", binary.name),
-                ],
-            )
+            if not os.path.exists(os.path.join("/usr/lib/ccache/", binary.name)):
+                run(
+                    [
+                        "sudo",
+                        "ln",
+                        "-s",
+                        "/usr/bin/ccache",
+                        os.path.join("/usr/lib/ccache/", binary.name),
+                    ],
+                )
 
 
 def setup_msys_ccache_symlinks() -> None:
@@ -121,6 +129,11 @@ def setup_msys_ccache_symlinks() -> None:
     )
 
 
+def install_linuxdeploy() -> None:
+    run(["wget", "-O", "/tmp/linuxdeploy-x86_64.AppImage", "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"])
+    run(["chmod", "+x", "/tmp/linuxdeploy-x86_64.AppImage"])
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Install packages required to build DCSS"
@@ -130,6 +143,8 @@ if __name__ == "__main__":
     parser.add_argument("--debug-opts", default={}, type=make_opts)
     parser.add_argument("--coverage", action="store_true")
     parser.add_argument("--crosscompile", action="store_true")
+    parser.add_argument("--appimage", action="store_true")
+    parser.add_argument("--debian-packages", action="store_true")
 
     args = parser.parse_args()
 
@@ -139,3 +154,5 @@ if __name__ == "__main__":
         install_llvm()
     if args.crosscompile:
         setup_msys_ccache_symlinks()
+    if args.appimage:
+        install_linuxdeploy()

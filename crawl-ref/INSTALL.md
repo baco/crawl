@@ -6,16 +6,18 @@
 * [Compiling](#compiling)
   * [Ubuntu / Debian](#ubuntu--debian)
   * [Fedora](#fedora)
-  * [Void Linux](#void)
   * [Other Linux / Unix](#other-linux--unix)
+  * [AppImage](#appimage)
   * [macOS](#macOS)
   * [Windows](#windows)
     * [MSYS2 (Recommended)](#msys2-recommended)
     * [Windows Subsystem for Linux (WSL)](#windows-subsystem-for-linux-wsl)
     * [Visual Studio](#visual-studio)
+  * [Android](#android)
 * [Advanced](#advanced)
   * [ccache](#ccache)
   * [Installing For All Users](#installing-for-all-users)
+  * [Desktop files and AppStream metadata](#desktop-files-and-appstream-metadata)
   * [.des Level Compiler](#des-level-compiler)
   * [Code Coverage](#code-coverage)
   * [Lua](#lua)
@@ -51,6 +53,9 @@ git submodule update --init
 # Build DCSS (remove TILES=y for console mode)
 cd crawl-ref/source
 make -j4 TILES=y
+
+# Play DCSS by running the compiled binary
+./crawl
 ```
 
 ### Packaged Dependencies
@@ -77,7 +82,7 @@ libsqlite3-dev libz-dev pkg-config python3-yaml binutils-gold python-is-python3
 
 # Dependencies for tiles builds
 sudo apt install libsdl2-image-dev libsdl2-mixer-dev libsdl2-dev \
-libfreetype6-dev libpng-dev ttf-dejavu-core advancecomp pngcrush
+libfreetype6-dev libpng-dev fonts-dejavu-core advancecomp pngcrush
 ```
 
 Then follow [the above compilation steps](#compiling).
@@ -126,14 +131,45 @@ Dependencies](#packaged-dependencies) above):
 
 Then follow [the above compilation steps](#compiling).
 
+## AppImage
+
+When building for Linux targets, you can easily create an AppImage with the
+help of the `linuxdeploy` tool.
+
+1. [Download the linuxdeploy AppImage](
+   https://github.com/linuxdeploy/linuxdeploy/releases)
+
+2. Make it executable.
+
+    ```sh
+    chmod +x /path/to/linuxdeploy.AppImage
+    ```
+
+3. Follow [the above compilation steps](#compiling) and, when running `make`,
+   include the `appimage` target and the path to `linuxdeploy` in the
+   `LINUXDEPLOY` parameter.
+
+    ```sh
+    # console build
+    make LINUXDEPLOY=/path/to/linuxdeploy.AppImage appimage
+    # tiles build
+    make TILES=y LINUXDEPLOY=/path/to/linuxdeploy.AppImage appimage
+    ```
+
 ## macOS
 
+The supported build method is via the command line. While installed Xcode is a
+a prerequisite for building, we do not support building within the Xcode app.
+
 1. Before building on macOS, you need a working copy of Xcode and the
-   associated command line tools.
+   associated command line tools (this installs a build toolchain).
     1. Install Xcode from the App Store
     2. Open Xcode and say yes if you are prompted to install optional developer
        tools. (You can quit Xcode after this completes.)
     3. Run `xcode-select --install` in a Terminal
+    4. Optional: install various command line conveniences from a package
+       manager (e.g anaconda, macports, or homebrew), such as GNU coreutils,
+       GNU make, an up-to-date python version, [ccache](#ccache), etc.
 
 2. You will also need to install DCSS's bundled dependencies:
 
@@ -142,7 +178,34 @@ Then follow [the above compilation steps](#compiling).
     git submodule update --init
     ```
 
-Then follow [the above compilation steps](#compiling).
+3. And install PyYAML:
+
+    ```sh
+    pip install pyyaml
+    ```
+
+    This step can go wrong if you have multiple python installs; ensure that
+    `pip` corresponds with the default `python3` binary. You can also install
+    this package in other ways, via package managers such as anaconda,
+    macports, or homebrew.
+
+4. Then follow [the above command-line compilation steps](#compiling).
+
+### Building a mac app
+
+The above instructions (as on linux) build a binary that can be run at the
+command line. To instead build a macOS application package, add
+`mac-app-tiles` or `mac-app-console` to your make command, eg:
+
+    make -j4 TILES=y mac-app-tiles
+    make -j4 mac-app-console
+
+This will create an application in `mac-app-zips/` of the source directory The
+build process does not sign applications. The build targets
+`mac-app-tiles-universal` and `mac-app-console-universal` will build x86/ARM
+universal binaries, which are generally only needed for distribution purposes.
+(A regular x86 application will run fine under Rosetta, but a non-universal
+binary built on ARM won't run on x86.)
 
 ## Windows
 
@@ -200,23 +263,28 @@ from within the MSYS2 Shell.
     pacman -S mingw-w64-x86_64-toolchain
     ```
 
-3. At this point on current MSYS2 versions, your development environment should
-  be complete. You can test it by running:
+3. At this point on current MSYS2 versions, your core development environment
+  for building windows binaries within MSYS2 should be complete. You can test
+  the toolchain by running:
 
     ```sh
     gcc -v
     ```
 
-    If this works, you're all set. If it doesn't, you may be an an older version
-    of MSYS2 and need to manually add the newly installed toolchain to your
-    path. To do so, run the following line, either at the command line (for
+    If this works, you're nearly all set. If it doesn't, you may be an an older
+    version of MSYS2 and need to manually add the newly installed toolchain to
+    your path. To do so, run the following line, either at the command line (for
     that shell instance only) or in the file `~/.bashrc` to make it permanent:
 
     ```sh
     export PATH=$PATH:/mingw64/bin
     ```
 
-4. To install PyYAML, you can install it from either pacman or Pip/PyPA:
+    (However, you may want to consider just upgrading MSYS2 at this point.)
+
+4. There is one more package dependency needed, the python package PyYAML. This
+  can be installed either via the MSYS2 package or (if you know what you're
+  doing) via pip.
 
     ```sh
     pacman -S mingw-w64-x86_64-python-yaml
@@ -225,9 +293,18 @@ from within the MSYS2 Shell.
     pip install pyyaml
     ```
 
-    You can verify PyYAML is installed by running `python -m yaml`, which should
-    give an error like `'yaml' is a package and cannot be directly imported`
-    (rather than `No module named yaml`).
+    You can verify PyYAML is installed by running something like:
+    ```sh
+    python3 -c "import yaml"
+    ```
+
+    If this gives an error, something went wrong with the installation. One
+    possibility at this point is that you have multiple conflicting python
+    versions installed; recent versions of MSYS2 can have this issue. First,
+    be sure you are using `python3` (and _not_ just `python`), and if this
+    doesn't work, try uninstalling the package named `python`. This may require
+    you to also uninstall other packages that are part of the `base-devel`
+    group, but they aren't needed for developing with python.
 
 5. To get the DCSS source, follow the steps in the [Getting The
    Source](#getting-the-source) section above to clone DCSS into your MSYS2
@@ -244,9 +321,9 @@ from within the MSYS2 Shell.
 6. Build DCSS by simply running:
 
     ```sh
-    # console build
+    # for the console build:
     make
-    # tiles build
+    # or, for the tiles build:
     make TILES=y
     ```
 
@@ -258,7 +335,7 @@ from within the MSYS2 Shell.
    console, type `start crawl`, which will open DCSS in a new command.exe
    window (the Windows version of DCSS requires a command.exe shell and will
    not run in an MSYS2 shell). Both versions can also be started by
-   double-clicking `crawl.exe` using the graphical file explorer.
+   double-clicking `crawl.exe` using the file explorer.
 
 8. If you want to build the installer or zipped packages instead,
    you need to install zip and nsis:
@@ -378,6 +455,11 @@ Troubleshooting tips:
   the MSVC folder will clear these files, making sure `tilegen.exe` stops the
   build process if it fails.
 
+## Android
+
+The android build is done within Android Studio, or at the command line via
+gradle. See [docs/develop/android.txt](docs/develop/android.txt) for details.
+
 ## Advanced
 
 DCSS looks for several data files when starting up. They include:
@@ -424,6 +506,23 @@ Make options:
   `/usr/local`
 * `SAVEDIR`: defaults to `~/.crawl`
 * `DATADIR`: defaults to `$prefix/share/crawl`
+
+### Desktop files and AppStream metadata
+
+On Linux distributions and any other OS that follows the
+[XDG specifications](https://www.freedesktop.org), you can install some
+additional files to provide the required information for DCSS to be included in
+applications menus and software centers. This can be particularly useful if you
+are building DCSS to be distributed as a package.
+
+Use `make install-xdg-data` to install the following files:
+
+* A desktop file in `$prefix/share/applications`
+* A metainfo file in `$prefix/share/metainfo`
+* Several icons of different sizes in `$prefix/share/icons/hicolor`
+
+The name of the files is governed by the `GAME` option in order to match
+the generated executable file.
 
 ### .des level compiler
 
@@ -485,8 +584,8 @@ font](http://www.yohng.com/software/terminalvector.html)
 
 ## Getting Help
 
-The best place to ask for help is `##crawl-dev` on Freenode IRC, where
-developers chat.
+The best place to ask for help is `#crawl-dev` on Libera IRC, where developers
+chat.
 
 You can also try [any of the community forums detailed in the
 README](../README.md#community).

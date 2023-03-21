@@ -17,8 +17,8 @@ using namespace ui;
 
 DollEditRegion::DollEditRegion(ImageManager *im, FontWrapper *font) :
     m_font_buf(font),
-    m_tile_buf(&im->m_textures[TEX_PLAYER], 17),
-    m_cur_buf(&im->m_textures[TEX_PLAYER], 17)
+    m_tile_buf(&im->get_texture(TEX_PLAYER), 17),
+    m_cur_buf(&im->get_texture(TEX_PLAYER), 17)
 {
     sx = sy = 0;
     dx = dy = 32;
@@ -260,8 +260,7 @@ void DollEditRegion::render()
         "Hair",
         "Beard",
         "Helm",
-        "DrcWing",
-        "DrcHead"
+        "DrcWing"
     };
 
     // Add current doll information:
@@ -468,7 +467,6 @@ void DollEditRegion::run()
                 case TILEP_PART_HALO:
                 case TILEP_PART_ENCH:
                 case TILEP_PART_DRCWING:
-                case TILEP_PART_DRCHEAD:
                     break;
                 default:
                     m_dolls[m_doll_idx].parts[i] = 0;

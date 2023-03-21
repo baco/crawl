@@ -1,6 +1,9 @@
+#pragma once
+
 #define AT_NO_ATK       {AT_NONE, AF_PLAIN, 0}
 
 #include "enum.h"
+#include "tag-version.h"
 
 /* ******************************************************************
 
@@ -13,7 +16,7 @@
     - row 1: monster id, display character, display colour, name
     - row 2: monster flags
     - row 3: monster resistance flags
-    - row 4: experience modifier, genus, species, holiness, resist magic
+    - row 4: experience modifier, genus, species, holiness, willpower
     - row 5: damage for each of four attacks
     - row 6: hit dice, hit points
     - row 7: AC, evasion, spells, corpse, shouts
@@ -35,20 +38,16 @@
                         holy wrath weapons. Includes good priests.
        MH_NATURAL    - baseline monster type
        MH_UNDEAD     - immunity from draining, pain, torment; resistance
-                        to poison; extra damage from holy wrath;
-                        affected by holy word
+                        to poison; extra damage from holy wrath
        MH_DEMONIC    - similar to undead, but no poison resistance
                         *no* automatic damnation resistance
        MH_NONLIVING  - golems and other constructs
        MH_PLANT      - plants
 
-      along with optional flags that affect some god conducts and abilities:
-       MH_EVIL       - inherently evil (and not MH_UNDEAD or MH_DEMONIC)
-
    exp_mod: multiplies xp value after most other calculations.
             see exper_value() in mon-util.cc
 
-   resist_magic: see mons_resist_magic() in mon-util.cc
+   willpower: see mons_willpower() in mon-util.cc
    - If -x calculate (-x * hit dice * 4/3), else simply x.
 
    damage [4]
@@ -58,10 +57,7 @@
    avg_hp_10x: average hp for the monster, * 10 for precision
                (see hit_points() for details)
 
-   sec: if the monster has only one possible spellbook, sec is set to that book.
-     If a monster has multiple possible books, sec is set to MST_NO_SPELLS. Then
-     the function _mons_spellbook_list in mon-util.cc handles the books.
-   TODO: replace this system ^
+   sec: the monster's spellbook. If a monster has no spells, MST_NO_SPELLS.
 
    corpse: whether the monster leaves a corpse or not
 
@@ -101,8 +97,7 @@
      SIZE_SMALL,             // halflings/kobolds
      SIZE_MEDIUM,            // humans/elves/dwarves
      SIZE_LARGE,             // trolls/ogres/centaurs/nagas
-     SIZE_BIG,               // large quadrupeds
-     SIZE_GIANT,             // giants
+     SIZE_GIANT,             // giants and such
 
    tile:
     - a struct with up to two elements.
@@ -138,7 +133,7 @@ static monsterentry mondata[] =
     M_NOT_DANGEROUS | M_CANT_SPAWN,
     // resistance flags
     MR_NO_FLAGS,
-    // xp modifier, genus, species, holiness, magic resistance
+    // xp modifier, genus, species, holiness, willpower
     10, MONS_PROGRAM_BUG, MONS_PROGRAM_BUG, MH_NATURAL, 10,
     // up to four attacks
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -171,7 +166,7 @@ static monsterentry mondata[] =
 },
 
 // Axed monsters.
-// AXED_MON(MONS_MOTHER_IN_LAW)
+// AXED_MON(MONS_AXE_MURDERER, "Jason")
 #if TAG_MAJOR_VERSION == 34
     AXED_MON(MONS_BUMBLEBEE, "bumblebee")
     AXED_MON(MONS_WOOD_GOLEM, "wood golem")
@@ -205,7 +200,6 @@ static monsterentry mondata[] =
     AXED_MON(MONS_ANCIENT_BEAR, "ancient bear")
     AXED_MON(MONS_ROTTING_DEVIL, "rotting devil")
     AXED_MON(MONS_IGNIS, "ignis")
-    AXED_MON(MONS_DJINNI, "djinni")
     AXED_MON(MONS_RAKSHASA_FAKE, "rakshasa fake")
     AXED_MON(MONS_MARA_FAKE, "mara fake")
     // GNOME_NO_MORE
@@ -264,7 +258,6 @@ static monsterentry mondata[] =
     AXED_MON(MONS_SHEEP, "sheep")
     AXED_MON(MONS_ANUBIS_GUARD, "anubis guard")
     AXED_MON(MONS_GRIFFON, "griffon")
-    AXED_MON(MONS_BOULDER_BEETLE, "boulder beetle")
     AXED_MON(MONS_BEETLE, "beetle")
     AXED_MON(MONS_PUTRID_DEMONSPAWN, "putrid demonspawn")
     AXED_MON(MONS_CHAOS_CHAMPION, "chaos champion")
@@ -281,6 +274,22 @@ static monsterentry mondata[] =
     AXED_MON(MONS_MONSTROUS_FEATURE_MIMIC, "monstrous feature mimic")
     AXED_MON(MONS_SLAVE, "slave")
     AXED_MON(MONS_HUNGRY_GHOST, "hungry ghost")
+    AXED_MON(MONS_CROCODILE, "crocodile")
+    AXED_MON(MONS_HIPPOGRIFF, "hippogriff")
+    AXED_MON(MONS_PORCUPINE, "porcupine")
+    AXED_MON(MONS_CRAWLING_CORPSE, "crawling corpse")
+    AXED_MON(MONS_MACABRE_MASS, "macabre mass")
+    AXED_MON(MONS_EYE_OF_DRAINING, "eye of draining")
+    AXED_MON(MONS_DEATH_OOZE, "death ooze")
+    AXED_MON(MONS_LEOPARD_GECKO, "leopard gecko")
+    AXED_MON(MONS_WORKER_ANT, "worker ant")
+    AXED_MON(MONS_QUEEN_ANT, "queen ant")
+    AXED_MON(MONS_SOLDIER_ANT, "soldier ant")
+    AXED_MON(MONS_IRONBOUND_BEASTMASTER, "ironbound beastmaster")
+    AXED_MON(MONS_MONSTROUS_DEMONSPAWN, "monstrous demonspawn")
+    AXED_MON(MONS_GELID_DEMONSPAWN, "gelid demonspawn")
+    AXED_MON(MONS_INFERNAL_DEMONSPAWN, "infernal demonspawn")
+    AXED_MON(MONS_TORTUROUS_DEMONSPAWN, "torturous demonspawn")
 #endif
 
 // Used for genus monsters (which are used for grouping monsters by how they
@@ -302,72 +311,44 @@ static monsterentry mondata[] =
 
 // Real monsters begin here {dlb}:
 
-// ants and formicids ('a')
+// ancients ('a')
 {
-    MONS_WORKER_ANT, 'a', RED, "worker ant",
-    M_NO_SKELETON,
-    MR_VUL_POISON,
-    10, MONS_WORKER_ANT, MONS_WORKER_ANT, MH_NATURAL, 10,
-    { {AT_BITE, AF_POISON, 8}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    3, 165,
-    4, 10, MST_NO_SPELLS, true, S_SILENT,
-    I_ANIMAL, HT_LAND, 12, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_INSECT,
-    {TILEP_MONS_WORKER_ANT}, TILE_CORPSE_WORKER_ANT
-},
-
-{
-    MONS_QUEEN_ANT, 'a', LIGHTRED, "queen ant",
-    M_NO_SKELETON,
-    MR_VUL_POISON,
-    10, MONS_WORKER_ANT, MONS_QUEEN_ANT, MH_NATURAL, 60,
-    { {AT_STING, AF_POISON_STRONG, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    13, 715,
-    14, 3, MST_NO_SPELLS, true, S_SILENT,
-    I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_INSECT,
-    {TILEP_MONS_QUEEN_ANT}, TILE_CORPSE_QUEEN_ANT
-},
-
-{
-    MONS_SOLDIER_ANT, 'a', WHITE, "soldier ant",
-    M_NO_SKELETON,
-    MR_VUL_POISON,
-    10, MONS_WORKER_ANT, MONS_SOLDIER_ANT, MH_NATURAL, 20,
-    { {AT_STING, AF_POISON, 14}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    6, 330,
-    8, 10, MST_NO_SPELLS, true, S_SILENT,
-    I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_MEDIUM, MON_SHAPE_INSECT,
-    {TILEP_MONS_SOLDIER_ANT}, TILE_CORPSE_SOLDIER_ANT
-},
-
-// dummy for recolouring
-{
-    MONS_FORMICID, 'a', GREEN, "formicid",
-    M_WARM_BLOOD | M_SEE_INVIS | M_SPEAKS | M_NO_SKELETON | M_NO_POLY_TO
-        | M_NO_GEN_DERIVED,
+    MONS_IMPERIAL_MYRMIDON, 'a', LIGHTCYAN, "imperial myrmidon",
+    M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
-    10, MONS_FORMICID, MONS_FORMICID, MH_NATURAL, 40,
-    { {AT_HIT, AF_PLAIN, 15}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    6, 420,
-    3, 10, MST_NO_SPELLS, true, S_SHOUT,
-    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_FORMICID}, TILE_CORPSE_FORMICID
-},
-
-{
-    MONS_ENTROPY_WEAVER, 'a', LIGHTCYAN, "entropy weaver",
-    M_WARM_BLOOD | M_NO_SKELETON | M_FIGHTER | M_SEE_INVIS | M_SPEAKS,
-    MR_NO_FLAGS,
-    10, MONS_ENTROPY_WEAVER, MONS_ENTROPY_WEAVER, MH_NATURAL, 60,
-    { {AT_HIT, AF_PLAIN, 17}, {AT_HIT, AF_PLAIN, 17}, {AT_HIT, AF_PLAIN, 17}, {AT_HIT, AF_PLAIN, 17} },
-    13, 715,
-    7, 13, MST_ENTROPY_WEAVER, true, S_SHOUT,
+    12, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 60,
+    { {AT_HIT, AF_VULN, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    16, 750,
+    1, 22, MST_IMPERIAL_MYRMIDON, true, S_SHOUT,
     I_HUMAN, HT_LAND, 12, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_ENTROPY_WEAVER}, TILE_CORPSE_ENTROPY_WEAVER
+    {TILEP_MONS_IMPERIAL_MYRMIDON}, TILE_ERROR
+},
+
+{
+    MONS_SERVANT_OF_WHISPERS, 'a', BROWN, "servant of whispers",
+    M_SPEAKS | M_WARM_BLOOD,
+    MR_NO_FLAGS,
+    10, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 60,
+    { {AT_HIT, AF_PLAIN, 10}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    12, 800,
+    1, 12, MST_SERVANT_OF_WHISPERS, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_SERVANT_OF_WHISPERS}, TILE_ERROR
+},
+
+{
+    MONS_RAGGED_HIEROPHANT, 'a', LIGHTMAGENTA, "ragged hierophant",
+    M_SPEAKS | M_WARM_BLOOD,
+    MR_NO_FLAGS,
+    15, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 40,
+    { {AT_HIT, AF_PLAIN, 12}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    9, 1200,
+    0, 10, MST_RAGGED_HIEROPHANT, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_RAGGED_HIEROPHANT}, TILE_ERROR
 },
 
 // batty monsters ('b')
@@ -386,12 +367,12 @@ static monsterentry mondata[] =
 
 {
     MONS_BUTTERFLY, 'b', ETC_JEWEL, "butterfly",
-    M_CONFUSED | M_NOT_DANGEROUS | M_FLIES,
+    M_CONFUSED | M_NOT_DANGEROUS | M_FLIES | M_NO_SKELETON,
     MR_VUL_POISON,
     10, MONS_BUTTERFLY, MONS_BUTTERFLY, MH_NATURAL, 10,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     1, 10,
-    0, 25, MST_NO_SPELLS, false, S_SILENT,
+    0, 15, MST_NO_SPELLS, false, S_SILENT,
     I_BRAINLESS, HT_LAND, 25, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_TINY, MON_SHAPE_INSECT_WINGED,
     {TILEP_MONS_BUTTERFLY, TVARY_MOD}, TILE_ERROR
@@ -413,7 +394,7 @@ static monsterentry mondata[] =
 {
     MONS_FIRE_BAT, 'b', LIGHTRED, "fire bat",
     M_SEE_INVIS | M_UNBLINDABLE | M_WARM_BLOOD | M_BATTY | M_FLIES,
-    mrd(MR_RES_FIRE, 3) | MR_VUL_COLD | MR_VUL_WATER,
+    mrd(MR_RES_FIRE, 3) | MR_VUL_COLD,
     8, MONS_BAT, MONS_FIRE_BAT, MH_NATURAL, 10,
     { {AT_BITE, AF_FIRE, 6}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     5, 225,
@@ -425,10 +406,9 @@ static monsterentry mondata[] =
 
 {
     MONS_BENNU, 'b', YELLOW, "bennu",
-    M_SEE_INVIS | M_WARM_BLOOD | M_FAST_REGEN | M_NO_POLY_TO | M_SPEAKS
+    M_SEE_INVIS | M_WARM_BLOOD | M_NO_POLY_TO | M_SPEAKS
         | M_FLIES,
-    mrd(MR_RES_FIRE | MR_RES_NEG, 3) | MR_RES_POISON |
-        MR_RES_ROTTING | MR_VUL_WATER,
+    mrd(MR_RES_FIRE | MR_RES_NEG, 3) | MR_RES_POISON | MR_RES_MIASMA,
     6, MONS_BENNU, MONS_BENNU, MH_NATURAL, 140,
     { {AT_PECK, AF_HOLY, 27}, {AT_CLAW, AF_PLAIN, 24},
       {AT_CLAW, AF_PLAIN, 24}, AT_NO_ATK },
@@ -441,7 +421,7 @@ static monsterentry mondata[] =
 
 {
     MONS_CAUSTIC_SHRIKE, 'b', LIGHTGREEN, "caustic shrike",
-    M_SEE_INVIS | M_UNBLINDABLE | M_WARM_BLOOD | M_FLIES,
+    M_WARM_BLOOD | M_FLIES,
     MR_RES_COLD | MR_RES_FIRE,
     15, MONS_CAUSTIC_SHRIKE, MONS_CAUSTIC_SHRIKE, MH_NATURAL, 80,
     { {AT_CLAW, AF_ACID, 36}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -454,7 +434,7 @@ static monsterentry mondata[] =
 
 {
     MONS_SHARD_SHRIKE, 'b', LIGHTBLUE, "shard shrike",
-    M_SEE_INVIS | M_UNBLINDABLE | M_WARM_BLOOD | M_BATTY | M_FLIES,
+    M_WARM_BLOOD | M_BATTY | M_FLIES,
     mrd(MR_RES_COLD, 2),
     12, MONS_SHARD_SHRIKE, MONS_SHARD_SHRIKE, MH_NATURAL, 80,
     { {AT_CLAW, AF_COLD, 21}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -471,7 +451,7 @@ static monsterentry mondata[] =
     M_WARM_BLOOD | M_ARCHER | M_SPEAKS,
     MR_NO_FLAGS,
     10, MONS_CENTAUR, MONS_CENTAUR, MH_NATURAL, 20,
-    { {AT_HIT, AF_PLAIN, 10}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 7}, {AT_KICK, AF_PLAIN, 3}, AT_NO_ATK, AT_NO_ATK },
     4, 220,
     3, 7, MST_NO_SPELLS, true, S_SHOUT,
     I_HUMAN, HT_LAND, 15, DEFAULT_ENERGY,
@@ -484,7 +464,7 @@ static monsterentry mondata[] =
     M_WARM_BLOOD | M_FIGHTER | M_ARCHER | M_SPEAKS,
     MR_NO_FLAGS,
     12, MONS_CENTAUR, MONS_CENTAUR, MH_NATURAL, 40,
-    { {AT_HIT, AF_PLAIN, 16}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 16}, {AT_KICK, AF_PLAIN, 5}, AT_NO_ATK, AT_NO_ATK },
     10, 550,
     4, 8, MST_NO_SPELLS, true, S_SHOUT,
     I_HUMAN, HT_LAND, 15, DEFAULT_ENERGY,
@@ -501,7 +481,7 @@ static monsterentry mondata[] =
     8, 440,
     4, 4, MST_NO_SPELLS, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_WEAPONS_ARMOUR, SIZE_BIG, MON_SHAPE_CENTAUR,
+    MONUSE_WEAPONS_ARMOUR, SIZE_LARGE, MON_SHAPE_CENTAUR,
     {TILEP_MONS_YAKTAUR}, TILE_CORPSE_YAKTAUR
 },
 
@@ -514,7 +494,7 @@ static monsterentry mondata[] =
     14, 770,
     5, 5, MST_NO_SPELLS, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_WEAPONS_ARMOUR, SIZE_BIG, MON_SHAPE_CENTAUR,
+    MONUSE_WEAPONS_ARMOUR, SIZE_LARGE, MON_SHAPE_CENTAUR,
     {TILEP_MONS_YAKTAUR_CAPTAIN}, TILE_ERROR
 },
 
@@ -525,7 +505,7 @@ static monsterentry mondata[] =
     8, MONS_FAUN, MONS_FAUN, MH_NATURAL, 40,
     { {AT_HIT, AF_PLAIN, 23}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 500,
-    2, 10, MST_NO_SPELLS, true, S_SHOUT,
+    2, 10, MST_FAUN, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_STARTING_EQUIPMENT, SIZE_MEDIUM,
         MON_SHAPE_HUMANOID_TAILED,
@@ -626,7 +606,7 @@ static monsterentry mondata[] =
     10, MONS_DRACONIAN, MONS_PURPLE_DRACONIAN, MH_NATURAL, 140,
     { {AT_HIT, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     14, 980,
-    8, 10, MST_NO_SPELLS, true, S_ROAR,
+    9, 10, MST_NO_SPELLS, true, S_ROAR,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM,
         MON_SHAPE_HUMANOID_TAILED,
@@ -663,14 +643,14 @@ static monsterentry mondata[] =
 
 {
     MONS_GREY_DRACONIAN, 'd', LIGHTGREY, "grey draconian",
-    M_COLD_BLOOD | M_UNBREATHING | M_SPEAKS | M_NO_POLY_TO,
+    M_COLD_BLOOD | M_SPEAKS | M_NO_POLY_TO,
     MR_NO_FLAGS,
     10, MONS_DRACONIAN, MONS_GREY_DRACONIAN, MH_NATURAL, 40,
     { {AT_HIT, AF_PLAIN, 25}, {AT_TAIL_SLAP, AF_PLAIN, 15}, AT_NO_ATK,
        AT_NO_ATK },
     14, 980,
     16, 10, MST_NO_SPELLS, true, S_ROAR,
-    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    I_HUMAN, HT_AMPHIBIOUS, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM,
         MON_SHAPE_HUMANOID_TAILED,
     {TILEP_MONS_PROGRAM_BUG}, TILE_CORPSE_DRACONIAN_GREY
@@ -679,7 +659,7 @@ static monsterentry mondata[] =
 // nonbase draconians ('q')
 // Nonbase draconian AC and EV is additive with the base type.
 {
-    MONS_DRACONIAN_STORMCALLER, 'q', BROWN, "draconian stormcaller",
+    MONS_DRACONIAN_STORMCALLER, 'q', WHITE, "draconian stormcaller",
     M_COLD_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     10, MONS_DRACONIAN, MONS_DRACONIAN, MH_NATURAL, 40,
@@ -693,7 +673,7 @@ static monsterentry mondata[] =
 },
 
 {
-    MONS_DRACONIAN_MONK, 'q', BLUE, "draconian monk",
+    MONS_DRACONIAN_MONK, 'q', LIGHTGREEN, "draconian monk",
     M_FIGHTER | M_COLD_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     10, MONS_DRACONIAN, MONS_DRACONIAN, MH_NATURAL, 40,
@@ -708,7 +688,7 @@ static monsterentry mondata[] =
 },
 
 {
-    MONS_DRACONIAN_SHIFTER, 'q', LIGHTCYAN, "draconian shifter",
+    MONS_DRACONIAN_SHIFTER, 'q', LIGHTMAGENTA, "draconian shifter",
     M_COLD_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     10, MONS_DRACONIAN, MONS_DRACONIAN, MH_NATURAL, 40,
@@ -722,7 +702,7 @@ static monsterentry mondata[] =
 },
 
 {
-    MONS_DRACONIAN_ANNIHILATOR, 'q', LIGHTBLUE, "draconian annihilator",
+    MONS_DRACONIAN_ANNIHILATOR, 'q', YELLOW, "draconian annihilator",
     M_COLD_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     10, MONS_DRACONIAN, MONS_DRACONIAN, MH_NATURAL, 40,
@@ -736,13 +716,13 @@ static monsterentry mondata[] =
 },
 
 {
-    MONS_DRACONIAN_KNIGHT, 'q', CYAN, "draconian knight",
+    MONS_DRACONIAN_KNIGHT, 'q', LIGHTBLUE, "draconian knight",
     M_FIGHTER | M_COLD_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     10, MONS_DRACONIAN, MONS_DRACONIAN, MH_NATURAL, 40,
     { {AT_HIT, AF_PLAIN, 27}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     16, 1120,
-    3, 2, MST_DRACONIAN_KNIGHT, true, S_ROAR,
+    9, 2, MST_DRACONIAN_KNIGHT, true, S_ROAR,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM,
         MON_SHAPE_HUMANOID_TAILED,
@@ -753,7 +733,7 @@ static monsterentry mondata[] =
     MONS_DRACONIAN_SCORCHER, 'q', LIGHTRED, "draconian scorcher",
     M_COLD_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
-    10, MONS_DRACONIAN, MONS_DRACONIAN, MH_NATURAL | MH_EVIL, 40,
+    10, MONS_DRACONIAN, MONS_DRACONIAN, MH_NATURAL, 40,
     { {AT_HIT, AF_PLAIN, 15}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     16, 800,
     -1, 2, MST_DRACONIAN_SCORCHER, true, S_ROAR,
@@ -778,13 +758,13 @@ static monsterentry mondata[] =
 },
 
 {
-    MONS_DEEP_ELF_KNIGHT, 'e', CYAN, "deep elf knight",
+    MONS_DEEP_ELF_KNIGHT, 'e', BLUE, "deep elf knight",
     M_WARM_BLOOD | M_FIGHTER | M_SPEAKS,
     MR_NO_FLAGS,
     10, MONS_ELF, MONS_ELF, MH_NATURAL, 80,
     { {AT_HIT, AF_PLAIN, 21}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     11, 495,
-    0, 17, MST_NO_SPELLS, true, S_SHOUT,
+    0, 17, MST_DEEP_ELF_KNIGHT, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_DEEP_ELF_KNIGHT}, TILE_ERROR
@@ -831,23 +811,36 @@ static monsterentry mondata[] =
 },
 
 {
-    MONS_DEEP_ELF_MAGE, 'e', MAGENTA, "deep elf mage",
+    MONS_DEEP_ELF_AIR_MAGE, 'e', CYAN, "deep elf zephyrmancer",
     M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     12, MONS_ELF, MONS_ELF, MH_NATURAL, 40,
     { {AT_HIT, AF_PLAIN, 5}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     9, 405,
-    0, 13, MST_NO_SPELLS, true, S_SHOUT,
+    0, 13, MST_DEEP_ELF_AIR_MAGE, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_DEEP_ELF_MAGE}, TILE_ERROR
+    {TILEP_MONS_DEEP_ELF_AIR_MAGE}, TILE_ERROR
+},
+
+{
+    MONS_DEEP_ELF_FIRE_MAGE, 'e', RED, "deep elf pyromancer",
+    M_WARM_BLOOD | M_SPEAKS,
+    MR_NO_FLAGS,
+    12, MONS_ELF, MONS_ELF, MH_NATURAL, 40,
+    { {AT_HIT, AF_PLAIN, 5}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    9, 405,
+    0, 13, MST_DEEP_ELF_FIRE_MAGE, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_DEEP_ELF_FIRE_MAGE}, TILE_ERROR
 },
 
 {
     MONS_DEEP_ELF_HIGH_PRIEST, 'e', LIGHTGREEN, "deep elf high priest",
-    M_SPEAKS | M_WARM_BLOOD | M_SEE_INVIS,
+    M_SPEAKS | M_WARM_BLOOD,
     MR_NO_FLAGS,
-    15, MONS_ELF, MONS_ELF, MH_NATURAL | MH_EVIL, 80,
+    15, MONS_ELF, MONS_ELF, MH_NATURAL, 80,
     { {AT_HIT, AF_PLAIN, 14}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     11, 495,
     3, 13, MST_DEEP_ELF_HIGH_PRIEST, true, S_SHOUT,
@@ -860,7 +853,7 @@ static monsterentry mondata[] =
     MONS_DEEP_ELF_DEMONOLOGIST, 'e', YELLOW, "deep elf demonologist",
     M_WARM_BLOOD | M_SEE_INVIS | M_SPEAKS,
     MR_NO_FLAGS,
-    20, MONS_ELF, MONS_ELF, MH_NATURAL | MH_EVIL, 100,
+    20, MONS_ELF, MONS_ELF, MH_NATURAL, 100,
     { {AT_HIT, AF_PLAIN, 12}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     12, 540,
     0, 13, MST_DEEP_ELF_DEMONOLOGIST, true, S_SHOUT,
@@ -886,7 +879,7 @@ static monsterentry mondata[] =
     MONS_DEEP_ELF_SORCERER, 'e', LIGHTMAGENTA, "deep elf sorcerer",
     M_WARM_BLOOD | M_SEE_INVIS | M_SPEAKS,
     MR_NO_FLAGS,
-    17, MONS_ELF, MONS_ELF, MH_NATURAL | MH_EVIL, 120,
+    17, MONS_ELF, MONS_ELF, MH_NATURAL, 120,
     { {AT_HIT, AF_PLAIN, 12}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     14, 630,
     0, 13, MST_DEEP_ELF_SORCERER, true, S_SHOUT,
@@ -899,7 +892,7 @@ static monsterentry mondata[] =
     MONS_DEEP_ELF_DEATH_MAGE, 'e', WHITE, "deep elf death mage",
     M_WARM_BLOOD | M_SEE_INVIS | M_SPEAKS,
     MR_NO_FLAGS,
-    10, MONS_ELF, MONS_ELF, MH_NATURAL | MH_EVIL, 120,
+    10, MONS_ELF, MONS_ELF, MH_NATURAL, 120,
     { {AT_HIT, AF_PLAIN, 12}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     15, 675,
     0, 13, MST_DEEP_ELF_DEATH_MAGE, true, S_SHOUT,
@@ -922,6 +915,19 @@ static monsterentry mondata[] =
 },
 
 // Mobile plants and fungi ('f')
+{
+    MONS_SLEEPCAP, 'f', BLUE, "sleepcap",
+    M_NO_FLAGS,
+    MR_RES_POISON,
+    10, MONS_FUNGUS, MONS_SLEEPCAP, MH_PLANT, 10,
+    { {AT_SPORE, AF_SLEEP, 9}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    3, 270,
+    5, 0, MST_NO_SPELLS, false, S_SILENT,
+    I_BRAINLESS, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_TINY, MON_SHAPE_FUNGUS,
+    {TILEP_MONS_SLEEPCAP}, TILE_ERROR
+},
+
 {
     MONS_WANDERING_MUSHROOM, 'f', BROWN, "wandering mushroom",
     M_NO_FLAGS,
@@ -966,18 +972,18 @@ static monsterentry mondata[] =
     MONS_SHAMBLING_MANGROVE, 'f', LIGHTRED, "shambling mangrove",
     M_NO_FLAGS,
     MR_RES_POISON,
-    12, MONS_SHAMBLING_MANGROVE, MONS_SHAMBLING_MANGROVE, MH_PLANT, 100,
+    15, MONS_SHAMBLING_MANGROVE, MONS_SHAMBLING_MANGROVE, MH_PLANT, 100,
     { {AT_HIT, AF_PLAIN, 41}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     13, 910,
     13, 3, MST_SHAMBLING_MANGROVE, false, S_SILENT,
     I_HUMAN, HT_AMPHIBIOUS, 8, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_PLANT,
+    MONUSE_NOTHING, SIZE_GIANT, MON_SHAPE_PLANT,
     {TILEP_MONS_TREANT}, TILE_ERROR
 },
 
 {
     MONS_VINE_STALKER, 'f', GREEN, "vine stalker",
-    M_SPEAKS | M_NO_POLY_TO | M_FAST_REGEN,
+    M_SPEAKS | M_NO_POLY_TO | M_FAST_REGEN | M_NO_SKELETON,
     MR_NO_FLAGS,
     10, MONS_VINE_STALKER, MONS_VINE_STALKER, MH_NATURAL, 40,
     { {AT_HIT, AF_PLAIN, 10}, {AT_BITE, AF_ANTIMAGIC, 10}, AT_NO_ATK,
@@ -995,7 +1001,7 @@ static monsterentry mondata[] =
     M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     10, MONS_GOBLIN, MONS_GOBLIN, MH_NATURAL, 0,
-    { {AT_HIT, AF_PLAIN, 4}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 1}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     1, 40,
     0, 12, MST_NO_SPELLS, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
@@ -1021,7 +1027,7 @@ static monsterentry mondata[] =
     M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     10, MONS_GNOLL, MONS_GNOLL, MH_NATURAL, 10,
-    { {AT_HIT, AF_PLAIN, 9}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 6}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     2, 130,
     2, 9, MST_NO_SPELLS, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
@@ -1030,16 +1036,16 @@ static monsterentry mondata[] =
 },
 
 {
-    MONS_GNOLL_SHAMAN, 'g', WHITE, "gnoll shaman",
+    MONS_GNOLL_BOUDA, 'g', WHITE, "gnoll bouda",
     M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     10, MONS_GNOLL, MONS_GNOLL, MH_NATURAL, 20,
     { {AT_HIT, AF_PLAIN, 10}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     3, 195,
-    2, 9, MST_GNOLL_SHAMAN, true, S_SHOUT,
+    2, 9, MST_BOUDA, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_GNOLL_SHAMAN}, TILE_ERROR
+    {TILEP_MONS_GNOLL_BOUDA}, TILE_ERROR
 },
 
 {
@@ -1070,7 +1076,7 @@ static monsterentry mondata[] =
 
 { // Another dummy monster.
     MONS_DWARF, 'g', GREEN, "dwarf",
-    M_WARM_BLOOD | M_SPEAKS | M_NO_POLY_TO,
+    M_WARM_BLOOD | M_SPEAKS | M_NO_POLY_TO | M_NO_GEN_DERIVED,
     MR_NO_FLAGS,
     10, MONS_DWARF, MONS_DWARF, MH_NATURAL, 20,
     { {AT_HIT, AF_PLAIN, 10}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -1128,7 +1134,7 @@ static monsterentry mondata[] =
     15, MONS_HOWLER_MONKEY, MONS_HOWLER_MONKEY, MH_NATURAL, 10,
     { {AT_HIT, AF_PLAIN, 8}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     3, 185,
-    1, 11, MST_HOWLER_MONKEY, true, S_HOWL,
+    1, 11, MST_SCREAMER, true, S_HOWL,
     I_ANIMAL, HT_LAND, 12, DEFAULT_ENERGY,
     MONUSE_OPEN_DOORS, SIZE_SMALL, MON_SHAPE_HUMANOID_TAILED,
     {TILEP_MONS_HOWLER_MONKEY}, TILE_CORPSE_HOWLER_MONKEY
@@ -1176,7 +1182,7 @@ static monsterentry mondata[] =
 {
     MONS_HELL_HOUND, 'h', CYAN, "hell hound",
     M_SEE_INVIS | M_UNBLINDABLE,
-    MR_RES_POISON | mrd(MR_RES_FIRE, 3) | MR_VUL_COLD,
+    mrd(MR_RES_FIRE, 3) | MR_VUL_COLD,
     10, MONS_HOUND, MONS_HELL_HOUND, MH_DEMONIC, 20,
     { {AT_BITE, AF_PLAIN, 13}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     5, 275,
@@ -1215,7 +1221,7 @@ static monsterentry mondata[] =
 {
     MONS_HELL_HOG, 'h', LIGHTRED, "hell hog",
     M_NO_FLAGS,
-    mrd(MR_RES_FIRE, 2),
+    mrd(MR_RES_FIRE, 3),
     10, MONS_HOG, MONS_HELL_HOG, MH_DEMONIC, 40,
     { {AT_BITE, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     11, 595,
@@ -1240,7 +1246,7 @@ static monsterentry mondata[] =
 
 { // a dummy monster for recolouring
     MONS_FELID, 'h', MAGENTA, "felid",
-    M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS | M_NO_POLY_TO,
+    M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS | M_NO_POLY_TO | M_NO_GEN_DERIVED,
     MR_NO_FLAGS,
     10, MONS_FELID, MONS_FELID, MH_NATURAL, 40,
     { {AT_CLAW, AF_PLAIN, 10}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -1299,7 +1305,7 @@ DUMMY(MONS_BEAR, 'h', LIGHTGREY, "bear", TILEP_MONS_BLACK_BEAR)
     MONS_SPRIGGAN_RIDER, 'i', LIGHTBLUE, "spriggan rider",
     M_WARM_BLOOD | M_SPEAKS | M_SEE_INVIS | M_FIGHTER | M_FLIES,
     MR_VUL_POISON, // the mount
-    10, MONS_SPRIGGAN, MONS_SPRIGGAN, MH_NATURAL, 100,
+    8, MONS_SPRIGGAN, MONS_SPRIGGAN, MH_NATURAL, 100,
     { {AT_HIT, AF_PLAIN, 27}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     11, 605,
     1, 18, MST_NO_SPELLS, true, S_SHOUT,
@@ -1419,7 +1425,7 @@ DUMMY(MONS_DRAKE, 'k', LIGHTGREY, "drake", TILEP_MONS_SWAMP_DRAKE)
 {
     MONS_DEATH_DRAKE, 'k', LIGHTGREY, "death drake",
     M_COLD_BLOOD | M_FLIES,
-    MR_RES_POISON | MR_RES_ROTTING,
+    MR_RES_POISON | MR_RES_MIASMA,
     10, MONS_DRAKE, MONS_DEATH_DRAKE, MH_NATURAL, 40,
     { {AT_BITE, AF_PLAIN, 12}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     9, 765,
@@ -1430,7 +1436,7 @@ DUMMY(MONS_DRAKE, 'k', LIGHTGREY, "drake", TILEP_MONS_SWAMP_DRAKE)
 },
 
 // lizards ('l')
-DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECKO)
+DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_IGUANA)
 
 {
     MONS_FRILLED_LIZARD, 'l', GREEN, "frilled lizard",
@@ -1443,19 +1449,6 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     I_ANIMAL, HT_AMPHIBIOUS, 10, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_TINY, MON_SHAPE_QUADRUPED,
     {TILEP_MONS_FRILLED_LIZARD}, TILE_CORPSE_FRILLED_LIZARD
-},
-
-{
-    MONS_LEOPARD_GECKO, 'l', YELLOW, "leopard gecko",
-    M_COLD_BLOOD,
-    MR_NO_FLAGS,
-    16, MONS_GIANT_LIZARD, MONS_LEOPARD_GECKO, MH_NATURAL, 0,
-    { {AT_BITE, AF_PLAIN, 5}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    1, 55,
-    1, 14, MST_NO_SPELLS, true, S_HISS,
-    I_ANIMAL, HT_LAND, 12, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_LITTLE, MON_SHAPE_QUADRUPED,
-    {TILEP_MONS_LEOPARD_GECKO}, TILE_CORPSE_LEOPARD_GECKO
 },
 
 {
@@ -1482,6 +1475,24 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_LITTLE, MON_SHAPE_QUADRUPED,
     {TILEP_MONS_BASILISK}, TILE_CORPSE_BASILISK
+},
+
+// A skyshark goes into a battle frenzy when it tastes blood.
+{
+    MONS_SKYSHARK, 'l', WHITE, "skyshark",
+    // Technically they have skeletons, but Crawl needs skeletons made
+    // of bone or similar materials (e.g. chitin)
+    M_NO_SKELETON | M_COLD_BLOOD | M_FLIES,
+    MR_NO_FLAGS,
+    10, MONS_SKYSHARK, MONS_SKYSHARK, MH_NATURAL, 40,
+    { {AT_BITE, AF_BLOODZERK, 20},
+      {AT_TAIL_SLAP, AF_PLAIN, 10},
+      {AT_TAIL_SLAP, AF_PLAIN, 10}, AT_NO_ATK  },
+    10, 750,
+    6, 8, MST_NO_SPELLS, true, S_SILENT /*?*/,
+    I_ANIMAL, HT_LAND, 10, MOVE_ENERGY(7),
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_FISH,
+    {TILEP_MONS_SKYSHARK}, TILE_CORPSE_SKYSHARK
 },
 
 {
@@ -1529,7 +1540,7 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     13, MONS_MERFOLK, MONS_MERFOLK, MH_NATURAL, 40,
-    { {AT_HIT, AF_PLAIN, 25}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 22}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     12, 780,
     // Impalers prefer light armour, and are dodging experts.
     0, 18, MST_NO_SPELLS, true, S_SHOUT,
@@ -1543,9 +1554,9 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     M_WARM_BLOOD | M_ARCHER | M_PREFER_RANGED | M_SPEAKS,
     MR_NO_FLAGS,
     12, MONS_MERFOLK, MONS_MERFOLK, MH_NATURAL, 60,
-    { {AT_HIT, AF_PLAIN, 17}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    13, 780,
-    0, 14, MST_NO_SPELLS, true, S_SHOUT,
+    { {AT_HIT, AF_PLAIN, 12}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    13, 730,
+    0, 12, MST_NO_SPELLS, true, S_SHOUT,
     I_HUMAN, HT_AMPHIBIOUS, 10, SWIM_ENERGY(6),
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_MERFOLK_JAVELINEER, TVARY_WATER}, TILE_ERROR
@@ -1578,6 +1589,19 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
 },
 
 {
+    MONS_SICKLY_MERFOLK_SIREN, 'm', BLUE, "sickly merfolk siren",
+    M_WARM_BLOOD | M_SPEAKS | M_NO_POLY_TO,
+    MR_NO_FLAGS,
+    10, MONS_MERFOLK, MONS_MERFOLK, MH_NATURAL, 60,
+    { {AT_HIT, AF_PLAIN, 19}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    3, 135,
+    4, 12, MST_MERFOLK_SIREN, true, S_SHOUT,
+    I_HUMAN, HT_AMPHIBIOUS, 10, SWIM_ENERGY(6),
+    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_MERFOLK_SIREN, TVARY_WATER}, TILE_ERROR
+},
+
+{
     MONS_MERFOLK_AVATAR, 'm', LIGHTCYAN, "merfolk avatar",
     M_WARM_BLOOD | M_SPEAKS | M_NO_GEN_DERIVED,
     MR_NO_FLAGS,
@@ -1591,8 +1615,21 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
 },
 
 {
+    MONS_MALARIOUS_MERFOLK_AVATAR, 'm', LIGHTBLUE, "malarious merfolk avatar",
+    M_WARM_BLOOD | M_SPEAKS | M_NO_GEN_DERIVED | M_NO_POLY_TO,
+    MR_NO_FLAGS,
+    10, MONS_MERFOLK, MONS_MERFOLK, MH_NATURAL, 120,
+    { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    3, 195,
+    4, 12, MST_MERFOLK_AVATAR, true, S_SHOUT,
+    I_HUMAN, HT_AMPHIBIOUS, 10, SWIM_ENERGY(6),
+    MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_MERFOLK_AVATAR, TVARY_WATER}, TILE_ERROR
+},
+
+{
     MONS_WATER_NYMPH, 'm', MAGENTA, "water nymph",
-    M_WARM_BLOOD | M_SPEAKS | M_SEE_INVIS | M_FEMALE,
+    M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     10, MONS_WATER_NYMPH, MONS_WATER_NYMPH, MH_NATURAL, 100,
     { {AT_TOUCH, AF_DROWN, 12}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -1603,14 +1640,14 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     {TILEP_MONS_WATER_NYMPH}, TILE_CORPSE_WATER_NYMPH
 },
 
-// rotting monsters ('n')
+// undead corpses ('n')
 {
     MONS_BOG_BODY, 'n', GREEN, "bog body",
     M_NO_ZOMBIE,
     MR_RES_FIRE | MR_RES_COLD,
     16, MONS_GHOUL, MONS_BOG_BODY, MH_UNDEAD, 40,
-    { {AT_HIT, AF_PLAIN, 25}, {AT_TOUCH, AF_COLD, 4}, AT_NO_ATK, AT_NO_ATK },
-    6, 390,
+    { {AT_TOUCH, AF_COLD, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    10, 390,
     1, 9, MST_BOG_BODY, true, S_SILENT,
     I_HUMAN, HT_AMPHIBIOUS, 10, SWIM_ENERGY(14),
     MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
@@ -1621,13 +1658,26 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     MONS_NECROPHAGE, 'n', LIGHTGREY, "necrophage",
     M_NO_ZOMBIE,
     MR_RES_COLD,
-    12, MONS_GHOUL, MONS_NECROPHAGE, MH_UNDEAD, 40,
-    { {AT_HIT, AF_ROT, 8}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    8, MONS_GHOUL, MONS_NECROPHAGE, MH_UNDEAD, 40,
+    { {AT_HIT, AF_DRAIN, 8}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     5, 275,
     2, 10, MST_NO_SPELLS, true, S_SILENT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_NECROPHAGE}, TILE_CORPSE_NECROPHAGE
+},
+
+{
+    MONS_BLOATED_HUSK, 'n', YELLOW, "bloated husk",
+    M_NO_ZOMBIE,
+    MR_RES_COLD,
+    10, MONS_GHOUL, MONS_BLOATED_HUSK, MH_UNDEAD, 40,
+    {  {AT_HIT, AF_PLAIN, 1}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    8, 250,
+    5, 5, MST_NO_SPELLS, false, S_SILENT,
+    I_HUMAN, HT_AMPHIBIOUS, 14, DEFAULT_ENERGY,
+    MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_BLOATED_HUSK}, TILE_ERROR
 },
 
 {
@@ -1643,13 +1693,26 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     {TILEP_MONS_GHOUL}, TILE_CORPSE_GHOUL
 },
 
+{
+    MONS_SEARING_WRETCH, 'n', ETC_FIRE, "searing wretch",
+    M_NO_ZOMBIE,
+    mrd(MR_RES_FIRE, 3) | MR_RES_COLD,
+    10, MONS_GHOUL, MONS_SEARING_WRETCH, MH_UNDEAD, 80,
+    { {AT_CLAW, AF_FIRE, 40}, {AT_CLAW, AF_SEAR, 30}, {AT_BITE, AF_STICKY_FLAME, 15}, AT_NO_ATK },
+    18, 1600,
+    4, 8, MST_NO_SPELLS, false, S_SILENT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_SEARING_WRETCH}, TILE_ERROR
+},
+
 // orcs ('o')
 {
     MONS_ORC, 'o', LIGHTRED, "orc",
     M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     15, MONS_ORC, MONS_ORC, MH_NATURAL, 0,
-    { {AT_HIT, AF_PLAIN, 5}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 2}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     1, 70,
     0, 10, MST_NO_SPELLS, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
@@ -1662,9 +1725,9 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     10, MONS_ORC, MONS_ORC, MH_NATURAL, 20,
-    { {AT_HIT, AF_PLAIN, 5}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 2}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     3, 150,
-    1, 12, MST_NO_SPELLS, true, S_SHOUT,
+    1, 12, MST_ORC_WIZARD, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_ORC_WIZARD}, TILE_ERROR
@@ -1674,8 +1737,8 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     MONS_ORC_PRIEST, 'o', GREEN, "orc priest",
     M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
-    10, MONS_ORC, MONS_ORC, MH_NATURAL | MH_EVIL, 20,
-    { {AT_HIT, AF_PLAIN, 6}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    10, MONS_ORC, MONS_ORC, MH_NATURAL, 20,
+    { {AT_HIT, AF_PLAIN, 3}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     3, 150,
     1, 10, MST_ORC_PRIEST, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
@@ -1688,7 +1751,7 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     M_FIGHTER | M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     16, MONS_ORC, MONS_ORC, MH_NATURAL, 20,
-    { {AT_HIT, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 12}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     4, 280,
     0, 13, MST_NO_SPELLS, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
@@ -1701,7 +1764,7 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     M_FIGHTER | M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     9, MONS_ORC, MONS_ORC, MH_NATURAL, 40,
-    { {AT_HIT, AF_PLAIN, 25}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     9, 675,
     2, 13, MST_ORC_KNIGHT, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
@@ -1714,7 +1777,7 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     M_FIGHTER | M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     11, MONS_ORC, MONS_ORC, MH_NATURAL, 60,
-    { {AT_HIT, AF_PLAIN, 32}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 27}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     15, 1125,
     3, 10, MST_BATTLECRY, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
@@ -1737,9 +1800,9 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
 
 {
     MONS_ORC_HIGH_PRIEST, 'o', LIGHTGREEN, "orc high priest",
-    M_SEE_INVIS | M_SPEAKS | M_WARM_BLOOD,
+    M_SPEAKS | M_WARM_BLOOD,
     MR_NO_FLAGS,
-    10, MONS_ORC, MONS_ORC, MH_NATURAL | MH_EVIL, 60,
+    10, MONS_ORC, MONS_ORC, MH_NATURAL, 60,
     { {AT_HIT, AF_PLAIN, 7}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     11, 550,
     1, 12, MST_ORC_HIGH_PRIEST, true, S_SHOUT,
@@ -1766,10 +1829,10 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     MONS_HELL_KNIGHT, 'p', RED, "hell knight",
     M_FIGHTER | M_WARM_BLOOD | M_SPEAKS,
     mrd(MR_RES_FIRE, 3),
-    10, MONS_HUMAN, MONS_HUMAN, MH_NATURAL | MH_EVIL, 40,
+    10, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 40,
     { {AT_HIT, AF_PLAIN, 26}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 650,
-    0, 10, MST_NO_SPELLS, true, S_SHOUT,
+    0, 10, MST_HELL_KNIGHT, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_HELL_KNIGHT}, TILE_ERROR
@@ -1779,7 +1842,7 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     MONS_DEATH_KNIGHT, 'p', GREEN, "death knight",
     M_WARM_BLOOD | M_FIGHTER | M_SPEAKS,
     MR_NO_FLAGS,
-    12, MONS_HUMAN, MONS_HUMAN, MH_NATURAL | MH_EVIL, 80,
+    12, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 80,
     { {AT_HIT, AF_PLAIN, 28}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 800,
     2, 12, MST_DEATH_KNIGHT, true, S_SHOUT,
@@ -1792,10 +1855,10 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     MONS_NECROMANCER, 'p', WHITE, "necromancer",
     M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
-    10, MONS_HUMAN, MONS_HUMAN, MH_NATURAL | MH_EVIL, 60,
+    10, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 60,
     { {AT_HIT, AF_PLAIN, 6}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 400,
-    0, 13, MST_NO_SPELLS, true, S_SHOUT,
+    0, 13, MST_NECROMANCER, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_NECROMANCER}, TILE_ERROR
@@ -1805,10 +1868,10 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     MONS_WIZARD, 'p', MAGENTA, "wizard",
     M_SPEAKS | M_WARM_BLOOD,
     MR_NO_FLAGS,
-    10, MONS_HUMAN, MONS_HUMAN, MH_NATURAL | MH_EVIL, 60,
+    10, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 60,
     { {AT_HIT, AF_PLAIN, 6}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 400,
-    0, 13, MST_NO_SPELLS, true, S_SHOUT,
+    0, 13, MST_WIZARD, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_WIZARD}, TILE_ERROR
@@ -1854,73 +1917,47 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
 },
 
 {
-    MONS_IRONBRAND_CONVOKER, 'p', YELLOW, "ironbrand convoker",
+    MONS_IRONBOUND_CONVOKER, 'p', YELLOW, "ironbound convoker",
     M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     12, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 40,
     { {AT_HIT, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     9, 495,
-    0, 10, MST_IRONBRAND_CONVOKER, true, S_SHOUT,
+    0, 10, MST_IRONBOUND_CONVOKER, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_IRONBRAND_CONVOKER}, TILE_ERROR
+    {TILEP_MONS_IRONBOUND_CONVOKER}, TILE_ERROR
 },
 
 {
-    MONS_IMPERIAL_MYRMIDON, 'p', LIGHTCYAN, "imperial myrmidon",
-    M_WARM_BLOOD | M_SPEAKS,
-    MR_NO_FLAGS,
-    12, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 60,
-    { {AT_HIT, AF_VULN, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    16, 750,
-    1, 22, MST_IMPERIAL_MYRMIDON, true, S_SHOUT,
-    I_HUMAN, HT_LAND, 12, DEFAULT_ENERGY,
-    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_IMPERIAL_MYRMIDON}, TILE_ERROR
-},
-
-{
-    MONS_SERVANT_OF_WHISPERS, 'p', BLUE, "servant of whispers",
-    M_SPEAKS | M_WARM_BLOOD,
-    MR_NO_FLAGS,
-    10, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 60,
-    { {AT_HIT, AF_PLAIN, 10}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    12, 800,
-    1, 12, MST_SERVANT_OF_WHISPERS, true, S_SHOUT,
+    MONS_IRONBOUND_FROSTHEART, 'p', BLUE, "ironbound frostheart",
+    M_WARM_BLOOD | M_SPEAKS | M_SEE_INVIS,
+    MR_RES_COLD,
+    12, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 40,
+    { {AT_TOUCH, AF_COLD, 25}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    12, 600,
+    0, 10, MST_IRONBOUND_FROSTHEART, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_SERVANT_OF_WHISPERS}, TILE_ERROR
+    MONUSE_STARTING_EQUIPMENT, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_IRONBOUND_FROSTHEART}, TILE_ERROR
 },
 
 {
-    MONS_RAGGED_HIEROPHANT, 'p', LIGHTMAGENTA, "ragged hierophant",
-    M_SPEAKS | M_WARM_BLOOD | M_SEE_INVIS,
-    MR_NO_FLAGS,
-    15, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 40,
-    { {AT_HIT, AF_PLAIN, 12}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    9, 1200,
-    0, 10, MST_RAGGED_HIEROPHANT, true, S_SHOUT,
-    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_RAGGED_HIEROPHANT}, TILE_ERROR
-},
-
-{
-    MONS_IRONHEART_PRESERVER, 'p', LIGHTGREEN, "ironheart preserver",
+    MONS_IRONBOUND_PRESERVER, 'p', LIGHTGREEN, "ironbound preserver",
     M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     12, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 40,
     { {AT_HIT, AF_PLAIN, 25}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     14, 1120,
-    0, 6, MST_IRONHEART_PRESERVER, true, S_SHOUT,
+    0, 6, MST_IRONBOUND_PRESERVER, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_IRONHEART_PRESERVER}, TILE_ERROR
+    {TILEP_MONS_IRONBOUND_PRESERVER}, TILE_ERROR
 },
 
 {
     MONS_SHAPESHIFTER, 'p', LIGHTRED, "shapeshifter",
-    M_NO_SKELETON | M_NO_ZOMBIE,
+    M_NO_FLAGS,
     MR_NO_FLAGS,
     10, MONS_SHAPESHIFTER, MONS_SHAPESHIFTER, MH_NATURAL, 40,
     { {AT_HIT, AF_PLAIN, 5}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -1933,7 +1970,7 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
 
 {
     MONS_GLOWING_SHAPESHIFTER, 'p', LIGHTRED, "glowing shapeshifter",
-    M_NO_SKELETON | M_NO_ZOMBIE,
+    M_NO_FLAGS,
     MR_NO_FLAGS,
     10, MONS_SHAPESHIFTER, MONS_GLOWING_SHAPESHIFTER, MH_NATURAL, 80,
     { {AT_HIT, AF_PLAIN, 15}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -1959,7 +1996,7 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
 
 { // dummy; spawns in a single vault.
     MONS_DEMIGOD, 'p', YELLOW, "demigod",
-    M_WARM_BLOOD | M_SPEAKS | M_NO_POLY_TO,
+    M_WARM_BLOOD | M_SPEAKS | M_NO_POLY_TO | M_NO_GEN_DERIVED,
     MR_NO_FLAGS,
     10, MONS_HUMAN, MONS_DEMIGOD, MH_NATURAL, 20,
     { {AT_HIT, AF_PLAIN, 10}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -1972,7 +2009,7 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
 
 { // dummy... literally; single vault
     MONS_HALFLING, 'p', LIGHTGREY, "halfling",
-    M_WARM_BLOOD | M_SPEAKS | M_NO_POLY_TO,
+    M_WARM_BLOOD | M_SPEAKS | M_NO_POLY_TO | M_NO_GEN_DERIVED,
     MR_NO_FLAGS,
     10, MONS_HALFLING, MONS_HALFLING, MH_NATURAL, 10,
     { {AT_HIT, AF_PLAIN, 6}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -1981,6 +2018,32 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_SMALL, MON_SHAPE_HUMANOID,
     {TILEP_MONS_HALFLING}, TILE_CORPSE_HALFLING
+},
+
+{ // dummy; spawns in a single vault.
+    MONS_METEORAN, 'p', YELLOW, "meteoran",
+    M_WARM_BLOOD | M_SPEAKS | M_NO_POLY_TO | M_NO_GEN_DERIVED,
+    MR_NO_FLAGS,
+    10, MONS_METEORAN, MONS_METEORAN, MH_NATURAL, 20,
+    { {AT_HIT, AF_PLAIN, 10}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    5, 375,
+    2, 12, MST_NO_SPELLS, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_METEORAN}, TILE_CORPSE_METEORAN
+},
+
+{ // 0 XP dummy monster for Okawaru's Arena
+    MONS_SPECTATOR, 'p', LIGHTGREY, "spectator",
+    M_WARM_BLOOD | M_SPEAKS | M_NOT_DANGEROUS | M_NO_POLY_TO | M_NO_GEN_DERIVED,
+    MR_NO_FLAGS,
+    10, MONS_HUMAN, MONS_SPECTATOR, MH_NATURAL, 20,
+    { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    20, 1000,
+    0, 10, MST_NO_SPELLS, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_HUMAN, TVARY_MOD}, TILE_CORPSE_HUMAN
 },
 
 // rodents ('r')
@@ -2028,7 +2091,7 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
     M_WARM_BLOOD,
     MR_NO_FLAGS,
     10, MONS_RAT, MONS_HELL_RAT, MH_DEMONIC, 20,
-    { {AT_BITE, AF_DRAIN_XP, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_BITE, AF_DRAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     3, 165,
     7, 10, MST_NO_SPELLS, true, S_LOUD_ROAR,
     I_ANIMAL, HT_LAND, 12, DEFAULT_ENERGY,
@@ -2037,82 +2100,56 @@ DUMMY(MONS_GIANT_LIZARD, 'l', LIGHTGREY, "giant lizard", TILEP_MONS_LEOPARD_GECK
 },
 
 {
-    MONS_PORCUPINE, 'r', BLUE, "porcupine",
-    M_WARM_BLOOD | M_SPINY,
-    MR_NO_FLAGS,
-    26, MONS_RAT, MONS_PORCUPINE, MH_NATURAL, 20,
-    { {AT_BITE, AF_PLAIN, 16}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    4, 160,
-    2, 12, MST_NO_SPELLS, true, S_SILENT,
-    I_ANIMAL, HT_LAND, 12, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_TINY, MON_SHAPE_QUADRUPED,
-    {TILEP_MONS_PORCUPINE}, TILE_CORPSE_PORCUPINE
+    MONS_CRYSTAL_ECHIDNA, 'r', GREEN, "crystal echidna",
+    M_NO_FLAGS,
+    mrd(MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC, 3),
+    10, MONS_CRYSTAL_ECHIDNA, MONS_CRYSTAL_ECHIDNA, MH_NONLIVING, WILL_INVULN,
+    { {AT_BITE, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    12, 640,
+    10, 10, MST_CRYSTAL_ECHIDNA, false, S_SILENT,
+    I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_LITTLE, MON_SHAPE_QUADRUPED,
+    {TILEP_MONS_CRYSTAL_ECHIDNA}, TILE_ERROR
 },
 
-// spiders and insects ('s')
-{
-    MONS_GIANT_COCKROACH, 's', BROWN, "giant cockroach",
-    M_NO_SKELETON,
-    MR_VUL_POISON,
-    10, MONS_GIANT_COCKROACH, MONS_GIANT_COCKROACH, MH_NATURAL, 0,
-    { {AT_BITE, AF_PLAIN, 2}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    1, 50,
-    3, 10, MST_NO_SPELLS, true, S_SILENT,
-    I_ANIMAL, HT_LAND, 12, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_LITTLE, MON_SHAPE_INSECT,
-    {TILEP_MONS_GIANT_COCKROACH}, TILE_CORPSE_GIANT_COCKROACH
-},
-
+// arachnids ('s')
 {
     MONS_SCORPION, 's', YELLOW, "scorpion",
     M_NO_SKELETON,
     MR_VUL_POISON,
     13, MONS_SCORPION, MONS_SCORPION, MH_NATURAL, 20,
-    { {AT_STING, AF_POISON, 10}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_STING, AF_POISON, 8}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     4, 180,
     5, 10, MST_NO_SPELLS, true, S_SILENT,
-    I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
+    I_ANIMAL, HT_LAND, 12, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_ARACHNID,
     {TILEP_MONS_SCORPION}, TILE_CORPSE_SCORPION
 },
 
 {
     MONS_EMPEROR_SCORPION, 's', LIGHTGREY, "emperor scorpion",
-    M_NO_SKELETON,
+    M_NO_SKELETON | M_WEB_IMMUNE,
     MR_RES_POISON,
-    13, MONS_SCORPION, MONS_EMPEROR_SCORPION, MH_NATURAL, 60,
-    { {AT_STING, AF_POISON, 30}, {AT_CLAW, AF_PLAIN, 15},
-      {AT_CLAW, AF_PLAIN, 15}, AT_NO_ATK },
-    14, 1190,
-    20, 12, MST_NO_SPELLS, true, S_SILENT,
-    I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
+    11, MONS_SCORPION, MONS_EMPEROR_SCORPION, MH_NATURAL, 60,
+    { {AT_STING, AF_POISON, 30}, {AT_CLAW, AF_PLAIN, 10},
+      {AT_CLAW, AF_PLAIN, 10}, AT_NO_ATK },
+    14, 1090,
+    18, 7, MST_NO_SPELLS, true, S_SILENT,
+    I_ANIMAL, HT_LAND, 12, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_GIANT, MON_SHAPE_ARACHNID,
     {TILEP_MONS_EMPEROR_SCORPION}, TILE_CORPSE_EMPEROR_SCORPION
-},
-
-{
-    MONS_DEATH_SCARAB, 's', BLUE, "death scarab",
-    M_NO_SKELETON | M_BATTY,
-    MR_NO_FLAGS,
-    12, MONS_DEATH_SCARAB, MONS_DEATH_SCARAB, MH_UNDEAD, 60,
-    { {AT_BITE, AF_SCARAB, 33}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    8, 320,
-    7, 14, MST_NO_SPELLS, true, S_SILENT,
-    I_ANIMAL, HT_LAND, 30, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_LITTLE, MON_SHAPE_INSECT,
-    {TILEP_MONS_DEATH_SCARAB}, TILE_CORPSE_DEATH_SCARAB
 },
 
 DUMMY(MONS_SPIDER, 's', CYAN, "spider", TILEP_MONS_REDBACK)
 
 {
     MONS_TARANTELLA, 's', LIGHTMAGENTA, "tarantella",
-    M_NO_SKELETON,
+    M_NO_SKELETON | M_WEB_IMMUNE,
     MR_VUL_POISON,
-    6, MONS_SPIDER, MONS_TARANTELLA, MH_NATURAL, 20,
-    { {AT_BITE, AF_CONFUSE, 19}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    8, MONS_SPIDER, MONS_TARANTELLA, MH_NATURAL, 20,
+    { {AT_TOUCH, AF_CONFUSE, 19}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     8, 280,
-    3, 14, MST_NO_SPELLS, true, S_HISS,
+    3, 14, MST_NO_SPELLS, true, S_FAINT_SKITTER,
     I_ANIMAL, HT_LAND, 15, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_ARACHNID,
     {TILEP_MONS_TARANTELLA}, TILE_CORPSE_TARANTELLA
@@ -2120,13 +2157,13 @@ DUMMY(MONS_SPIDER, 's', CYAN, "spider", TILEP_MONS_REDBACK)
 
 {
     MONS_JUMPING_SPIDER, 's', LIGHTBLUE, "jumping spider",
-    M_NO_SKELETON,
+    M_NO_SKELETON | M_WEB_IMMUNE,
     MR_VUL_POISON,
-    8, MONS_SPIDER, MONS_JUMPING_SPIDER, MH_NATURAL, 20,
+    6, MONS_SPIDER, MONS_JUMPING_SPIDER, MH_NATURAL, 20,
     { {AT_POUNCE, AF_ENSNARE, 20}, {AT_BITE, AF_PLAIN, 8}, AT_NO_ATK,
        AT_NO_ATK },
     8, 320,
-    6, 12, MST_JUMPING_SPIDER, true, S_HISS,
+    6, 12, MST_JUMPING_SPIDER, true, S_FAINT_SKITTER,
     I_ANIMAL, HT_LAND, 15, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_ARACHNID,
     {TILEP_MONS_JUMPING_SPIDER}, TILE_CORPSE_JUMPING_SPIDER
@@ -2134,13 +2171,13 @@ DUMMY(MONS_SPIDER, 's', CYAN, "spider", TILEP_MONS_REDBACK)
 
 {
     MONS_WOLF_SPIDER, 's', WHITE, "wolf spider",
-    M_NO_SKELETON,
+    M_NO_SKELETON | M_WEB_IMMUNE,
     MR_VUL_POISON,
     4, MONS_SPIDER, MONS_WOLF_SPIDER, MH_NATURAL, 20,
     { {AT_HIT, AF_PLAIN, 25}, {AT_BITE, AF_POISON, 15}, AT_NO_ATK,
        AT_NO_ATK },
     11, 550,
-    3, 10, MST_NO_SPELLS, true, S_HISS,
+    3, 10, MST_NO_SPELLS, true, S_SKITTER,
     I_ANIMAL, HT_LAND, 15, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_MEDIUM, MON_SHAPE_ARACHNID,
     {TILEP_MONS_WOLF_SPIDER}, TILE_CORPSE_WOLF_SPIDER
@@ -2148,9 +2185,9 @@ DUMMY(MONS_SPIDER, 's', CYAN, "spider", TILEP_MONS_REDBACK)
 
 {
     MONS_REDBACK, 's', LIGHTRED, "redback",
-    M_NO_SKELETON,
+    M_NO_SKELETON | M_WEB_IMMUNE,
     MR_VUL_POISON,
-    5, MONS_SPIDER, MONS_REDBACK, MH_NATURAL, 20,
+    4, MONS_SPIDER, MONS_REDBACK, MH_NATURAL, 20,
     { {AT_BITE, AF_POISON_STRONG, 18}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     9, 270,
     2, 12, MST_NO_SPELLS, true, S_SILENT,
@@ -2161,50 +2198,63 @@ DUMMY(MONS_SPIDER, 's', CYAN, "spider", TILEP_MONS_REDBACK)
 
 {
     MONS_DEMONIC_CRAWLER, 's', LIGHTGREEN, "demonic crawler",
-    M_NO_SKELETON | M_SEE_INVIS,
-    MR_RES_ELEC | MR_RES_POISON | MR_RES_COLD | MR_RES_FIRE,
-    4, MONS_DEMONIC_CRAWLER, MONS_DEMONIC_CRAWLER, MH_DEMONIC, 100,
-    { {AT_HIT, AF_PLAIN, 13}, {AT_HIT, AF_PLAIN, 13}, {AT_HIT, AF_PLAIN, 13},
+    M_NO_SKELETON | M_SEE_INVIS | M_WEB_IMMUNE | M_FAST_REGEN,
+    MR_RES_POISON,
+    4, MONS_DEMONIC_CRAWLER, MONS_DEMONIC_CRAWLER, MH_DEMONIC, 60,
+    { {AT_HIT, AF_PLAIN, 20}, {AT_HIT, AF_PLAIN, 20}, {AT_HIT, AF_PLAIN, 20},
        AT_NO_ATK },
     9, 585,
     10, 6, MST_NO_SPELLS, true, S_SCREAM,
     I_ANIMAL, HT_LAND, 13, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_CENTIPEDE,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_CENTIPEDE,
     {TILEP_MONS_DEMONIC_CRAWLER}, TILE_CORPSE_DEMONIC_CRAWLER
 },
 
 {
     MONS_ORB_SPIDER, 's', MAGENTA, "orb spider",
-    M_NO_SKELETON | M_MAINTAIN_RANGE,
+    M_NO_SKELETON | M_MAINTAIN_RANGE | M_WEB_IMMUNE,
     MR_VUL_POISON,
-    20, MONS_SPIDER, MONS_ORB_SPIDER, MH_NATURAL, 40,
-    { {AT_BITE, AF_PLAIN, 5}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    7, 420,
-    3, 10, MST_ORB_SPIDER, true, S_HISS,
+    12, MONS_SPIDER, MONS_ORB_SPIDER, MH_NATURAL, 40,
+    { {AT_BITE, AF_PLAIN, 15}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    10, 420,
+    3, 10, MST_ORB_SPIDER, true, S_FAINT_SKITTER,
     I_ANIMAL, HT_LAND, 12, SPELL_ENERGY(20),
     MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_ARACHNID,
     {TILEP_MONS_ORB_SPIDER}, TILE_CORPSE_ORB_SPIDER
 },
 
-// testudines and crocodiles ('t')
 {
-    MONS_CROCODILE, 't', BROWN, "crocodile",
-    M_COLD_BLOOD,
+    MONS_BROODMOTHER, 's', LIGHTCYAN, "broodmother",
+    M_NO_SKELETON | M_WEB_IMMUNE,
     MR_NO_FLAGS,
-    10, MONS_CROCODILE, MONS_CROCODILE, MH_NATURAL, 20,
-    { {AT_BITE, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    5, 275,
-    4, 10, MST_NO_SPELLS, true, S_SILENT,
-    I_ANIMAL, HT_AMPHIBIOUS, 10, SWIM_ENERGY(6),
-    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_QUADRUPED,
-    {TILEP_MONS_CROCODILE}, TILE_CORPSE_CROCODILE
+    10, MONS_SPIDER, MONS_BROODMOTHER, MH_NATURAL, 60,
+    { {AT_BITE, AF_SPIDER, 40}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    12, 1400,
+    2, 4, MST_BROODMOTHER, true, S_SKITTER,
+    I_ANIMAL, HT_LAND, 12, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_GIANT, MON_SHAPE_ARACHNID,
+    {TILEP_MONS_BROODMOTHER}, TILE_CORPSE_BROODMOTHER
 },
 
+{
+    MONS_CULICIVORA, 's', BROWN, "culicivora",
+    M_NO_SKELETON | M_WEB_IMMUNE,
+    MR_VUL_POISON,
+    5, MONS_SPIDER, MONS_CULICIVORA, MH_NATURAL, 20,
+    { {AT_BITE, AF_VAMPIRIC, 27}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    8, 390,
+    2, 16, MST_CULICIVORA, true, S_FAINT_SKITTER,
+    I_ANIMAL, HT_LAND, 15, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_ARACHNID,
+    {TILEP_MONS_CULICIVORA}, TILE_CORPSE_CULICIVORA
+},
+
+// alligators, testudines, and crabs ('t')
 {
     MONS_ALLIGATOR, 't', LIGHTBLUE, "alligator",
     M_COLD_BLOOD,
     MR_NO_FLAGS,
-    10, MONS_CROCODILE, MONS_ALLIGATOR, MH_NATURAL, 40,
+    10, MONS_GIANT_LIZARD, MONS_ALLIGATOR, MH_NATURAL, 40,
     { {AT_BITE, AF_PLAIN, 30}, {AT_TAIL_SLAP, AF_PLAIN, 15}, AT_NO_ATK,
        AT_NO_ATK },
     12, 720,
@@ -2261,7 +2311,7 @@ DUMMY(MONS_CRAB, 't', LIGHTGREY, "crab", TILEP_MONS_FIRE_CRAB)
     M_NO_SKELETON,
     MR_NO_FLAGS,
     25, MONS_CRAB, MONS_GHOST_CRAB, MH_UNDEAD, 40,
-    { {AT_BITE, AF_DRAIN_XP, 20}, {AT_CLAW, AF_DRAIN_XP, 15}, AT_NO_ATK, AT_NO_ATK },
+    { {AT_BITE, AF_DRAIN, 20}, {AT_CLAW, AF_DRAIN, 15}, AT_NO_ATK, AT_NO_ATK },
     9, 585,
     9, 6, MST_GHOST_CRAB, true, S_SILENT,
     I_ANIMAL, HT_AMPHIBIOUS, 10, DEFAULT_ENERGY,
@@ -2316,7 +2366,7 @@ DUMMY(MONS_CRAB, 't', LIGHTGREY, "crab", TILEP_MONS_FIRE_CRAB)
     MONS_FIRE_VORTEX, 'v', RED, "fire vortex",
     M_CONFUSED | M_INSUBSTANTIAL | M_CONJURED | M_FLIES | M_NO_EXP_GAIN,
     mrd(MR_RES_FIRE, 3) | MR_VUL_COLD | MR_RES_ELEC,
-    5, MONS_FIRE_VORTEX, MONS_FIRE_VORTEX, MH_NONLIVING, MAG_IMMUNE,
+    5, MONS_FIRE_VORTEX, MONS_FIRE_VORTEX, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_PURE_FIRE, 0}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 300,
     0, 5, MST_NO_SPELLS, false, S_SILENT,
@@ -2329,7 +2379,7 @@ DUMMY(MONS_CRAB, 't', LIGHTGREY, "crab", TILEP_MONS_FIRE_CRAB)
     MONS_SPATIAL_VORTEX, 'v', ETC_RANDOM, "spatial vortex",
     M_CONFUSED | M_INSUBSTANTIAL | M_CONJURED | M_FLIES,
     MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC,
-    5, MONS_FIRE_VORTEX, MONS_SPATIAL_VORTEX, MH_NONLIVING, MAG_IMMUNE,
+    5, MONS_SPATIAL_VORTEX, MONS_SPATIAL_VORTEX, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_DISTORT, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     6, 540,
     0, 5, MST_NO_SPELLS, false, S_SILENT,
@@ -2343,36 +2393,39 @@ DUMMY(MONS_CRAB, 't', LIGHTGREY, "crab", TILEP_MONS_FIRE_CRAB)
     M_BATTY | M_INSUBSTANTIAL | M_FLIES,
     mrd(MR_RES_FIRE | MR_RES_COLD, 2) | MR_RES_ELEC,
     5, MONS_SPATIAL_MAELSTROM, MONS_SPATIAL_MAELSTROM,
-        MH_NONLIVING, MAG_IMMUNE,
+        MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_DISTORT, 20}, {AT_HIT, AF_DISTORT, 20}, AT_NO_ATK,
        AT_NO_ATK },
     10, 750,
     0, 5, MST_NO_SPELLS, false, S_SILENT,
     I_BRAINLESS, HT_LAND, 16, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_MISC,
+    MONUSE_NOTHING, SIZE_GIANT, MON_SHAPE_MISC,
     {TILEP_MONS_SPATIAL_MAELSTROM, TVARY_CYCLE}, TILE_ERROR
 },
 
+// wisp-form
+DUMMY(MONS_INSUBSTANTIAL_WISP, 'v', LIGHTGREY, "insubstantial wisp",
+      TILEP_MONS_WILL_O_THE_WISP)
+
 {
-    MONS_INSUBSTANTIAL_WISP, 'v', LIGHTGREY, "insubstantial wisp",
-    M_INSUBSTANTIAL | M_FLIES,
-    mrd(MR_RES_ELEC, 3) | mrd(MR_RES_FIRE | MR_RES_COLD, 2),
-    8, MONS_INSUBSTANTIAL_WISP, MONS_INSUBSTANTIAL_WISP,
-        MH_NONLIVING, MAG_IMMUNE,
-    { {AT_HIT, AF_BLINK, 12}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    8, 200,
-    4, 18, MST_INSUBSTANTIAL_WISP, false, S_MOAN,
+    MONS_WILL_O_THE_WISP, 'v', GREEN, "will-o-the-wisp",
+    M_INSUBSTANTIAL | M_FLIES | M_SEE_INVIS,
+    MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC,
+    10, MONS_WILL_O_THE_WISP, MONS_WILL_O_THE_WISP, MH_NONLIVING, WILL_INVULN,
+    { {AT_ENGULF, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    11, 400,
+    4, 10, MST_WILL_O_THE_WISP, false, S_MOAN,
     I_BRAINLESS, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_TINY, MON_SHAPE_MISC,
-    {TILEP_MONS_INSUBSTANTIAL_WISP}, TILE_ERROR
+    {TILEP_MONS_WILL_O_THE_WISP}, TILE_ERROR
 },
 
 { // miscast only
     MONS_TWISTER, 'v', ETC_AIR, "twister",
     M_CONFUSED | M_INSUBSTANTIAL | M_BATTY | M_NO_EXP_GAIN | M_NO_POLY_TO
         | M_FLIES,
-    MR_RES_FIRE | MR_RES_COLD | mrd(MR_RES_ELEC, 3) | MR_RES_TORNADO,
-    5, MONS_FIRE_VORTEX, MONS_TWISTER, MH_NONLIVING, MAG_IMMUNE,
+    MR_RES_FIRE | mrd(MR_RES_COLD, 3) | mrd(MR_RES_ELEC, 3) | MR_RES_VORTEX,
+    5, MONS_FIRE_VORTEX, MONS_TWISTER, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     12, 120000,
     0, 5, MST_NO_SPELLS, false, S_SILENT,
@@ -2436,15 +2489,28 @@ DUMMY(MONS_CRAB, 't', LIGHTGREY, "crab", TILEP_MONS_FIRE_CRAB)
 
 {
     MONS_TORPOR_SNAIL, 'w', GREEN, "torpor snail",
-    M_NO_SKELETON,
+    M_NO_SKELETON | M_WEB_IMMUNE,
     MR_NO_FLAGS,
-    20, MONS_ELEPHANT_SLUG, MONS_TORPOR_SNAIL, MH_NATURAL, 40,
+    20, MONS_ELEPHANT_SLUG, MONS_TORPOR_SNAIL, MH_NATURAL, 80,
     { {AT_BITE, AF_PLAIN, 25}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 600,
     8, 1, MST_NO_SPELLS, true, S_SILENT,
     I_ANIMAL, HT_AMPHIBIOUS, 7, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_SNAIL,
     {TILEP_MONS_TORPOR_SNAIL}, TILE_CORPSE_TORPOR_SNAIL
+},
+
+{
+    MONS_STEELBARB_WORM, 'w', LIGHTGRAY, "steelbarb worm",
+    M_NO_SKELETON | M_WEB_IMMUNE,
+    MR_RES_FIRE,
+    8, MONS_WORM, MONS_STEELBARB_WORM, MH_NATURAL, 10,
+    { {AT_HIT, AF_BARBS, 29}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    10, 690,
+    11, 7, MST_NO_SPELLS, true, S_SILENT,
+    I_ANIMAL, HT_LAND, 12, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_SNAKE,
+    {TILEP_MONS_STEELBARB_WORM}, TILE_CORPSE_STEELBARB_WORM
 },
 
 // dummy genus monster; not using DUMMY since it's also a dummy species
@@ -2457,7 +2523,7 @@ DUMMY(MONS_CRAB, 't', LIGHTGREY, "crab", TILEP_MONS_FIRE_CRAB)
     20, 1300,
     2, 1, MST_NO_SPELLS, true, S_SILENT,
     I_ANIMAL, HT_LAND, 4, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_SNAIL,
+    MONUSE_NOTHING, SIZE_GIANT, MON_SHAPE_SNAIL,
     {TILEP_MONS_DART_SLUG}, TILE_CORPSE_ELEPHANT_SLUG
 },
 
@@ -2466,7 +2532,7 @@ DUMMY(MONS_CRAB, 't', LIGHTGREY, "crab", TILEP_MONS_FIRE_CRAB)
     MONS_UNSEEN_HORROR, 'x', MAGENTA, "unseen horror",
     M_SEE_INVIS | M_INVIS | M_BATTY,
     MR_NO_FLAGS,
-    12, MONS_UNSEEN_HORROR, MONS_UNSEEN_HORROR, MH_NATURAL, 20,
+    6, MONS_UNSEEN_HORROR, MONS_UNSEEN_HORROR, MH_NATURAL, 20,
     { {AT_HIT, AF_PLAIN, 12}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     7, 385,
     5, 10, MST_NO_SPELLS, false, S_SILENT,
@@ -2489,34 +2555,8 @@ DUMMY(MONS_CRAB, 't', LIGHTGREY, "crab", TILEP_MONS_FIRE_CRAB)
 },
 
 {
-    MONS_CRAWLING_CORPSE, 'x', BROWN, "crawling corpse",
-    M_NO_EXP_GAIN | M_NO_REGEN,
-    mrd(MR_RES_COLD, 2),
-    8, MONS_MACABRE_MASS, MONS_CRAWLING_CORPSE, MH_UNDEAD, MAG_IMMUNE,
-    { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    1, 10,
-    1, 0, MST_NO_SPELLS, false, S_SILENT,
-    I_BRAINLESS, HT_LAND, 8, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_TINY, MON_SHAPE_MISC,
-    {TILEP_MONS_CRAWLING_CORPSE}, TILE_ERROR
-},
-
-{
-    MONS_MACABRE_MASS, 'x', BROWN, "macabre mass",
-    M_NO_EXP_GAIN | M_NO_REGEN,
-    mrd(MR_RES_COLD, 2),
-    8, MONS_MACABRE_MASS, MONS_MACABRE_MASS, MH_UNDEAD, MAG_IMMUNE,
-    { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    1, 30,
-    1, 0, MST_NO_SPELLS, false, S_SILENT,
-    I_BRAINLESS, HT_LAND, 5, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_MISC,
-    {TILEP_MONS_MACABRE_MASS}, TILE_ERROR
-},
-
-{
     MONS_ANCIENT_ZYME, 'x', GREEN, "ancient zyme",
-    M_SEE_INVIS | M_FLIES,
+    M_FLIES,
     MR_NO_FLAGS,
     8, MONS_ANCIENT_ZYME, MONS_ANCIENT_ZYME, MH_NONLIVING, 60,
     { {AT_HIT, AF_PLAIN, 16}, {AT_HIT, AF_PLAIN, 16}, AT_NO_ATK, AT_NO_ATK },
@@ -2529,7 +2569,7 @@ DUMMY(MONS_CRAB, 't', LIGHTGREY, "crab", TILEP_MONS_FIRE_CRAB)
 
 {
     MONS_WORLDBINDER, 'x', CYAN, "worldbinder",
-    M_SEE_INVIS | M_FLIES,
+    M_FLIES,
     MR_NO_FLAGS,
     13, MONS_WORLDBINDER, MONS_WORLDBINDER, MH_NONLIVING, 60,
     { {AT_HIT, AF_PLAIN, 8}, {AT_HIT, AF_PLAIN, 8},
@@ -2539,6 +2579,19 @@ DUMMY(MONS_CRAB, 't', LIGHTGREY, "crab", TILEP_MONS_FIRE_CRAB)
     I_ANIMAL, HT_LAND, 14, DEFAULT_ENERGY,
     MONUSE_OPEN_DOORS, SIZE_SMALL, MON_SHAPE_MISC,
     {TILEP_MONS_WORLDBINDER}, TILE_ERROR
+},
+
+{
+    MONS_BUNYIP, 'x', YELLOW, "bunyip",
+    M_WARM_BLOOD,
+    MR_RES_POISON,
+    7, MONS_BUNYIP, MONS_BUNYIP, MH_NATURAL, 60,
+    { {AT_CLAW, AF_PLAIN, 40}, {AT_CLAW, AF_PLAIN, 40}, {AT_CLAW, AF_PLAIN, 40}, AT_NO_ATK },
+    12, 800,
+    6, 10, MST_BUNYIP, true, S_SCREAM,
+    I_ANIMAL, HT_AMPHIBIOUS, 15, ATTACK_ENERGY(45),
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_QUADRUPED /*close enough*/,
+    {TILEP_MONS_BUNYIP}, TILE_CORPSE_BUNYIP
 },
 
 // flying insects ('y')
@@ -2596,7 +2649,7 @@ DUMMY(MONS_CRAB, 't', LIGHTGREY, "crab", TILEP_MONS_FIRE_CRAB)
 
 {
     MONS_MELIAI, 'y', GREEN, "meliai",
-    M_NO_SKELETON | M_FLIES,
+    M_NO_SKELETON | M_FLIES | M_WEB_IMMUNE,
     MR_VUL_POISON,
     6, MONS_KILLER_BEE, MONS_MELIAI, MH_NATURAL, 20,
     { {AT_HIT, AF_PLAIN, 14}, {AT_STING, AF_POISON, 12}, AT_NO_ATK, AT_NO_ATK },
@@ -2609,7 +2662,7 @@ DUMMY(MONS_CRAB, 't', LIGHTGREY, "crab", TILEP_MONS_FIRE_CRAB)
 
 {
     MONS_SPARK_WASP, 'y', LIGHTCYAN, "spark wasp",
-    M_NO_SKELETON | M_FLIES,
+    M_NO_SKELETON | M_FLIES | M_WEB_IMMUNE,
     mrd(MR_RES_ELEC, 3) | MR_VUL_POISON,
     12, MONS_SPARK_WASP, MONS_SPARK_WASP, MH_NATURAL, 40,
     { {AT_STING, AF_ELEC, 33}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -2624,11 +2677,11 @@ DUMMY(MONS_MOTH, 'y', WHITE, "moth", TILEP_MONS_MOTH_OF_WRATH)
 
 {
     MONS_GHOST_MOTH, 'y', MAGENTA, "ghost moth",
-    M_NO_SKELETON | M_INVIS | M_FLIES,
+    M_NO_SKELETON | M_INVIS | M_FLIES | M_WEB_IMMUNE,
     MR_RES_POISON | MR_RES_COLD,
-    18, MONS_MOTH, MONS_GHOST_MOTH, MH_NATURAL, 100,
-    { {AT_HIT, AF_DRAIN_STAT, 18}, {AT_HIT, AF_DRAIN_STAT, 18},
-      {AT_STING, AF_POISON_STRONG, 12}, AT_NO_ATK },
+    16, MONS_MOTH, MONS_GHOST_MOTH, MH_NATURAL, 100,
+    { {AT_HIT, AF_DRAIN_STAT, 24}, {AT_HIT, AF_DRAIN_STAT, 18},
+      {AT_STING, AF_DRAIN_STAT, 18}, AT_NO_ATK },
     13, 715,
     8, 10, MST_DRAIN_GAZE, true, S_SILENT,
     I_ANIMAL, HT_LAND, 12, DEFAULT_ENERGY,
@@ -2638,7 +2691,7 @@ DUMMY(MONS_MOTH, 'y', WHITE, "moth", TILEP_MONS_MOTH_OF_WRATH)
 
 {
     MONS_MOTH_OF_WRATH, 'y', LIGHTRED, "moth of wrath",
-    M_NO_SKELETON | M_FLIES,
+    M_NO_SKELETON | M_FLIES | M_WEB_IMMUNE,
     MR_NO_FLAGS,
     10, MONS_MOTH, MONS_MOTH_OF_WRATH, MH_NATURAL, 40,
     { {AT_BITE, AF_RAGE, 25}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -2649,13 +2702,26 @@ DUMMY(MONS_MOTH, 'y', WHITE, "moth", TILEP_MONS_MOTH_OF_WRATH)
     {TILEP_MONS_MOTH_OF_WRATH}, TILE_CORPSE_MOTH_OF_WRATH
 },
 
+{
+    MONS_SUN_MOTH, 'y', ETC_GOLD, "sun moth",
+    M_NO_SKELETON | M_FLIES | M_WEB_IMMUNE,
+    MR_RES_FIRE | MR_RES_ELEC,
+    10, MONS_MOTH, MONS_SUN_MOTH, MH_HOLY, 60,
+    { {AT_BITE, AF_STICKY_FLAME, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    9, 805,
+    6, 12, MST_SUN_MOTH, true, S_SILENT,
+    I_ANIMAL, HT_LAND, 12, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_INSECT_WINGED,
+    {TILEP_MONS_SUN_MOTH}, TILE_CORPSE_SUN_MOTH
+},
+
 // corporeal (semi-)humanoid undead ('z')
 {
     MONS_WIGHT, 'z', GREEN, "wight",
     M_NO_FLAGS,
     mrd(MR_RES_COLD, 2),
-    16, MONS_WIGHT, MONS_WIGHT, MH_UNDEAD, 20,
-    { {AT_HIT, AF_DRAIN_XP, 8}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    20, MONS_WIGHT, MONS_WIGHT, MH_UNDEAD, 20,
+    { {AT_HIT, AF_DRAIN, 8}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     3, 165,
     4, 10, MST_NO_SPELLS, false, S_SILENT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
@@ -2683,7 +2749,7 @@ DUMMY(MONS_MOTH, 'y', WHITE, "moth", TILEP_MONS_MOTH_OF_WRATH)
     24, MONS_ANCIENT_CHAMPION, MONS_ANCIENT_CHAMPION, MH_UNDEAD, 120,
     { {AT_HIT, AF_PLAIN, 32}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     14, 700,
-    15, 10, MST_NO_SPELLS, false, S_SILENT,
+    15, 10, MST_ANCIENT_CHAMPION, false, S_SILENT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_ANCIENT_CHAMPION}, TILE_ERROR
@@ -2691,7 +2757,7 @@ DUMMY(MONS_MOTH, 'y', WHITE, "moth", TILEP_MONS_MOTH_OF_WRATH)
 
 {
     MONS_FLYING_SKULL, 'z', WHITE, "flying skull",
-    M_NO_FLAGS | M_FLIES, // duh
+    M_FLIES, // duh
     MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC,
     10, MONS_FLYING_SKULL, MONS_FLYING_SKULL, MH_UNDEAD, 20,
     { {AT_HIT, AF_PLAIN, 14}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -2706,7 +2772,7 @@ DUMMY(MONS_MOTH, 'y', WHITE, "moth", TILEP_MONS_MOTH_OF_WRATH)
     MONS_CURSE_SKULL, 'z', LIGHTMAGENTA, "curse skull",
     M_SEE_INVIS | M_SPEAKS | M_FLIES,
     mrd(MR_RES_FIRE | MR_RES_COLD, 2) | MR_RES_ELEC,
-    20, MONS_CURSE_SKULL, MONS_CURSE_SKULL, MH_UNDEAD, MAG_IMMUNE,
+    20, MONS_CURSE_SKULL, MONS_CURSE_SKULL, MH_UNDEAD, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     13, 520,
     35, 3, MST_CURSE_SKULL, false, S_MOAN,
@@ -2719,7 +2785,7 @@ DUMMY(MONS_MOTH, 'y', WHITE, "moth", TILEP_MONS_MOTH_OF_WRATH)
     MONS_CURSE_TOE, 'z', LIGHTGREEN, "curse toe",
     M_SEE_INVIS | M_SPEAKS | M_FLIES,
     MR_RES_ELEC | mrd(MR_RES_FIRE, 3) | MR_RES_COLD,
-    60, MONS_LICH, MONS_CURSE_TOE, MH_UNDEAD, MAG_IMMUNE,
+    60, MONS_CURSE_TOE, MONS_CURSE_TOE, MH_UNDEAD, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     14, 980,
     25, 1, MST_CURSE_TOE, false, S_MOAN,
@@ -2728,10 +2794,23 @@ DUMMY(MONS_MOTH, 'y', WHITE, "moth", TILEP_MONS_MOTH_OF_WRATH)
     {TILEP_MONS_CURSE_TOE}, TILE_ERROR
 },
 
+{
+    MONS_REVENANT, 'z', MAGENTA, "revenant",
+    M_SEE_INVIS | M_SPEAKS,
+    mrd(MR_RES_COLD, 2),
+    18, MONS_REVENANT, MONS_REVENANT, MH_UNDEAD, WILL_INVULN,
+    { {AT_HIT, AF_PLAIN, 26}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    18, 810,
+    8, 12, MST_REVENANT, false, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_REVENANT}, TILE_ERROR
+},
+
 // angelic beings ('A')
 {
     MONS_ANGEL, 'A', WHITE, "angel",
-    M_FIGHTER | M_SEE_INVIS | M_SPEAKS | M_FLIES,
+    M_FIGHTER | M_SPEAKS | M_FLIES,
     MR_RES_POISON | MR_RES_ELEC,
     10, MONS_ANGEL, MONS_ANGEL, MH_HOLY, 120,
     { {AT_HIT, AF_PLAIN, 25}, {AT_HIT, AF_PLAIN, 10}, AT_NO_ATK,
@@ -2746,7 +2825,7 @@ DUMMY(MONS_MOTH, 'y', WHITE, "moth", TILEP_MONS_MOTH_OF_WRATH)
 
 {
     MONS_CHERUB, 'A', LIGHTBLUE, "cherub",
-    M_FIGHTER | M_ARCHER | M_SEE_INVIS | M_SPEAKS | M_FLIES,
+    M_FIGHTER | M_ARCHER | M_SPEAKS | M_FLIES,
     MR_RES_POISON | MR_RES_ELEC | MR_RES_FIRE,
     10, MONS_ANGEL, MONS_CHERUB, MH_HOLY, 100,
     { {AT_HIT, AF_PLAIN, 15}, {AT_CHERUB, AF_PLAIN, 8}, AT_NO_ATK,
@@ -2776,7 +2855,7 @@ DUMMY(MONS_MOTH, 'y', WHITE, "moth", TILEP_MONS_MOTH_OF_WRATH)
 
 {
     MONS_DAEVA, 'A', YELLOW, "daeva",
-    M_FIGHTER | M_SEE_INVIS | M_SPEAKS | M_FLIES,
+    M_FIGHTER | M_SPEAKS | M_FLIES,
     MR_RES_POISON,
     12, MONS_ANGEL, MONS_DAEVA, MH_HOLY, 140,
     { {AT_HIT, AF_PLAIN, 25}, {AT_HIT, AF_PLAIN, 10}, AT_NO_ATK,
@@ -2794,7 +2873,7 @@ DUMMY(MONS_MOTH, 'y', WHITE, "moth", TILEP_MONS_MOTH_OF_WRATH)
     M_FIGHTER | M_SEE_INVIS | M_SPEAKS | M_FLIES,
     MR_RES_COLD | MR_RES_ELEC,
     10, MONS_ANGEL, MONS_PROFANE_SERVITOR, MH_UNDEAD, 140,
-    { {AT_HIT, AF_VAMPIRIC, 25}, {AT_HIT, AF_DRAIN_XP, 10}, AT_NO_ATK,
+    { {AT_HIT, AF_VAMPIRIC, 25}, {AT_HIT, AF_DRAIN, 10}, AT_NO_ATK,
        AT_NO_ATK },
     18, 1530,
     10, 20, MST_NO_SPELLS, false, S_SILENT,
@@ -2802,6 +2881,103 @@ DUMMY(MONS_MOTH, 'y', WHITE, "moth", TILEP_MONS_MOTH_OF_WRATH)
     MONUSE_STARTING_EQUIPMENT, SIZE_MEDIUM,
         MON_SHAPE_HUMANOID_WINGED,
     {TILEP_MONS_PROFANE_SERVITOR}, TILE_ERROR
+},
+
+// beetles and other insects ('B')
+
+{
+    MONS_GIANT_COCKROACH, 'B', BROWN, "giant cockroach",
+    M_NO_SKELETON,
+    MR_VUL_POISON,
+    10, MONS_GIANT_COCKROACH, MONS_GIANT_COCKROACH, MH_NATURAL, 0,
+    { {AT_BITE, AF_PLAIN, 2}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    1, 50,
+    3, 10, MST_NO_SPELLS, true, S_SILENT,
+    I_ANIMAL, HT_LAND, 12, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_LITTLE, MON_SHAPE_INSECT,
+    {TILEP_MONS_GIANT_COCKROACH}, TILE_CORPSE_GIANT_COCKROACH
+},
+
+{
+    MONS_RADROACH, 'B', LIGHTRED, "radroach",
+    M_NO_SKELETON | M_WEB_IMMUNE,
+    MR_NO_FLAGS,
+    10, MONS_GIANT_COCKROACH, MONS_RADROACH, MH_NATURAL, 60,
+    { {AT_BITE, AF_PLAIN, 28}, {AT_CLAW, AF_PLAIN, 16}, AT_NO_ATK, AT_NO_ATK },
+    12, 800,
+    13, 5, MST_RADROACH, true, S_SILENT,
+    I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_LITTLE, MON_SHAPE_INSECT,
+    {TILEP_MONS_RADROACH}, TILE_CORPSE_RADROACH
+},
+
+// dummy for recolouring
+{
+    MONS_FORMICID, 'B', GREEN, "formicid",
+    M_WARM_BLOOD | M_SEE_INVIS | M_SPEAKS | M_NO_SKELETON | M_NO_POLY_TO
+        | M_NO_GEN_DERIVED,
+    MR_NO_FLAGS,
+    10, MONS_FORMICID, MONS_FORMICID, MH_NATURAL, 40,
+    { {AT_HIT, AF_PLAIN, 15}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    6, 420,
+    3, 10, MST_NO_SPELLS, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_FORMICID}, TILE_CORPSE_FORMICID
+},
+
+{
+    MONS_ENTROPY_WEAVER, 'B', LIGHTCYAN, "entropy weaver",
+    M_WARM_BLOOD | M_NO_SKELETON | M_FIGHTER | M_SEE_INVIS | M_SPEAKS
+        | M_WEB_IMMUNE | M_FIGHTER,
+    MR_NO_FLAGS,
+    25, MONS_ENTROPY_WEAVER, MONS_ENTROPY_WEAVER, MH_NATURAL, 60,
+    { {AT_HIT, AF_PLAIN, 17}, {AT_HIT, AF_PLAIN, 17}, {AT_HIT, AF_PLAIN, 17}, {AT_HIT, AF_PLAIN, 17} },
+    7, 715,
+    7, 13, MST_ENTROPY_WEAVER, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 12, DEFAULT_ENERGY,
+    MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_ENTROPY_WEAVER}, TILE_CORPSE_ENTROPY_WEAVER
+},
+
+{
+    MONS_BOULDER_BEETLE, 'B', LIGHTGREY, "boulder beetle",
+    M_NO_SKELETON | M_WEB_IMMUNE,
+    MR_VUL_POISON,
+    12, MONS_BOULDER_BEETLE, MONS_BOULDER_BEETLE, MH_NATURAL, 40,
+    { {AT_BITE, AF_PLAIN, 27}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    12, 765,
+    20, 2, MST_BOULDER_BEETLE, true, S_SILENT,
+    I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_INSECT,
+    {TILEP_MONS_BOULDER_BEETLE}, TILE_CORPSE_BOULDER_BEETLE
+},
+
+{
+    MONS_PHARAOH_ANT, 'B', YELLOW, "pharaoh ant",
+    M_NO_SKELETON | M_WEB_IMMUNE,
+    MR_NO_FLAGS,
+    10, MONS_PHARAOH_ANT, MONS_PHARAOH_ANT, MH_UNDEAD, 60,
+    { {AT_BITE, AF_DRAIN, 43}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    10, 360,
+    4, 8, MST_NO_SPELLS, false, S_MOAN,
+    I_ANIMAL, HT_LAND, 14, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_MEDIUM, MON_SHAPE_INSECT,
+    {TILEP_MONS_PHARAOH_ANT}, TILE_ERROR
+},
+
+
+{
+    MONS_DEATH_SCARAB, 'B', BLUE, "death scarab",
+    M_NO_SKELETON | M_BATTY | M_WEB_IMMUNE,
+    MR_NO_FLAGS,
+    12, MONS_DEATH_SCARAB, MONS_DEATH_SCARAB, MH_UNDEAD, 60,
+    { {AT_BITE, AF_SCARAB, 33}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    8, 320,
+    7, 14, MST_NO_SPELLS, true, S_FAINT_SKITTER,
+    I_ANIMAL, HT_LAND, 30, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_LITTLE, MON_SHAPE_INSECT,
+    {TILEP_MONS_DEATH_SCARAB}, TILE_CORPSE_DEATH_SCARAB
 },
 
 // cyclopes and giants ('C')
@@ -2825,7 +3001,7 @@ DUMMY(MONS_GIANT, 'C', LIGHTGREY, "giant", TILEP_MONS_STONE_GIANT)
     M_WARM_BLOOD | M_TWO_WEAPONS | M_SPEAKS,
     MR_NO_FLAGS,
     12, MONS_GIANT, MONS_ETTIN, MH_NATURAL, 40,
-    { {AT_HIT, AF_PLAIN, 45}, {AT_HIT, AF_PLAIN, 45}, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 40}, {AT_HIT, AF_PLAIN, 40}, AT_NO_ATK, AT_NO_ATK },
     12, 660,
     9, 4, MST_NO_SPELLS, true, S_SHOUT2,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
@@ -2873,7 +3049,7 @@ DUMMY(MONS_GIANT, 'C', LIGHTGREY, "giant", TILEP_MONS_STONE_GIANT)
 },
 
 {
-    MONS_TITAN, 'C', MAGENTA, "titan",
+    MONS_TITAN, 'C', LIGHTCYAN, "titan",
     M_FIGHTER | M_WARM_BLOOD | M_SEE_INVIS | M_SPEAKS,
     mrd(MR_RES_ELEC, 3),
     12, MONS_GIANT, MONS_TITAN, MH_NATURAL, 180,
@@ -2911,6 +3087,32 @@ DUMMY(MONS_GIANT, 'C', LIGHTGREY, "giant", TILEP_MONS_STONE_GIANT)
     {TILEP_MONS_IRON_GIANT}, TILE_CORPSE_IRON_GIANT
 },
 
+{
+    MONS_CACTUS_GIANT, 'C', GREEN, "cactus giant",
+    M_SPINY | M_NO_POLY_TO, // summon only
+    MR_RES_POISON,
+    10, MONS_GIANT, MONS_CACTUS_GIANT, MH_PLANT, 60,
+    { {AT_HIT, AF_PLAIN, 10}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    9, 495, // hp will be adjusted later
+    1, 2, MST_NO_SPELLS, false, S_SILENT,
+    I_HUMAN, HT_LAND, 10, ATTACK_ENERGY(30),
+    MONUSE_STARTING_EQUIPMENT, SIZE_GIANT, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_CACTUS_GIANT}, TILE_ERROR
+},
+
+{
+    MONS_TAINTED_LEVIATHAN, 'C', MAGENTA, "tainted leviathan",
+    M_WARM_BLOOD | M_SPEAKS | M_FIGHTER | M_SEE_INVIS | M_MIASMA_RING,
+    MR_RES_COLD,
+    10, MONS_GIANT, MONS_TAINTED_LEVIATHAN, MH_UNDEAD, 120,
+    { {AT_HIT, AF_PLAIN, 50}, {AT_HIT, AF_DRAIN, 30}, AT_NO_ATK, AT_NO_ATK },
+    18, 1500,
+    15, 2, MST_TAINTED_LEVIATHAN, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_STARTING_EQUIPMENT, SIZE_GIANT, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_TAINTED_LEVIATHAN}, TILE_CORPSE_TAINTED_LEVIATHAN
+},
+
 // dragons ('D')
 DUMMY(MONS_DRAGON, 'D', GREEN, "dragon", TILEP_MONS_FIRE_DRAGON)
 
@@ -2937,7 +3139,7 @@ DUMMY(MONS_DRAGON, 'D', GREEN, "dragon", TILEP_MONS_FIRE_DRAGON)
     13, 715,
     0, 5, MST_NO_SPELLS, true, S_ROAR,
     I_ANIMAL, HT_AMPHIBIOUS, 10, SWIM_ENERGY(6),
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_QUADRUPED,
+    MONUSE_NOTHING, SIZE_GIANT, MON_SHAPE_QUADRUPED,
     {TILEP_MONS_PROGRAM_BUG}, TILE_CORPSE_HYDRA
 },
 
@@ -2964,7 +3166,7 @@ DUMMY(MONS_DRAGON, 'D', GREEN, "dragon", TILEP_MONS_FIRE_DRAGON)
     4, 300,
     5, 10, MST_STEAM_DRAGON, true, S_HISS, // just for the pun
     I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_QUADRUPED_WINGED,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_QUADRUPED_WINGED,
     {TILEP_MONS_STEAM_DRAGON}, TILE_CORPSE_STEAM_DRAGON
 },
 
@@ -2991,7 +3193,7 @@ DUMMY(MONS_DRAGON, 'D', GREEN, "dragon", TILEP_MONS_FIRE_DRAGON)
     5, 275,
     5, 10, MST_ACID_DRAGON, true, S_ROAR,
     I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_QUADRUPED_WINGED,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_QUADRUPED_WINGED,
     {TILEP_MONS_ACID_DRAGON}, TILE_CORPSE_ACID_DRAGON
 },
 
@@ -3010,7 +3212,7 @@ DUMMY(MONS_DRAGON, 'D', GREEN, "dragon", TILEP_MONS_FIRE_DRAGON)
 
 {
     MONS_IRON_DRAGON, 'D', CYAN, "iron dragon",
-    M_SEE_INVIS | M_WARM_BLOOD | M_UNBREATHING,
+    M_SEE_INVIS | M_WARM_BLOOD,
     MR_RES_POISON | MR_RES_FIRE | MR_RES_COLD,
     14, MONS_DRAGON, MONS_IRON_DRAGON, MH_NATURAL, 160,
     { {AT_BITE, AF_PLAIN, 25}, {AT_CLAW, AF_PLAIN, 25},
@@ -3055,7 +3257,7 @@ DUMMY(MONS_DRAGON, 'D', GREEN, "dragon", TILEP_MONS_FIRE_DRAGON)
     M_SEE_INVIS | M_COLD_BLOOD | M_FLIES,
     MR_RES_POISON | mrd(MR_RES_COLD, 2) | mrd(MR_RES_NEG, 3),
     12, MONS_DRAGON, MONS_SHADOW_DRAGON, MH_NATURAL, 120,
-    { {AT_BITE, AF_DRAIN_XP, 20}, {AT_CLAW, AF_PLAIN, 15},
+    { {AT_BITE, AF_DRAIN, 20}, {AT_CLAW, AF_PLAIN, 15},
       {AT_CLAW, AF_PLAIN, 15}, AT_NO_ATK },
     17, 1275,
     15, 10, MST_SHADOW_DRAGON, true, S_SILENT, // stealth dragon
@@ -3096,81 +3298,93 @@ DUMMY(MONS_ELEMENTAL, 'E', LIGHTGREY, "elemental", TILEP_MONS_WATER_ELEMENTAL)
 
 {
     MONS_EARTH_ELEMENTAL, 'E', ETC_EARTH, "earth elemental",
-    M_NO_FLAGS,
+    M_UNBLINDABLE,
     mrd(MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC, 3)
         | MR_RES_PETRIFY,
-    13, MONS_ELEMENTAL, MONS_EARTH_ELEMENTAL, MH_NONLIVING, MAG_IMMUNE,
+    13, MONS_ELEMENTAL, MONS_EARTH_ELEMENTAL, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 40}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     6, 450,
     14, 4, MST_NO_SPELLS, false, S_SILENT,
     I_BRAINLESS, HT_LAND, 6, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_MISC,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_MISC,
     {TILEP_MONS_EARTH_ELEMENTAL}, TILE_ERROR
 },
 
 {
+    MONS_QUICKSILVER_ELEMENTAL, 'E', LIGHTCYAN, "quicksilver elemental",
+    M_SEE_INVIS | M_BATTY | M_UNBLINDABLE,
+    mrd(MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC, 3),
+    10, MONS_ELEMENTAL, MONS_QUICKSILVER_ELEMENTAL, MH_NONLIVING, WILL_INVULN,
+    { {AT_HIT, AF_ANTIMAGIC, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    16, 800,
+    1, 20, MST_QUICKSILVER_DRAGON, false, S_SILENT,
+    I_BRAINLESS, HT_LAND, 20, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_MISC,
+    {TILEP_MONS_QUICKSILVER_ELEMENTAL}, TILE_ERROR
+},
+
+{
     MONS_FIRE_ELEMENTAL, 'E', ETC_FIRE, "fire elemental",
-    M_INSUBSTANTIAL,
-    mrd(MR_RES_FIRE, 3) | MR_VUL_COLD | MR_RES_ELEC
-        | MR_VUL_WATER,
-    10, MONS_ELEMENTAL, MONS_FIRE_ELEMENTAL, MH_NONLIVING, MAG_IMMUNE,
+    M_INSUBSTANTIAL | M_UNBLINDABLE,
+    mrd(MR_RES_FIRE, 3) | MR_VUL_COLD | MR_RES_ELEC,
+    10, MONS_ELEMENTAL, MONS_FIRE_ELEMENTAL, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_PURE_FIRE, 0}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     6, 330,
     4, 12, MST_NO_SPELLS, false, S_SILENT,
     I_BRAINLESS, HT_AMPHIBIOUS_LAVA, 13, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_MISC,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_MISC,
     {TILEP_MONS_FIRE_ELEMENTAL}, TILE_ERROR
 },
 
 {
     MONS_WATER_ELEMENTAL, 'E', ETC_WATER, "water elemental",
-    M_NO_FLAGS,
+    M_UNBLINDABLE,
     MR_VUL_FIRE | MR_RES_ELEC,
-    12, MONS_ELEMENTAL, MONS_WATER_ELEMENTAL, MH_NONLIVING, MAG_IMMUNE,
+    12, MONS_ELEMENTAL, MONS_WATER_ELEMENTAL, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_ENGULF, 22}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     6, 420,
     4, 7, MST_NO_SPELLS, false, S_SILENT,
     I_BRAINLESS, HT_AMPHIBIOUS, 10, SWIM_ENERGY(6),
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_MISC,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_MISC,
     {TILEP_MONS_WATER_ELEMENTAL}, TILE_ERROR
 },
 
 {
     MONS_AIR_ELEMENTAL, 'E', ETC_AIR, "air elemental",
-    M_SEE_INVIS | M_INSUBSTANTIAL | M_FLIES,
-    mrd(MR_RES_ELEC, 3) | MR_RES_TORNADO,
-    6, MONS_ELEMENTAL, MONS_AIR_ELEMENTAL, MH_NONLIVING, MAG_IMMUNE,
+    M_SEE_INVIS | M_INSUBSTANTIAL | M_FLIES | M_UNBLINDABLE,
+    mrd(MR_RES_ELEC, 3),
+    6, MONS_ELEMENTAL, MONS_AIR_ELEMENTAL, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 15}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     6, 330,
     2, 18, MST_AIR_ELEMENTAL, false, S_SILENT,
     I_BRAINLESS, HT_LAND, 25, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_MISC,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_MISC,
     {TILEP_MONS_AIR_ELEMENTAL}, TILE_ERROR
 },
 
 {
     MONS_IRON_ELEMENTAL, 'E', ETC_IRON, "iron elemental",
-    M_NO_FLAGS,
+    M_UNBLINDABLE,
     mrd(MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC, 3),
-    13, MONS_ELEMENTAL, MONS_IRON_ELEMENTAL, MH_NONLIVING, MAG_IMMUNE,
+    13, MONS_ELEMENTAL, MONS_IRON_ELEMENTAL, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 40}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     12, 1080,
     20, 2, MST_IRON_ELEMENTAL, false, S_SILENT,
     I_BRAINLESS, HT_LAND, 6, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_MISC,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_MISC,
     {TILEP_MONS_IRON_ELEMENTAL}, TILE_ERROR
 },
 
 {
     MONS_ELEMENTAL_WELLSPRING, 'E', LIGHTCYAN, "elemental wellspring",
-    M_FAST_REGEN,
+    M_UNBLINDABLE,
     MR_RES_ELEC,
-    13, MONS_ELEMENTAL, MONS_ELEMENTAL_WELLSPRING, MH_NONLIVING, MAG_IMMUNE,
+    13, MONS_ELEMENTAL, MONS_ELEMENTAL_WELLSPRING, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     18, 620,
     8, 8, MST_ELEMENTAL_WELLSPRING, false, S_SILENT,
     I_BRAINLESS, HT_WATER, 10, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_MISC,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_MISC,
     {TILEP_MONS_ELEMENTAL_WELLSPRING}, TILE_ERROR
 },
 
@@ -3216,10 +3430,23 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
     {TILEP_MONS_BLINK_FROG}, TILE_CORPSE_BLINK_FROG
 },
 
+{
+    MONS_GOLIATH_FROG, 'F', LIGHTGREY, "goliath frog",
+    M_COLD_BLOOD,
+    MR_NO_FLAGS, // it's tough out there for a frog.
+    10, MONS_FROG, MONS_GOLIATH_FROG, MH_NATURAL, 60,
+    { { AT_HIT, AF_REACH_TONGUE, 27 }, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    12, 420,
+    3, 16, MST_NO_SPELLS, true, S_SILENT, // IRL, goliath frogs have no vocals!
+    I_ANIMAL, HT_AMPHIBIOUS, 12, SWIM_ENERGY(6),
+    MONUSE_NOTHING, SIZE_LITTLE /* ~13" */, MON_SHAPE_QUADRUPED_TAILLESS,
+    {TILEP_MONS_GOLIATH_FROG}, TILE_CORPSE_GOLIATH_FROG
+},
+
 // dummy for recolouring
 {
     MONS_BARACHI, 'F', LIGHTCYAN, "barachi",
-    M_SPEAKS | M_NO_POLY_TO,
+    M_SPEAKS | M_NO_POLY_TO | M_NO_GEN_DERIVED,
     MR_NO_FLAGS,
     10, MONS_FROG, MONS_BARACHI, MH_NATURAL, 10,
     { {AT_HIT, AF_PLAIN, 6}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -3233,7 +3460,7 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
 // eyes ('G')
 {
     MONS_FLOATING_EYE, 'G', WHITE, "floating eye",
-    M_SEE_INVIS | M_FLIES,
+    M_SEE_INVIS | M_FLIES | M_NO_SKELETON,
     MR_NO_FLAGS,
     6, MONS_FLOATING_EYE, MONS_FLOATING_EYE, MH_NATURAL, 10,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -3245,21 +3472,8 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
 },
 
 {
-    MONS_EYE_OF_DRAINING, 'G', LIGHTGREY, "eye of draining",
-    M_SEE_INVIS | M_FLIES,
-    MR_NO_FLAGS,
-    10, MONS_FLOATING_EYE, MONS_EYE_OF_DRAINING, MH_NATURAL, 60,
-    { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    7, 385,
-    3, 1, MST_DRAIN_GAZE, false, S_SILENT,
-    I_BRAINLESS, HT_LAND, 5, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_MEDIUM, MON_SHAPE_ORB,
-    {TILEP_MONS_EYE_OF_DRAINING}, TILE_ERROR
-},
-
-{
     MONS_GLOWING_ORANGE_BRAIN, 'G', LIGHTRED, "glowing orange brain",
-    M_WARM_BLOOD | M_SEE_INVIS | M_FLIES,
+    M_WARM_BLOOD | M_SEE_INVIS | M_FLIES | M_NO_SKELETON,
     MR_NO_FLAGS,
     13, MONS_GLOWING_ORANGE_BRAIN, MONS_GLOWING_ORANGE_BRAIN, MH_NATURAL, 100,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -3272,8 +3486,8 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
 
 {
     MONS_GREAT_ORB_OF_EYES, 'G', LIGHTGREEN, "great orb of eyes",
-    M_SEE_INVIS | M_FLIES,
-    MR_RES_POISON,
+    M_SEE_INVIS | M_FLIES | M_NO_SKELETON,
+    MR_NO_FLAGS,
     13, MONS_FLOATING_EYE, MONS_GREAT_ORB_OF_EYES, MH_NATURAL, 120,
     { {AT_BITE, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     12, 660,
@@ -3285,7 +3499,7 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
 
 {
     MONS_SHINING_EYE, 'G', LIGHTMAGENTA, "shining eye",
-    M_SEE_INVIS | M_FLIES,
+    M_SEE_INVIS | M_FLIES | M_NO_SKELETON,
     MR_NO_FLAGS,
     14, MONS_FLOATING_EYE, MONS_SHINING_EYE, MH_NATURAL, 100,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -3298,7 +3512,7 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
 
 {
     MONS_EYE_OF_DEVASTATION, 'G', YELLOW, "eye of devastation",
-    M_SEE_INVIS | M_FLIES,
+    M_SEE_INVIS | M_FLIES | M_NO_SKELETON,
     MR_NO_FLAGS,
     11, MONS_FLOATING_EYE, MONS_EYE_OF_DEVASTATION,
         MH_NATURAL, 100,
@@ -3312,7 +3526,7 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
 
 {
     MONS_GOLDEN_EYE, 'G', ETC_GOLD, "golden eye",
-    M_SEE_INVIS | M_BATTY | M_FLIES,
+    M_SEE_INVIS | M_BATTY | M_FLIES | M_NO_SKELETON,
     MR_NO_FLAGS,
     17, MONS_FLOATING_EYE, MONS_GOLDEN_EYE, MH_NATURAL, 60,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -3325,7 +3539,7 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
 
 {
     MONS_OPHAN, 'G', RED, "ophan",
-    M_SEE_INVIS | M_UNBREATHING | M_FLIES,
+    M_SEE_INVIS | M_FLIES,
     MR_NO_FLAGS,
     14, MONS_ANGEL, MONS_OPHAN, MH_HOLY, 140,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -3338,22 +3552,8 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
 
 // hybrids ('H')
 {
-    MONS_HIPPOGRIFF, 'H', BROWN, "hippogriff",
-    M_WARM_BLOOD | M_HYBRID | M_FLIES,
-    MR_NO_FLAGS,
-    8, MONS_HIPPOGRIFF, MONS_HIPPOGRIFF, MH_NATURAL, 25,
-    { {AT_BITE, AF_PLAIN, 12}, {AT_PECK, AF_PLAIN, 9}, {AT_CLAW, AF_PLAIN, 9},
-       AT_NO_ATK },
-    8, 435,
-    2, 7, MST_NO_SPELLS, true, S_SCREECH,
-    I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_QUADRUPED_WINGED,
-    {TILEP_MONS_HIPPOGRIFF}, TILE_CORPSE_HIPPOGRIFF
-},
-
-{
     MONS_MANTICORE, 'H', RED, "manticore",
-    M_WARM_BLOOD | M_HYBRID | M_FLIES,
+    M_WARM_BLOOD | M_FLIES,
     MR_NO_FLAGS,
     10, MONS_MANTICORE, MONS_MANTICORE, MH_NATURAL, 40,
     { {AT_BITE, AF_PLAIN, 26}, {AT_CLAW, AF_PLAIN, 14}, {AT_CLAW, AF_PLAIN, 14},
@@ -3367,7 +3567,7 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
 
 {
     MONS_MINOTAUR, 'H', LIGHTRED, "minotaur",
-    M_FIGHTER | M_WARM_BLOOD | M_SPEAKS | M_HYBRID,
+    M_FIGHTER | M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     10, MONS_MINOTAUR, MONS_MINOTAUR, MH_NATURAL, 100,
     { {AT_HIT, AF_PLAIN, 35}, {AT_GORE, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK },
@@ -3379,8 +3579,21 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
 },
 
 {
+    MONS_FENSTRIDER_WITCH, 'H', LIGHTMAGENTA, "fenstrider witch",
+    M_SPEAKS | M_WARM_BLOOD | M_SEE_INVIS,
+    MR_RES_POISON | MR_RES_NEG,
+    10, MONS_FENSTRIDER_WITCH, MONS_FENSTRIDER_WITCH, MH_NATURAL, 100,
+    { { AT_HIT, AF_PLAIN, 25 }, { AT_KICK, AF_PLAIN, 25 }, AT_NO_ATK, AT_NO_ATK },
+    16, 666,
+    3, 15, MST_FENSTRIDER_WITCH, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 13, DEFAULT_ENERGY,
+    MONUSE_WEAPONS_ARMOUR, SIZE_GIANT, MON_SHAPE_HUMANOID,
+    { TILEP_MONS_FENSTRIDER_WITCH }, TILE_CORPSE_FENSTRIDER_WITCH
+},
+
+{
     MONS_SPHINX, 'H', LIGHTGREY, "sphinx",
-    M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS | M_HYBRID | M_FLIES,
+    M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS | M_FLIES,
     MR_NO_FLAGS,
     12, MONS_SPHINX, MONS_SPHINX, MH_NATURAL, 60,
     { {AT_HIT, AF_PLAIN, 25}, {AT_HIT, AF_PLAIN, 12}, {AT_HIT, AF_PLAIN, 12},
@@ -3388,13 +3601,13 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
     16, 880,
     5, 5, MST_SPHINX, true, S_SHOUT,
     I_HUMAN, HT_LAND, 11, DEFAULT_ENERGY,
-    MONUSE_OPEN_DOORS, SIZE_BIG, MON_SHAPE_QUADRUPED_WINGED,
+    MONUSE_OPEN_DOORS, SIZE_GIANT, MON_SHAPE_QUADRUPED_WINGED,
     {TILEP_MONS_SPHINX}, TILE_CORPSE_SPHINX
 },
 
 {
     MONS_HARPY, 'H', GREEN, "harpy",
-    M_WARM_BLOOD | M_BATTY | M_HYBRID | M_FEMALE | M_FLIES,
+    M_WARM_BLOOD | M_BATTY | M_FLIES,
     MR_RES_POISON,
     9, MONS_HARPY, MONS_HARPY, MH_NATURAL, 20,
     { {AT_CLAW, AF_PLAIN, 19}, {AT_CLAW, AF_PLAIN, 14}, AT_NO_ATK,
@@ -3406,25 +3619,38 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
     {TILEP_MONS_HARPY}, TILE_CORPSE_HARPY
 },
 
+{
+    MONS_JOROGUMO, 'H', BLUE, "jorogumo",
+    M_WARM_BLOOD | M_SPEAKS | M_SEE_INVIS | M_WEB_IMMUNE,
+    MR_NO_FLAGS,
+    10, MONS_JOROGUMO, MONS_JOROGUMO, MH_NATURAL, 60,
+    { {AT_HIT, AF_POISON_PARALYSE, 28}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    12, 850,
+    4, 14, MST_JOROGUMO, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 12, DEFAULT_ENERGY,
+    MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_ARACHNID,
+    {TILEP_MONS_JOROGUMO}, TILE_CORPSE_JOROGUMO
+},
+
 // dummy, though it's rude to say so
 {
-    MONS_PALENTONGA, 'H', YELLOW, "palentonga",
-    M_SPEAKS | M_NO_POLY_TO,
+    MONS_ARMATAUR, 'H', YELLOW, "armataur",
+    M_SPEAKS | M_NO_POLY_TO | M_NO_GEN_DERIVED,
     MR_NO_FLAGS,
-    10, MONS_PALENTONGA, MONS_PALENTONGA, MH_NATURAL, 10,
+    10, MONS_ARMATAUR, MONS_ARMATAUR, MH_NATURAL, 10,
     { {AT_HIT, AF_PLAIN, 18}, {AT_TAIL_SLAP, AF_PLAIN, 12}, AT_NO_ATK,
         AT_NO_ATK },
     8, 450,
     15, 5, MST_NO_SPELLS, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_WEAPONS_ARMOUR, SIZE_BIG, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_PORCUPINE}, TILE_CORPSE_PORCUPINE
+    MONUSE_WEAPONS_ARMOUR, SIZE_LARGE, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_ARMATAUR}, TILE_CORPSE_ARMATAUR
 },
 
 // Mutant beasts - variable traits
 {
     MONS_MUTANT_BEAST, 'H', MAGENTA, "mutant beast",
-    M_NO_POLY_TO | M_HYBRID | M_NO_GEN_DERIVED,
+    M_NO_POLY_TO | M_NO_GEN_DERIVED,
     MR_NO_FLAGS,
     11, MONS_MUTANT_BEAST, MONS_MUTANT_BEAST, MH_NATURAL, -3,
     { {AT_HIT, AF_PLAIN, 27}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -3458,7 +3684,7 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
     { {AT_HIT, AF_PLAIN, 27}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     1, 1,
     5, 10, MST_NO_SPELLS, false, S_SHOUT,
-    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    I_HUMAN, HT_LAND, 10, ATTACK_ENERGY(15),
     MONUSE_STARTING_EQUIPMENT, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_ANCESTOR_KNIGHT}, TILE_ERROR
 },
@@ -3482,28 +3708,29 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
     { {AT_HIT, AF_PLAIN, 27}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     1, 1,
     5, 10, MST_NO_SPELLS, false, S_SHOUT,
-    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    I_HUMAN, HT_LAND, 10, ATTACK_ENERGY(5),
     MONUSE_STARTING_EQUIPMENT, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_ANCESTOR_HEXER}, TILE_ERROR
     },
 
 // jellies ('J')
 {
-    MONS_OOZE, 'J', LIGHTGREY, "ooze",
-    M_SEE_INVIS | M_UNBLINDABLE,
+    MONS_ENDOPLASM, 'J', LIGHTGREY, "endoplasm",
+    M_SEE_INVIS | M_UNBLINDABLE | M_WEB_IMMUNE | M_NO_SKELETON,
     MR_RES_POISON | mrd(MR_RES_ACID, 3),
-    3, MONS_JELLY, MONS_OOZE, MH_NATURAL, 20,
-    { {AT_HIT, AF_PLAIN, 5}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    3, 120,
-    1, 3, MST_NO_SPELLS, false, S_SILENT,
+    10, MONS_JELLY, MONS_ENDOPLASM, MH_NATURAL, 0,
+    { {AT_HIT, AF_PLAIN, 3}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    1, 60,
+    1, 3, MST_ENDOPLASM, false, S_SILENT,
     I_BRAINLESS, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_LITTLE, MON_SHAPE_BLOB,
-    {TILEP_MONS_OOZE}, TILE_ERROR
+    {TILEP_MONS_ENDOPLASM}, TILE_ERROR
 },
 
 {
     MONS_JELLY, 'J', LIGHTRED, "jelly",
-    M_SEE_INVIS | M_UNBLINDABLE | M_SPLITS | M_ACID_SPLASH | M_EAT_DOORS,
+    M_SEE_INVIS | M_UNBLINDABLE | M_SPLITS | M_ACID_SPLASH | M_EAT_DOORS
+        | M_WEB_IMMUNE | M_NO_SKELETON,
     MR_RES_POISON | mrd(MR_RES_ACID, 3),
     15, MONS_JELLY, MONS_JELLY, MH_NATURAL, 10,
     { {AT_HIT, AF_ACID, 3}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -3516,7 +3743,7 @@ DUMMY(MONS_FROG, 'F', LIGHTGREEN, "giant frog", TILEP_MONS_BULLFROG)
 
 {
     MONS_SLIME_CREATURE, 'J', GREEN, "slime creature",
-    M_FAST_REGEN | M_HERD,
+    M_HERD | M_WEB_IMMUNE | M_NO_SKELETON | M_UNBLINDABLE,
     MR_RES_POISON,
     3, MONS_JELLY, MONS_SLIME_CREATURE, MH_NATURAL, 40,
     { {AT_HIT, AF_PLAIN, 22}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -3531,10 +3758,35 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
       TILEP_MONS_PROGRAM_BUG)
 
 {
+    MONS_ROCKSLIME, 'J', BROWN, "rockslime",
+    M_SEE_INVIS | M_UNBLINDABLE | M_EAT_DOORS | M_WEB_IMMUNE | M_NO_SKELETON,
+    MR_RES_POISON | MR_RES_ELEC | mrd(MR_RES_FIRE, 2),
+    10, MONS_JELLY, MONS_ROCKSLIME, MH_NATURAL, 60,
+    { {AT_HIT, AF_TRAMPLE, 50}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    20, 600,
+    27, 2, MST_NO_SPELLS, false, S_SILENT,
+    I_BRAINLESS, HT_LAND, 12, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_GIANT, MON_SHAPE_BLOB,
+    {TILEP_MONS_ROCKSLIME}, TILE_ERROR
+},
+
+{
+    MONS_QUICKSILVER_OOZE, 'J', CYAN, "quicksilver ooze",
+    M_SEE_INVIS | M_UNBLINDABLE | M_EAT_DOORS | M_WEB_IMMUNE | M_NO_SKELETON,
+    MR_RES_POISON | mrd(MR_RES_ACID, 3),
+    15, MONS_JELLY, MONS_QUICKSILVER_OOZE, MH_NATURAL, WILL_INVULN,
+    { {AT_HIT, AF_ENGULF, 27}, {AT_HIT, AF_ANTIMAGIC, 15}, AT_NO_ATK, AT_NO_ATK },
+    13, 500,
+    3, 15, MST_NO_SPELLS, false, S_SILENT,
+    I_BRAINLESS, HT_LAND, 16, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_GIANT, MON_SHAPE_BLOB,
+    {TILEP_MONS_QUICKSILVER_OOZE}, TILE_ERROR
+},
+
+{
     MONS_AZURE_JELLY, 'J', LIGHTBLUE, "azure jelly",
-    M_SEE_INVIS | M_UNBLINDABLE | M_EAT_DOORS,
-    MR_RES_POISON | MR_RES_COLD | MR_VUL_FIRE | MR_RES_ELEC
-        | mrd(MR_RES_ACID, 3),
+    M_SEE_INVIS | M_UNBLINDABLE | M_EAT_DOORS | M_WEB_IMMUNE | M_NO_SKELETON,
+    MR_RES_POISON | MR_RES_COLD | MR_VUL_FIRE | mrd(MR_RES_ACID, 3),
     14, MONS_JELLY, MONS_AZURE_JELLY, MH_NATURAL, 80,
     { {AT_HIT, AF_COLD, 12}, {AT_HIT, AF_COLD, 12}, {AT_HIT, AF_PLAIN, 12},
       {AT_HIT, AF_PLAIN, 12} },
@@ -3546,21 +3798,9 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
 },
 
 {
-    MONS_DEATH_OOZE, 'J', MAGENTA, "death ooze",
-    M_SEE_INVIS | M_UNBLINDABLE | M_EAT_DOORS,
-    MR_RES_COLD | mrd(MR_RES_ACID, 3),
-    15, MONS_JELLY, MONS_DEATH_OOZE, MH_UNDEAD, 120,
-    { {AT_HIT, AF_ROT, 32}, {AT_HIT, AF_PLAIN, 32}, AT_NO_ATK, AT_NO_ATK },
-    11, 495,
-    2, 4, MST_NO_SPELLS, false, S_SILENT,
-    I_BRAINLESS, HT_LAND, 12, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_LITTLE, MON_SHAPE_BLOB,
-    {TILEP_MONS_DEATH_OOZE}, TILE_ERROR
-},
-
-{
     MONS_ACID_BLOB, 'J', LIGHTCYAN, "acid blob",
-    M_SEE_INVIS | M_UNBLINDABLE | M_ACID_SPLASH | M_EAT_DOORS,
+    M_SEE_INVIS | M_UNBLINDABLE | M_ACID_SPLASH | M_EAT_DOORS | M_WEB_IMMUNE
+         | M_NO_SKELETON,
     MR_RES_POISON | mrd(MR_RES_ACID, 3),
     12, MONS_JELLY, MONS_ACID_BLOB, MH_NATURAL, 160,
     { {AT_HIT, AF_ACID, 42}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -3577,7 +3817,7 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     10, MONS_KOBOLD, MONS_KOBOLD, MH_NATURAL, 0,
-    { {AT_HIT, AF_PLAIN, 4}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 1}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     1, 35,
     2, 12, MST_NO_SPELLS, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
@@ -3586,23 +3826,23 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
 },
 
 {
-    MONS_BIG_KOBOLD, 'K', YELLOW, "big kobold",
+    MONS_KOBOLD_BRIGAND, 'K', YELLOW, "kobold brigand",
     M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
-    7, MONS_KOBOLD, MONS_BIG_KOBOLD, MH_NATURAL, 20,
+    7, MONS_KOBOLD, MONS_KOBOLD, MH_NATURAL, 20,
     { {AT_HIT, AF_PLAIN, 7}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     5, 275,
     3, 12, MST_NO_SPELLS, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_BIG_KOBOLD}, TILE_CORPSE_BIG_KOBOLD
+    {TILEP_MONS_KOBOLD_BRIGAND}, TILE_ERROR
 },
 
 {
     MONS_KOBOLD_DEMONOLOGIST, 'K', MAGENTA, "kobold demonologist",
     M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
-    18, MONS_KOBOLD, MONS_KOBOLD, MH_NATURAL | MH_EVIL, 40,
+    18, MONS_KOBOLD, MONS_KOBOLD, MH_NATURAL, 40,
     { {AT_HIT, AF_PLAIN, 4}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     6, 390,
     2, 13, MST_KOBOLD_DEMONOLOGIST, true, S_SHOUT,
@@ -3616,10 +3856,10 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     MONS_LICH, 'L', LIGHTGREY, "lich",
     M_SEE_INVIS | M_SPEAKS,
     mrd(MR_RES_COLD, 2),
-    18, MONS_LICH, MONS_LICH, MH_UNDEAD, MAG_IMMUNE,
-    { {AT_TOUCH, AF_DRAIN_XP, 15}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    18, MONS_LICH, MONS_LICH, MH_UNDEAD, WILL_INVULN,
+    { {AT_TOUCH, AF_DRAIN, 15}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     20, 800,
-    10, 10, MST_NO_SPELLS, false, S_SHOUT,
+    10, 10, MST_LICH, false, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_LICH}, TILE_ERROR
@@ -3629,26 +3869,26 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     MONS_ANCIENT_LICH, 'L', WHITE, "ancient lich",
     M_SEE_INVIS | M_SPEAKS,
     mrd(MR_RES_COLD, 2) | MR_RES_FIRE | MR_RES_ELEC,
-    24, MONS_LICH, MONS_LICH, MH_UNDEAD, MAG_IMMUNE,
-    { {AT_TOUCH, AF_DRAIN_XP, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    24, MONS_LICH, MONS_LICH, MH_UNDEAD, WILL_INVULN,
+    { {AT_TOUCH, AF_DRAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     27, 1080,
-    20, 10, MST_NO_SPELLS, false, S_SHOUT,
+    20, 10, MST_ANCIENT_LICH, false, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_ANCIENT_LICH}, TILE_ERROR
 },
 
 {
-    MONS_REVENANT, 'L', CYAN, "revenant",
+    MONS_DREAD_LICH, 'L', LIGHTMAGENTA, "dread lich",
     M_SEE_INVIS | M_SPEAKS,
-    mrd(MR_RES_COLD, 2),
-    18, MONS_REVENANT, MONS_REVENANT, MH_UNDEAD, MAG_IMMUNE,
-    { {AT_HIT, AF_PLAIN, 26}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    18, 810,
-    8, 12, MST_REVENANT, false, S_SHOUT,
+    mrd(MR_RES_COLD, 2) | MR_RES_FIRE | MR_RES_ELEC,
+    24, MONS_LICH, MONS_LICH, MH_UNDEAD, WILL_INVULN,
+    { {AT_TOUCH, AF_DRAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    27, 1080,
+    20, 10, MST_DREAD_LICH, false, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_REVENANT}, TILE_ERROR
+    {TILEP_MONS_DREAD_LICH}, TILE_ERROR
 },
 
 {
@@ -3662,6 +3902,19 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_HALAZID_WARLOCK}, TILE_ERROR
+},
+
+{
+    MONS_STOKER, 'L', ETC_FIRE, "stoker",
+    M_NO_SKELETON,
+    mrd(MR_RES_FIRE, 3),
+    10, MONS_LICH, MONS_STOKER, MH_UNDEAD, 120,
+    { {AT_TOUCH, AF_FIRE, 15}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    13, 800,
+    5, 12, MST_STOKER, false, S_SHOUT,
+    I_HUMAN, HT_AMPHIBIOUS_LAVA, 10, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_STOKER}, TILE_ERROR
 },
 
 // mummies ('M')
@@ -3680,7 +3933,7 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
 
 {
     MONS_GUARDIAN_MUMMY, 'M', YELLOW, "guardian mummy",
-    M_FIGHTER | M_SEE_INVIS,
+    M_FIGHTER,
     MR_RES_COLD,
     13, MONS_MUMMY, MONS_MUMMY, MH_UNDEAD, 40,
     { {AT_HIT, AF_PLAIN, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -3692,21 +3945,21 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
 },
 
 {
-    MONS_GREATER_MUMMY, 'M', WHITE, "greater mummy",
+    MONS_ROYAL_MUMMY, 'M', WHITE, "royal mummy",
     M_SEE_INVIS | M_SPEAKS,
     MR_RES_COLD | MR_RES_ELEC,
     24, MONS_MUMMY, MONS_MUMMY, MH_UNDEAD, 160,
     { {AT_HIT, AF_PLAIN, 35}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     15, 1950,
-    10, 6, MST_NO_SPELLS, false, S_SILENT,
+    10, 6, MST_ROYAL_MUMMY, false, S_SILENT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_GREATER_MUMMY}, TILE_ERROR
+    {TILEP_MONS_ROYAL_MUMMY}, TILE_ERROR
 },
 
 {
     MONS_MUMMY_PRIEST, 'M', RED, "mummy priest",
-    M_SEE_INVIS | M_SPEAKS,
+    M_SPEAKS,
     MR_RES_COLD | MR_RES_ELEC,
     20, MONS_MUMMY, MONS_MUMMY, MH_UNDEAD, 120,
     { {AT_HIT, AF_PLAIN, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -3723,7 +3976,7 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS,
     MR_RES_POISON,
     13, MONS_NAGA, MONS_NAGA, MH_NATURAL, 40,
-    { {AT_HIT, AF_PLAIN, 17}, {AT_CONSTRICT, AF_CRUSH, 3},
+    { {AT_HIT, AF_PLAIN, 22}, {AT_CONSTRICT, AF_CRUSH, 5},
        AT_NO_ATK, AT_NO_ATK },
     5, 275,
     6, 10, MST_NAGA, true, S_SHOUT,
@@ -3737,7 +3990,7 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS,
     MR_RES_POISON,
     14, MONS_NAGA, MONS_NAGA, MH_NATURAL, 60,
-    { {AT_HIT, AF_PLAIN, 17}, {AT_CONSTRICT, AF_CRUSH, 4},
+    { {AT_HIT, AF_PLAIN, 14}, {AT_CONSTRICT, AF_CRUSH, 4},
        AT_NO_ATK, AT_NO_ATK },
     7, 385,
     6, 10, MST_NAGA_MAGE, true, S_SHOUT,
@@ -3779,10 +4032,10 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     M_FIGHTER | M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS,
     MR_RES_POISON,
     11, MONS_NAGA, MONS_NAGA, MH_NATURAL, 80,
-    { {AT_HIT, AF_PLAIN, 28}, {AT_CONSTRICT, AF_CRUSH, 6},
+    { {AT_HIT, AF_PLAIN, 27}, {AT_CONSTRICT, AF_CRUSH, 6},
        AT_NO_ATK, AT_NO_ATK },
-    10, 1000,
-    6, 10, MST_NAGA, true, S_SHOUT,
+    10, 750,
+    6, 10, MST_NAGA_WARRIOR, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, MOVE_ENERGY(14),
     MONUSE_WEAPONS_ARMOUR, SIZE_LARGE, MON_SHAPE_NAGA,
     {TILEP_MONS_NAGA_WARRIOR}, TILE_ERROR
@@ -3796,7 +4049,7 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     { {AT_HIT, AF_PLAIN, 27}, {AT_CONSTRICT, AF_CRUSH, 7},
        AT_NO_ATK, AT_NO_ATK },
     15, 825,
-    6, 10, MST_NAGA_MAGE, true, S_SHOUT,
+    6, 10, MST_NAGARAJA, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, MOVE_ENERGY(14),
     MONUSE_WEAPONS_ARMOUR, SIZE_LARGE, MON_SHAPE_NAGA,
     {TILEP_MONS_NAGARAJA}, TILE_ERROR
@@ -3808,10 +4061,10 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
     9, MONS_OGRE, MONS_OGRE, MH_NATURAL, 20,
-    { {AT_HIT, AF_PLAIN, 17}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     5, 275,
     1, 6, MST_NO_SPELLS, true, S_SHOUT,
-    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    I_HUMAN, HT_LAND, 10, ATTACK_ENERGY(15),
     MONUSE_STARTING_EQUIPMENT, SIZE_LARGE, MON_SHAPE_HUMANOID,
     {TILEP_MONS_OGRE}, TILE_CORPSE_OGRE
 },
@@ -3826,7 +4079,7 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     { {AT_HIT, AF_PLAIN, 20}, {AT_HIT, AF_PLAIN, 15}, AT_NO_ATK, AT_NO_ATK },
     10, 550,
     3, 6, MST_NO_SPELLS, true, S_SHOUT2,
-    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    I_HUMAN, HT_LAND, 10, ATTACK_ENERGY(15),
     MONUSE_STARTING_EQUIPMENT, SIZE_LARGE, MON_SHAPE_HUMANOID,
     {TILEP_MONS_TWO_HEADED_OGRE}, TILE_CORPSE_TWO_HEADED_OGRE
 },
@@ -3835,24 +4088,37 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     MONS_OGRE_MAGE, 'O', MAGENTA, "ogre mage",
     M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS,
     MR_NO_FLAGS,
-    16, MONS_OGRE, MONS_OGRE, MH_NATURAL | MH_EVIL, 80,
-    { {AT_HIT, AF_PLAIN, 12}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    16, MONS_OGRE, MONS_OGRE, MH_NATURAL, 80,
+    { {AT_HIT, AF_PLAIN, 16}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 550,
-    1, 7, MST_NO_SPELLS, true, S_SHOUT,
-    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    1, 7, MST_OGRE_MAGE, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, ATTACK_ENERGY(15),
     MONUSE_WEAPONS_ARMOUR, SIZE_LARGE, MON_SHAPE_HUMANOID,
     {TILEP_MONS_OGRE_MAGE}, TILE_ERROR
+},
+
+{
+    MONS_IRONBOUND_THUNDERHULK, 'O', LIGHTCYAN, "ironbound thunderhulk",
+    M_WARM_BLOOD | M_SPEAKS,
+    MR_NO_FLAGS,
+    7, MONS_OGRE, MONS_OGRE, MH_NATURAL, 40,
+    { {AT_HIT, AF_PLAIN, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    18, 880,
+    1, 8, MST_IRONBOUND_THUNDERHULK, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, ATTACK_ENERGY(15),
+    MONUSE_WEAPONS_ARMOUR, SIZE_LARGE, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_IRONBOUND_THUNDERHULK}, TILE_ERROR
 },
 
 // immobile plants and fungi ('P')
 {
     MONS_PLANT, 'P', GREEN, "plant",
-    M_STATIONARY | M_NOT_DANGEROUS,
+    M_STATIONARY | M_NOT_DANGEROUS | M_FRAGILE,
     MR_RES_POISON,
-    10, MONS_PLANT, MONS_PLANT, MH_PLANT, MAG_IMMUNE,
+    10, MONS_PLANT, MONS_PLANT, MH_PLANT, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    10, 550,
-    10, 0, MST_NO_SPELLS, false, S_SILENT,
+    10, 2000,
+    0, 0, MST_NO_SPELLS, false, S_SILENT,
     I_BRAINLESS, HT_LAND, 0, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_PLANT,
     {TILEP_MONS_PLANT, TVARY_MOD}, TILE_ERROR
@@ -3860,12 +4126,12 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
 
 {
     MONS_DEMONIC_PLANT, 'P', ETC_RANDOM, "demonic plant",
-    M_STATIONARY | M_NOT_DANGEROUS,
+    M_STATIONARY | M_NOT_DANGEROUS | M_FRAGILE,
     MR_RES_POISON,
-    10, MONS_PLANT, MONS_DEMONIC_PLANT, MH_PLANT, MAG_IMMUNE,
+    10, MONS_PLANT, MONS_DEMONIC_PLANT, MH_PLANT, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    10, 550,
-    10, 0, MST_NO_SPELLS, false, S_SILENT,
+    10, 2000,
+    0, 0, MST_NO_SPELLS, false, S_SILENT,
     I_BRAINLESS, HT_LAND, 0, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_PLANT,
     {TILEP_MONS_DEMONIC_PLANT}, TILE_ERROR
@@ -3873,12 +4139,12 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
 
 {
     MONS_WITHERED_PLANT, 'P', DARKGREY, "withered plant",
-    M_STATIONARY | M_NOT_DANGEROUS,
-    mrd(MR_RES_POISON, 3),
-    10, MONS_PLANT, MONS_WITHERED_PLANT, MH_PLANT, MAG_IMMUNE,
+    M_STATIONARY | M_NOT_DANGEROUS | M_FRAGILE,
+    mrd(MR_RES_NEG | MR_RES_POISON, 3),
+    10, MONS_PLANT, MONS_WITHERED_PLANT, MH_PLANT, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    10, 550,
-    10, 0, MST_NO_SPELLS, false, S_SILENT,
+    10, 2000,
+    0, 0, MST_NO_SPELLS, false, S_SILENT,
     I_BRAINLESS, HT_LAND, 0, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_PLANT,
     {TILEP_MONS_WITHERED_PLANT}, TILE_ERROR
@@ -3911,15 +4177,31 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
 },
 
 {
+    MONS_STARFLOWER, 'P', LIGHTMAGENTA, "starflower",
+    M_STATIONARY,
+    MR_RES_POISON | MR_RES_FIRE | MR_RES_COLD | MR_RES_ACID,
+    10, MONS_PLANT, MONS_STARFLOWER, MH_PLANT, 100,
+    { {AT_TENTACLE_SLAP, AF_RIFT, 22},
+      {AT_TENTACLE_SLAP, AF_REACH, 17},
+      {AT_TENTACLE_SLAP, AF_DISTORT, 13},
+      AT_NO_ATK },
+    16, 900,
+    16, 0, MST_STARFLOWER, false, S_GURGLE,
+    I_BRAINLESS, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_MEDIUM, MON_SHAPE_PLANT,
+    {TILEP_MONS_STARFLOWER, TVARY_CYCLE}, TILE_ERROR
+},
+
+{
     MONS_BUSH, 'P', BROWN, "bush",
     M_STATIONARY | M_NOT_DANGEROUS,
     MR_RES_POISON | MR_VUL_FIRE,
-    10, MONS_PLANT, MONS_BUSH, MH_PLANT, MAG_IMMUNE,
+    10, MONS_PLANT, MONS_BUSH, MH_PLANT, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     20, 1100,
     15, 0, MST_NO_SPELLS, false, S_SILENT,
     I_BRAINLESS, HT_LAND, 0, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_PLANT,
+    MONUSE_NOTHING, SIZE_GIANT, MON_SHAPE_PLANT,
     {TILEP_MONS_BUSH, TVARY_MOD}, TILE_ERROR
 },
 
@@ -3932,7 +4214,7 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     8, 440,
     10, 0, MST_BURNING_BUSH, false, S_SILENT,
     I_BRAINLESS, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_PLANT,
+    MONUSE_NOTHING, SIZE_GIANT, MON_SHAPE_PLANT,
     {TILEP_MONS_BUSH_BURNING}, TILE_ERROR
 },
 
@@ -3940,7 +4222,7 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     MONS_TOADSTOOL, 'P', COLOUR_UNDEF, "toadstool",
     M_NOT_DANGEROUS | M_STATIONARY,
     MR_RES_POISON,
-    10, MONS_FUNGUS, MONS_TOADSTOOL, MH_PLANT, MAG_IMMUNE,
+    10, MONS_FUNGUS, MONS_TOADSTOOL, MH_PLANT, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     1, 30,
     1, 0, MST_NO_SPELLS, false, S_SILENT,
@@ -3951,12 +4233,12 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
 
 {
     MONS_FUNGUS, 'P', LIGHTGREY, "fungus",
-    M_NOT_DANGEROUS | M_STATIONARY,
+    M_NOT_DANGEROUS | M_STATIONARY | M_FRAGILE,
     MR_RES_POISON,
-    10, MONS_FUNGUS, MONS_FUNGUS, MH_PLANT, MAG_IMMUNE,
+    10, MONS_FUNGUS, MONS_FUNGUS, MH_PLANT, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    8, 440,
-    1, 0, MST_NO_SPELLS, false, S_SILENT,
+    8, 2000,
+    0, 0, MST_NO_SPELLS, false, S_SILENT,
     I_BRAINLESS, HT_LAND, 0, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_TINY, MON_SHAPE_FUNGUS,
     {TILEP_MONS_FUNGUS, TVARY_MOD}, TILE_ERROR
@@ -3966,7 +4248,7 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     MONS_BALLISTOMYCETE, 'P', MAGENTA, "ballistomycete",
     M_STATIONARY,
     MR_RES_POISON,
-    10, MONS_FUNGUS, MONS_BALLISTOMYCETE, MH_PLANT, MAG_IMMUNE,
+    10, MONS_FUNGUS, MONS_BALLISTOMYCETE, MH_PLANT, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     4, 260,
     1, 0, MST_BALLISTOMYCETE, false, S_SILENT,
@@ -3979,7 +4261,7 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     MONS_BRIAR_PATCH, 'P', YELLOW, "briar patch",
     M_STATIONARY | M_NOT_DANGEROUS | M_SPINY,
     MR_RES_POISON | MR_VUL_FIRE,
-    10, MONS_PLANT, MONS_BRIAR_PATCH, MH_PLANT, MAG_IMMUNE,
+    10, MONS_PLANT, MONS_BRIAR_PATCH, MH_PLANT, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 150,
     10, 0, MST_NO_SPELLS, false, S_SILENT,
@@ -3991,7 +4273,7 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
 // tengu ('Q')
 {
     MONS_TENGU, 'Q', LIGHTBLUE, "tengu",
-    M_WARM_BLOOD | M_SPEAKS | M_HYBRID | M_FLIES,
+    M_WARM_BLOOD | M_SPEAKS | M_FLIES,
     MR_NO_FLAGS,
     10, MONS_TENGU, MONS_TENGU, MH_NATURAL, 20,
     { {AT_HIT, AF_PLAIN, 10}, {AT_PECK, AF_PLAIN, 5}, {AT_CLAW, AF_PLAIN, 5},
@@ -4005,13 +4287,13 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
 
 {
     MONS_TENGU_CONJURER, 'Q', BLUE, "tengu conjurer",
-    M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS | M_HYBRID | M_FLIES,
+    M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS | M_FLIES,
     MR_NO_FLAGS,
     13, MONS_TENGU, MONS_TENGU, MH_NATURAL, 20,
     { {AT_HIT, AF_PLAIN, 10}, {AT_PECK, AF_PLAIN, 5}, {AT_CLAW, AF_PLAIN, 5},
        AT_NO_ATK },
     7, 315,
-    2, 17, MST_NO_SPELLS, true, S_SHOUT,
+    2, 17, MST_TENGU_CONJURER, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, MOVE_ENERGY(9),
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_TENGU_CONJURER}, TILE_ERROR
@@ -4019,7 +4301,7 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
 
 {
     MONS_TENGU_WARRIOR, 'Q', CYAN, "tengu warrior",
-    M_FIGHTER | M_ARCHER | M_WARM_BLOOD | M_SPEAKS | M_HYBRID | M_FLIES,
+    M_FIGHTER | M_ARCHER | M_WARM_BLOOD | M_SPEAKS | M_FLIES,
     MR_NO_FLAGS,
     13, MONS_TENGU, MONS_TENGU, MH_NATURAL, 40,
     { {AT_HIT, AF_PLAIN, 16}, {AT_PECK, AF_PLAIN, 8}, {AT_CLAW, AF_PLAIN, 8},
@@ -4033,23 +4315,38 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
 
 {
     MONS_TENGU_REAVER, 'Q', LIGHTMAGENTA, "tengu reaver",
-    M_FIGHTER | M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS | M_HYBRID | M_FLIES,
+    M_FIGHTER | M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS | M_FLIES,
     MR_NO_FLAGS,
     13, MONS_TENGU, MONS_TENGU, MH_NATURAL, 60,
     { {AT_HIT, AF_PLAIN, 27}, {AT_PECK, AF_PLAIN, 11}, {AT_CLAW, AF_PLAIN, 11},
        AT_NO_ATK },
     17, 850,
-    2, 17, MST_NO_SPELLS, true, S_SHOUT,
+    2, 17, MST_TENGU_REAVER, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, MOVE_ENERGY(9),
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_TENGU_REAVER}, TILE_ERROR
 },
 
 // spiritual beings ('R')
+
+// Dummy species monster
+{
+    MONS_DJINNI, 'R', MAGENTA, "djinni",
+    M_SPEAKS | M_FLIES,
+    mrd(MR_RES_FIRE, 2) | MR_VUL_COLD,
+    10, MONS_DJINNI, MONS_DJINNI, MH_NONLIVING, 30,
+    { {AT_HIT, AF_PLAIN, 10}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    8, 400,
+    5, 5, MST_NO_SPELLS, false, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_EFREET}, TILE_ERROR
+},
+
 {
     MONS_EFREET, 'R', RED, "efreet",
     M_SPEAKS | M_FLIES,
-    MR_RES_POISON | mrd(MR_RES_FIRE, 3) | MR_VUL_COLD | MR_VUL_WATER,
+    MR_RES_POISON | mrd(MR_RES_FIRE, 3) | MR_VUL_COLD,
     12, MONS_EFREET, MONS_EFREET, MH_DEMONIC, 20,
     { {AT_HIT, AF_PLAIN, 17}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     7, 385,
@@ -4073,6 +4370,19 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
 },
 
 {
+    MONS_WENDIGO, 'R', BLUE, "wendigo",
+    M_SEE_INVIS,
+    MR_RES_POISON | mrd(MR_RES_COLD, 3) | MR_VUL_FIRE,
+    10, MONS_WENDIGO, MONS_WENDIGO, MH_DEMONIC, 140,
+    { {AT_CLAW, AF_COLD, 30}, {AT_BITE, AF_VAMPIRIC, 20}, AT_NO_ATK, AT_NO_ATK },
+    15, 880,
+    4, 20, MST_WENDIGO, false, S_HOWL,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_WENDIGO}, TILE_ERROR
+},
+
+{
     MONS_DRYAD, 'R', LIGHTGREEN, "dryad",
     M_WARM_BLOOD | M_SPEAKS | M_NO_POLY_TO | M_NO_GEN_DERIVED,
     MR_VUL_FIRE,
@@ -4083,6 +4393,19 @@ DUMMY(MONS_MERGED_SLIME_CREATURE, 'J', LIGHTGREEN, "merged slime creature",
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_DRYAD}, TILE_CORPSE_DRYAD
+},
+
+{
+    MONS_ELEIONOMA, 'R', GREEN, "eleionoma",
+    M_WARM_BLOOD | M_SPEAKS,
+    MR_NO_FLAGS,
+    10, MONS_ELEIONOMA, MONS_ELEIONOMA, MH_NATURAL, 100,
+    { {AT_HIT, AF_PLAIN, 25}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    16, 800,
+    2, 10, MST_ELEIONOMA, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_STARTING_EQUIPMENT, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_ELEIONOMA}, TILE_CORPSE_ELEIONOMA
 },
 
 {
@@ -4119,7 +4442,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     M_COLD_BLOOD,
     MR_NO_FLAGS,
     13, MONS_SNAKE, MONS_BALL_PYTHON, MH_NATURAL, 0,
-    { {AT_BITE, AF_PLAIN, 2}, {AT_CONSTRICT, AF_CRUSH, 1},
+    { {AT_BITE, AF_PLAIN, 3}, {AT_CONSTRICT, AF_CRUSH, 1},
        AT_NO_ATK, AT_NO_ATK },
     1, 35,
     0, 11, MST_NO_SPELLS, true, S_HISS,
@@ -4133,7 +4456,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     M_COLD_BLOOD,
     MR_NO_FLAGS,
     10, MONS_SNAKE, MONS_ADDER, MH_NATURAL, 10,
-    { {AT_BITE, AF_POISON, 5}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_BITE, AF_POISON, 4}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     2, 110,
     1, 15, MST_NO_SPELLS, true, S_HISS,
     I_ANIMAL, HT_AMPHIBIOUS, 13, SWIM_ENERGY(6),
@@ -4168,7 +4491,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
 },
 
 {
-    MONS_SEA_SNAKE, 'S', LIGHTCYAN, "sea snake",
+    MONS_SEA_SNAKE, 'S', LIGHTRED, "sea snake",
     M_COLD_BLOOD,
     MR_NO_FLAGS,
     10, MONS_SNAKE, MONS_SEA_SNAKE, MH_NATURAL, 40,
@@ -4258,7 +4581,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     16, 880,
     20, 4, MST_NO_SPELLS, true, S_SHOUT,
     I_HUMAN, HT_LAND, 7, DEFAULT_ENERGY,
-    MONUSE_OPEN_DOORS, SIZE_BIG, MON_SHAPE_HUMANOID,
+    MONUSE_OPEN_DOORS, SIZE_LARGE, MON_SHAPE_HUMANOID,
     {TILEP_MONS_IRON_TROLL}, TILE_CORPSE_IRON_TROLL
 },
 
@@ -4350,7 +4673,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
 
 {
     MONS_JIANGSHI, 'V', YELLOW, "jiangshi",
-    M_SEE_INVIS | M_FIGHTER,
+    M_FIGHTER,
     MR_RES_COLD,
     10, MONS_JIANGSHI, MONS_VAMPIRE, MH_UNDEAD, 80,
     { {AT_CLAW, AF_VAMPIRIC, 27}, {AT_CLAW, AF_VAMPIRIC, 27}, AT_NO_ATK,
@@ -4376,16 +4699,14 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     {TILEP_MONS_GHOST}, TILE_ERROR
 },
 
-// XP modifier is 5 for these, because they really aren't all that
-// dangerous, but still come out at 200+ XP
 {
     MONS_PHANTOM, 'W', BLUE, "phantom",
     M_INSUBSTANTIAL | M_FLIES,
     mrd(MR_RES_COLD, 2),
-    5, MONS_PHANTOM, MONS_PHANTOM, MH_UNDEAD, 40,
-    { {AT_HIT, AF_BLINK, 10}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    7, 385,
-    3, 13, MST_BLINKER, false, S_SILENT,
+    7, MONS_PHANTOM, MONS_PHANTOM, MH_UNDEAD, 40,
+    { {AT_HIT, AF_BLINK_WITH, 8}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    6, 270,
+    3, 13, MST_NO_SPELLS, false, S_SILENT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_PHANTOM}, TILE_ERROR
@@ -4485,6 +4806,19 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
 },
 
 {
+    MONS_PUTRID_MOUTH, 'W', GREEN, "putrid mouth",
+    M_SEE_INVIS | M_INSUBSTANTIAL | M_FLIES,
+    MR_NO_FLAGS,
+    15, MONS_WRAITH, MONS_PUTRID_MOUTH, MH_UNDEAD, 100,
+    { {AT_BITE, AF_POISON_STRONG, 30}, {AT_CLAW, AF_DRAIN_STAT, 20}, AT_NO_ATK, AT_NO_ATK },
+    14, 700,
+    5, 14, MST_PUTRID_MOUTH, false, S_MOAN,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_PUTRID_MOUTH}, TILE_ERROR
+},
+
+{
     MONS_FREEZING_WRAITH, 'W', LIGHTBLUE, "freezing wraith",
     M_SEE_INVIS | M_INSUBSTANTIAL | M_FLIES,
     MR_VUL_FIRE | mrd(MR_RES_COLD, 3),
@@ -4534,7 +4868,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     11, 495,
     0, 0, MST_NO_SPELLS, false, S_SILENT,
     I_BRAINLESS, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_MISC,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_MISC,
     {TILEP_MONS_ABOMINATION_LARGE, TVARY_MOD}, TILE_ERROR
 },
 
@@ -4548,7 +4882,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     9, 495,
     5, 10, MST_THRASHING_HORROR, false, S_ROAR,
     I_ANIMAL, HT_LAND, 25, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_MISC,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_MISC,
     {TILEP_MONS_THRASHING_HORROR}, TILE_ERROR
 },
 
@@ -4582,10 +4916,10 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
 
 {
     MONS_TENTACLED_STARSPAWN, 'X', LIGHTCYAN, "tentacled starspawn",
-    M_SEE_INVIS,
+    M_NO_FLAGS,
     MR_NO_FLAGS,
     20, MONS_TENTACLED_STARSPAWN, MONS_TENTACLED_STARSPAWN, MH_NONLIVING, 120,
-    { {AT_BITE, AF_PLAIN, 40}, {AT_ENGULF, AF_PLAIN, 25}, AT_NO_ATK,
+    { {AT_BITE, AF_PLAIN, 40}, {AT_TENTACLE_SLAP, AF_PLAIN, 25}, AT_NO_ATK,
        AT_NO_ATK },
     16, 880,
     5, 5, MST_TENTACLED_STARSPAWN, false, S_SILENT,
@@ -4596,10 +4930,10 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
 
 {
     MONS_STARSPAWN_TENTACLE, 'w', LIGHTCYAN, "starspawn tentacle",
-    M_NO_EXP_GAIN | M_STATIONARY | M_NO_POLY_TO | M_FLIES | M_SEE_INVIS,
+    M_NO_EXP_GAIN | M_STATIONARY | M_NO_POLY_TO | M_FLIES,
     MR_NO_FLAGS,
     10, MONS_TENTACLED_STARSPAWN, MONS_STARSPAWN_TENTACLE,
-        MH_NONLIVING, MAG_IMMUNE,
+        MH_NONLIVING, WILL_INVULN,
     { {AT_CONSTRICT, AF_CRUSH, 3}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     11, 220,
     8, 2, MST_NO_SPELLS, false, S_SILENT,
@@ -4610,10 +4944,10 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
 
 {
     MONS_STARSPAWN_TENTACLE_SEGMENT, '*', LIGHTCYAN, "starspawn tentacle segment",
-    M_NOT_DANGEROUS | M_STATIONARY | M_NO_POLY_TO | M_FLIES | M_SEE_INVIS,
+    M_NOT_DANGEROUS | M_STATIONARY | M_NO_POLY_TO | M_FLIES,
     MR_NO_FLAGS,
     10, MONS_TENTACLED_STARSPAWN, MONS_STARSPAWN_TENTACLE_SEGMENT,
-        MH_NONLIVING, MAG_IMMUNE,
+        MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     11, 220,
     8, 2, MST_NO_SPELLS, false, S_SILENT,
@@ -4624,10 +4958,10 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
 
 {
     MONS_STARCURSED_MASS, 'X', BLUE, "starcursed mass",
-    M_SEE_INVIS | M_FAST_REGEN,
+    M_SEE_INVIS,
     MR_NO_FLAGS,
     12, MONS_STARCURSED_MASS, MONS_STARCURSED_MASS, MH_NONLIVING, 100,
-    { {AT_ENGULF, AF_PLAIN, 16}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_TOUCH, AF_PLAIN, 16}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     12, 1500,
     10, 0, MST_NO_SPELLS, false, S_SILENT,
     I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
@@ -4638,9 +4972,9 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
 // Summoning miscast, monster is scaled based on miscast strength
 {
     MONS_NAMELESS, 'X', CYAN, "nameless horror",
-    M_SEE_INVIS | M_NO_POLY_TO | M_HYBRID | M_NO_GEN_DERIVED,
+    M_SEE_INVIS | M_NO_POLY_TO | M_NO_GEN_DERIVED,
     MR_NO_FLAGS,
-    11, MONS_NAMELESS, MONS_NAMELESS, MH_NONLIVING, MAG_IMMUNE,
+    11, MONS_NAMELESS, MONS_NAMELESS, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_ANTIMAGIC, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     15, 600,
     8, 2, MST_NAMELESS, false, S_SILENT,
@@ -4685,7 +5019,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     14, 770,
     9, 5, MST_NO_SPELLS, true, S_BELLOW,
     I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_QUADRUPED,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_QUADRUPED,
     {TILEP_MONS_DEATH_YAK}, TILE_CORPSE_DEATH_YAK
 },
 
@@ -4698,7 +5032,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     14, 770,
     10, 2, MST_CATOBLEPAS, true, S_BELLOW,
     I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_QUADRUPED,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_QUADRUPED,
     {TILEP_MONS_CATOBLEPAS}, TILE_CORPSE_CATOBLEPAS
 },
 
@@ -4753,13 +5087,13 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     16, 1200,
     9, 5, MST_NO_SPELLS, true, S_SILENT,
     I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_NOTHING, SIZE_BIG, MON_SHAPE_QUADRUPED,
+    MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_QUADRUPED,
     {TILEP_MONS_APIS}, TILE_CORPSE_APIS
 },
 
 {
     MONS_ICE_BEAST, 'Y', LIGHTBLUE, "ice beast",
-    M_NO_FLAGS,
+    M_NO_SKELETON,
     MR_RES_POISON | MR_VUL_FIRE | mrd(MR_RES_COLD, 3),
     13, MONS_ICE_BEAST, MONS_ICE_BEAST, MH_NATURAL, 20,
     { {AT_HIT, AF_COLD, 5}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -4908,7 +5242,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     MONS_SPECTRAL_THING, 'Z', GREEN, "spectral thing",
     M_SEE_INVIS | M_INSUBSTANTIAL | M_FLIES,
     MR_RES_COLD,
-    11, MONS_WRAITH, MONS_SPECTRAL_THING, MH_UNDEAD, MAG_IMMUNE,
+    11, MONS_WRAITH, MONS_SPECTRAL_THING, MH_UNDEAD, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     8, 440,
     8, 5, MST_NO_SPELLS, false, S_SILENT,
@@ -4917,9 +5251,25 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     {TILEP_MONS_SPECTRAL_LARGE}, TILE_ERROR
 },
 
+// yred bound soul - similar to a spectral thing, stats overridden
+// on creation
+{
+    MONS_BOUND_SOUL, 'Z', LIGHTRED, "bound soul",
+    M_SEE_INVIS | M_INSUBSTANTIAL | M_FLIES,
+    MR_RES_COLD,
+    11, MONS_WRAITH, MONS_SPECTRAL_THING, MH_UNDEAD, WILL_INVULN,
+    { {AT_HIT, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    8, 440,
+    8, 5, MST_NO_SPELLS, false, S_SILENT,
+    I_BRAINLESS, HT_LAND, 7, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_MEDIUM, MON_SHAPE_MISC,
+    {TILEP_MONS_SPECTRAL_LARGE}, TILE_ERROR
+},
+
+
 // water monsters
 {
-    MONS_ELECTRIC_EEL, ';', LIGHTBLUE, "electric eel",
+    MONS_ELECTRIC_EEL, 'S', LIGHTCYAN, "electric eel",
     M_NO_GEN_DERIVED | M_COLD_BLOOD,
     mrd(MR_RES_ELEC, 3),
     19, MONS_ELECTRIC_EEL, MONS_ELECTRIC_EEL, MH_NATURAL, 10,
@@ -4949,7 +5299,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     MONS_KRAKEN_TENTACLE, 'w', LIGHTMAGENTA, "tentacle",
     M_COLD_BLOOD | M_NO_EXP_GAIN | M_STATIONARY | M_NO_POLY_TO | M_FLIES,
     MR_NO_FLAGS,
-    10, MONS_KRAKEN, MONS_KRAKEN_TENTACLE, MH_NATURAL, MAG_IMMUNE,
+    10, MONS_KRAKEN, MONS_KRAKEN_TENTACLE, MH_NATURAL, WILL_INVULN,
     { {AT_TENTACLE_SLAP, AF_PLAIN, 29}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     12, 480,
     5, 7, MST_NO_SPELLS, false, S_SILENT,
@@ -4962,7 +5312,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     MONS_KRAKEN_TENTACLE_SEGMENT, '*', LIGHTMAGENTA, "tentacle segment",
     M_COLD_BLOOD | M_NOT_DANGEROUS | M_STATIONARY | M_SUBMERGES | M_NO_POLY_TO | M_FLIES,
     MR_NO_FLAGS,
-    10, MONS_KRAKEN, MONS_KRAKEN_TENTACLE_SEGMENT, MH_NATURAL, MAG_IMMUNE,
+    10, MONS_KRAKEN, MONS_KRAKEN_TENTACLE_SEGMENT, MH_NATURAL, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     12, 480,
     5, 7, MST_NO_SPELLS, false, S_SILENT,
@@ -4975,7 +5325,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
 // Dummy monster for recolouring.
 {
     MONS_OCTOPODE, 'x', LIGHTCYAN, "octopode",
-    M_NO_SKELETON | M_SPEAKS | M_NO_POLY_TO,
+    M_NO_SKELETON | M_SPEAKS | M_NO_POLY_TO | M_NO_GEN_DERIVED,
     MR_NO_FLAGS,
     10, MONS_OCTOPODE, MONS_OCTOPODE, MH_NATURAL, 10,
     { {AT_TENTACLE_SLAP, AF_PLAIN, 24}, {AT_CONSTRICT, AF_CRUSH, 5},
@@ -4989,7 +5339,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
 
 // lava monsters
 {
-    MONS_LAVA_SNAKE, 'S', LIGHTRED, "lava snake",
+    MONS_LAVA_SNAKE, 'S', YELLOW, "lava snake",
     M_WARM_BLOOD,
     mrd(MR_RES_FIRE, 3) | MR_VUL_COLD,
     17, MONS_SNAKE, MONS_LAVA_SNAKE, MH_NATURAL, 10,
@@ -5006,7 +5356,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     M_FIGHTER | M_WARM_BLOOD,
     mrd(MR_RES_FIRE, 3) | MR_VUL_COLD,
     10, MONS_NAGA, MONS_SALAMANDER, MH_NATURAL, 40,
-    { {AT_HIT, AF_FIRE, 17}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_FIRE, 13}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     8, 640,
     5, 7, MST_NO_SPELLS, true, S_SILENT,
     I_HUMAN, HT_AMPHIBIOUS_LAVA, 10, SWIM_ENERGY(7),
@@ -5027,10 +5377,23 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     {TILEP_MONS_SALAMANDER_MYSTIC}, TILE_ERROR
 },
 
+{
+    MONS_SALAMANDER_TYRANT, 'N', RED, "salamander tyrant",
+    M_WARM_BLOOD,
+    mrd(MR_RES_FIRE, 3) | MR_VUL_COLD,
+    10, MONS_NAGA, MONS_SALAMANDER, MH_NATURAL, 60,
+    { {AT_HIT, AF_FIRE, 15}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    15, 675,
+    5, 7, MST_SALAMANDER_TYRANT, true, S_SILENT,
+    I_HUMAN, HT_AMPHIBIOUS_LAVA, 10, SWIM_ENERGY(7),
+    MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_NAGA,
+    {TILEP_MONS_SALAMANDER_TYRANT}, TILE_ERROR
+},
+
 // Semi-unique humans ('@')
 {
     MONS_HELLBINDER, '@', ETC_FIRE, "Hellbinder",
-    M_SPEAKS | M_WARM_BLOOD | M_SEE_INVIS,
+    M_SPEAKS | M_WARM_BLOOD | M_SEE_INVIS | M_UNIQUE,
     MR_NO_FLAGS,
     10, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 100,
     { {AT_HIT, AF_PLAIN, 6}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -5043,7 +5406,7 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
 
 {
     MONS_CLOUD_MAGE, '@', ETC_SILVER, "Cloud Mage",
-    M_SPEAKS | M_WARM_BLOOD | M_SEE_INVIS | M_FLIES,
+    M_SPEAKS | M_WARM_BLOOD | M_SEE_INVIS | M_FLIES | M_UNIQUE,
     MR_NO_FLAGS,
     10, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 100,
     { {AT_HIT, AF_PLAIN, 6}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -5052,6 +5415,19 @@ DUMMY(MONS_SNAKE, 'S', LIGHTGREEN, "snake", TILEP_MONS_ADDER)
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_CLOUD_MAGE}, TILE_ERROR
+},
+
+{
+    MONS_HEADMASTER, '@', ETC_IRON, "Head Instructor",
+    M_WARM_BLOOD | M_FIGHTER | M_TWO_WEAPONS | M_SPEAKS | M_SEE_INVIS | M_UNIQUE,
+    MR_NO_FLAGS,
+    10, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 100,
+    { {AT_HIT, AF_PLAIN, 30}, {AT_HIT, AF_PLAIN, 30}, AT_NO_ATK, AT_NO_ATK },
+    20, 1500,
+    0, 18, MST_HEADMASTER, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 15, DEFAULT_ENERGY,
+    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_HEADMASTER}, TILE_ERROR
 },
 
 // 'dummy' a fairly accurate description
@@ -5089,9 +5465,9 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
 // to examine them.
 {
     MONS_DANCING_WEAPON, '(', COLOUR_UNDEF, "dancing weapon",
-    M_FIGHTER | M_FLIES | M_GHOST_DEMON,
+    M_FIGHTER | M_FLIES | M_PREFER_RANGED | M_GHOST_DEMON | M_UNBLINDABLE,
     mrd(MR_RES_FIRE | MR_RES_COLD, 2) | mrd(MR_RES_ELEC, 3),
-    10, MONS_DANCING_WEAPON, MONS_DANCING_WEAPON, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_DANCING_WEAPON, MONS_DANCING_WEAPON, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     15, 150,
     10, 20, MST_NO_SPELLS, false, S_SILENT,
@@ -5104,15 +5480,97 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
 {
     MONS_SPECTRAL_WEAPON, '(', GREEN, "spectral weapon",
     M_INSUBSTANTIAL | M_NO_REGEN | M_AVATAR | M_NO_EXP_GAIN | M_FLIES
-        | M_GHOST_DEMON,
+        | M_GHOST_DEMON | M_UNBLINDABLE,
     MR_RES_FIRE | MR_RES_COLD |  MR_RES_ELEC,
-    11, MONS_WRAITH, MONS_SPECTRAL_WEAPON, MH_NONLIVING, MAG_IMMUNE,
+    11, MONS_WRAITH, MONS_SPECTRAL_WEAPON, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 6}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    5, 150,
+    5, 250,
     5, 10, MST_NO_SPELLS, false, S_SILENT,
     I_BRAINLESS, HT_LAND, 30, DEFAULT_ENERGY,
     MONUSE_NOTHING, SIZE_MEDIUM, MON_SHAPE_MISC,
     {TILEP_MONS_SPECTRAL_SBL}, TILE_ERROR
+},
+
+// animated armour - variable traits
+{
+    MONS_ANIMATED_ARMOUR, '[', GREEN, "animated armour",
+    M_FLIES | M_UNBLINDABLE,
+    MR_NO_FLAGS,
+    10, MONS_ANIMATED_ARMOUR, MONS_ANIMATED_ARMOUR, MH_NONLIVING, WILL_INVULN,
+    { {AT_HIT, AF_PLAIN, 1}, {AT_HIT, AF_PLAIN, 1}, AT_NO_ATK, AT_NO_ATK },
+    15, 400,
+    8, 5, MST_NO_SPELLS, false, S_SILENT,
+    I_BRAINLESS, HT_LAND, 10, MOVE_ENERGY(30),
+    MONUSE_NOTHING, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_ANIMATED_ARMOUR}, TILE_ERROR
+},
+
+// living spells and things that make em
+{
+    MONS_LIVING_SPELL, '*', LIGHTBLUE, "living spell",
+    M_INSUBSTANTIAL | M_NO_EXP_GAIN | M_FLIES,
+    MR_NO_FLAGS,
+    10, MONS_LIVING_SPELL, MONS_LIVING_SPELL, MH_NONLIVING, WILL_INVULN,
+    { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    1, 3,
+    0, 5, MST_NO_SPELLS, false, S_SILENT,
+    I_BRAINLESS, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_TINY, MON_SHAPE_ORB,
+    {TILEP_MONS_LIVING_SPELL}, TILE_ERROR // XXX TODO
+},
+
+DUMMY(MONS_WALKING_TOME, ';', BROWN, "walking tome", TILE_ERROR) // XXX TODO
+
+{
+    MONS_EARTHEN_TOME, ';', MAGENTA, "walking earthen tome",
+    M_NO_FLAGS,
+    MR_NO_FLAGS,
+    7, MONS_WALKING_TOME, MONS_EARTHEN_TOME, MH_NONLIVING, WILL_INVULN,
+    { { AT_HIT, AF_PLAIN, 50 }, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    27, 1000,
+    20, 5, MST_WALKING_TOME, false, S_RUSTLE,
+    I_BRAINLESS, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_MISC,
+    {TILEP_MONS_EARTHEN_TOME}, TILE_ERROR // XXX TODO
+},
+
+{
+    MONS_CRYSTAL_TOME, ';', CYAN, "walking crystal tome",
+    M_NO_FLAGS,
+    MR_NO_FLAGS,
+    25, MONS_WALKING_TOME, MONS_EARTHEN_TOME, MH_NONLIVING, WILL_INVULN,
+    { { AT_HIT, AF_PLAIN, 40 }, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    15, 1000,
+    15, 5, MST_WALKING_TOME, false, S_RUSTLE,
+    I_BRAINLESS, HT_LAND, 10, ATTACK_ENERGY(20),
+    MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_MISC,
+    {TILEP_MONS_CRYSTAL_TOME}, TILE_ERROR // XXX TODO
+},
+
+{
+    MONS_DIVINE_TOME, ';', LIGHTGREEN /*high priest*/, "walking divine tome",
+    M_NO_FLAGS,
+    MR_NO_FLAGS,
+    14, MONS_WALKING_TOME, MONS_EARTHEN_TOME, MH_NONLIVING, WILL_INVULN,
+    { { AT_HIT, AF_PLAIN, 20 }, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    20, 1000,
+    10, 5, MST_WALKING_TOME, false, S_RUSTLE,
+    I_BRAINLESS, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_MISC,
+    {TILEP_MONS_DIVINE_TOME}, TILE_ERROR // XXX TODO
+},
+
+{
+    MONS_FROSTBOUND_TOME, ';', YELLOW, "walking frostbound tome",
+    M_NO_FLAGS,
+    MR_RES_COLD | MR_VUL_FIRE,
+    14, MONS_WALKING_TOME, MONS_EARTHEN_TOME, MH_NONLIVING, WILL_INVULN,
+    { { AT_HIT, AF_COLD, 20 }, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    20, 1000,
+    10, 10, MST_WALKING_TOME, false, S_RUSTLE,
+    I_BRAINLESS, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_MISC,
+    {TILEP_MONS_FROSTBOUND_TOME}, TILE_ERROR // XXX TODO
 },
 
 // Demonic tentacle things.
@@ -5122,7 +5580,7 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
     mrd(MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC
         | MR_RES_ACID, 3) | MR_RES_STICKY_FLAME,
     10, MONS_ELDRITCH_TENTACLE, MONS_ELDRITCH_TENTACLE,
-        MH_NONLIVING, MAG_IMMUNE,
+        MH_NONLIVING, WILL_INVULN,
     { {AT_TENTACLE_SLAP, AF_CHAOTIC, 30}, {AT_CLAW, AF_CHAOTIC, 40}, AT_NO_ATK,
        AT_NO_ATK },
     16, 1200,
@@ -5138,7 +5596,7 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
     mrd(MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC
         | MR_RES_ACID, 3) | MR_RES_STICKY_FLAME,
     10, MONS_ELDRITCH_TENTACLE, MONS_ELDRITCH_TENTACLE_SEGMENT,
-        MH_NONLIVING, MAG_IMMUNE,
+        MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     16, 1200,
     13, 0, MST_NO_SPELLS, false, S_SILENT,
@@ -5152,120 +5610,67 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
     MONS_DEMONSPAWN, '6', BROWN, "demonspawn",
     M_WARM_BLOOD | M_SPEAKS | M_NO_POLY_TO,
     MR_NO_FLAGS,
-    10, MONS_DEMONSPAWN, MONS_DEMONSPAWN, MH_NATURAL | MH_DEMONIC, 20,
-    { {AT_HIT, AF_PLAIN, 10}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    6, 330,
-    3, 13, MST_NO_SPELLS, true, S_SHOUT,
+    10, MONS_DEMONSPAWN, MONS_DEMONSPAWN, MH_NATURAL | MH_DEMONIC, 40,
+    { {AT_HIT, AF_PLAIN, 20}, {AT_CLAW, AF_PLAIN, 20},
+      {AT_GORE, AF_PLAIN, 20}, AT_NO_ATK },
+    10, 925,
+    3, 12, MST_NO_SPELLS, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_DEMONSPAWN}, TILE_CORPSE_DEMONSPAWN
 },
 
 {
-    MONS_MONSTROUS_DEMONSPAWN, '6', LIGHTGRAY, "monstrous demonspawn",
-    M_WARM_BLOOD | M_SPEAKS | M_SEE_INVIS | M_NO_POLY_TO,
-    MR_NO_FLAGS,
-    10, MONS_DEMONSPAWN, MONS_MONSTROUS_DEMONSPAWN, MH_NATURAL | MH_DEMONIC, 40,
-    { {AT_HIT, AF_PLAIN, 20}, {AT_CLAW, AF_PLAIN, 21},
-      {AT_GORE, AF_PLAIN, 21}, AT_NO_ATK },
-    10, 1000,
-    3, 10, MST_NO_SPELLS, true, S_SHOUT,
-    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_MONSTROUS_DEMONSPAWN}, TILE_CORPSE_MONSTROUS_DEMONSPAWN
-},
-
-{
-    MONS_GELID_DEMONSPAWN, '6', BLUE, "gelid demonspawn",
-    M_WARM_BLOOD | M_SPEAKS | M_NO_POLY_TO,
-    mrd(MR_RES_COLD, 3),
-    10, MONS_DEMONSPAWN, MONS_GELID_DEMONSPAWN, MH_NATURAL | MH_DEMONIC, 40,
-    { {AT_HIT, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    10, 550,
-    6, 12, MST_NO_SPELLS, true, S_SHOUT,
-    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_GELID_DEMONSPAWN}, TILE_CORPSE_GELID_DEMONSPAWN
-},
-
-{
-    MONS_INFERNAL_DEMONSPAWN, '6', RED, "infernal demonspawn",
-    M_WARM_BLOOD | M_SPEAKS | M_NO_POLY_TO,
-    mrd(MR_RES_FIRE, 3),
-    10, MONS_DEMONSPAWN, MONS_INFERNAL_DEMONSPAWN, MH_NATURAL | MH_DEMONIC, 40,
-    { {AT_HIT, AF_FIRE, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    10, 550,
-    6, 12, MST_NO_SPELLS, true, S_SHOUT,
-    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_INFERNAL_DEMONSPAWN}, TILE_CORPSE_INFERNAL_DEMONSPAWN
-},
-
-{
-    MONS_TORTUROUS_DEMONSPAWN, '6', MAGENTA, "torturous demonspawn",
-    M_WARM_BLOOD | M_SPEAKS | M_NO_POLY_TO | M_SPINY,
-    mrd(MR_RES_NEG, 3),
-    10, MONS_DEMONSPAWN, MONS_TORTUROUS_DEMONSPAWN, MH_NATURAL | MH_DEMONIC, 40,
-    { {AT_HIT, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    10, 550,
-    3, 13, MST_NO_SPELLS, true, S_SHOUT,
-    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_TORTUROUS_DEMONSPAWN}, TILE_CORPSE_TORTUROUS_DEMONSPAWN
-},
-
-// The nonbase demonspawn's hit dice HP values, AC, and EV are added to
-// those of the relevant base demonspawn type.
-{
-    MONS_BLOOD_SAINT, '6', LIGHTBLUE, "blood saint",
+    MONS_DEMONSPAWN_BLOOD_SAINT, '6', LIGHTBLUE, "demonspawn blood saint",
     M_WARM_BLOOD | M_SPEAKS,
-    MR_NO_FLAGS,
+    mrd(MR_RES_FIRE, 3),
     10, MONS_DEMONSPAWN, MONS_DEMONSPAWN, MH_NATURAL | MH_DEMONIC, 60,
-    { {AT_HIT, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    15, 325,
-    0, 0, MST_DEMONSPAWN_BLOOD_SAINT, true, S_SHOUT,
+    { {AT_HIT, AF_FIRE, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    15, 925,
+    6, 12, MST_DEMONSPAWN_BLOOD_SAINT, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_BLOOD_SAINT}, TILE_ERROR
+    {TILEP_MONS_DEMONSPAWN_BLOOD_SAINT}, TILE_ERROR
 },
 
 {
-    MONS_WARMONGER, '6', LIGHTCYAN, "warmonger",
+    MONS_DEMONSPAWN_WARMONGER, '6', LIGHTCYAN, "demonspawn warmonger",
     M_WARM_BLOOD | M_SPEAKS | M_FIGHTER,
     MR_NO_FLAGS,
     10, MONS_DEMONSPAWN, MONS_DEMONSPAWN, MH_NATURAL | MH_DEMONIC, 60,
-    { {AT_HIT, AF_PLAIN, 40}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    15, 600,
-    0, 2, MST_DEMONSPAWN_WARMONGER, true, S_SHOUT,
+    { {AT_HIT, AF_PLAIN, 40}, {AT_CLAW, AF_PLAIN, 20},
+      {AT_GORE, AF_PLAIN, 20}, AT_NO_ATK },
+    15, 1250,
+    3, 12, MST_DEMONSPAWN_WARMONGER, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_WARMONGER}, TILE_ERROR
+    {TILEP_MONS_DEMONSPAWN_WARMONGER}, TILE_ERROR
 },
 
 {
-    MONS_CORRUPTER, '6', LIGHTGREEN, "corrupter",
+    MONS_DEMONSPAWN_CORRUPTER, '6', LIGHTGREEN, "demonspawn corrupter",
     M_WARM_BLOOD | M_SPEAKS,
-    MR_NO_FLAGS,
+    mrd(MR_RES_NEG, 3),
     10, MONS_DEMONSPAWN, MONS_DEMONSPAWN, MH_NATURAL | MH_DEMONIC, 60,
-    { {AT_HIT, AF_PLAIN, 25}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    15, 375,
-    0, 0, MST_DEMONSPAWN_CORRUPTER, true, S_SHOUT,
+    { {AT_HIT, AF_PLAIN, 25}, {AT_KICK, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK },
+    15, 925,
+    3, 15, MST_DEMONSPAWN_CORRUPTER, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_CORRUPTER}, TILE_ERROR
+    {TILEP_MONS_DEMONSPAWN_CORRUPTER}, TILE_ERROR
 },
 
 {
-    MONS_BLACK_SUN, '6', LIGHTMAGENTA, "black sun",
+    MONS_DEMONSPAWN_BLACK_SUN, '6', LIGHTMAGENTA, "demonspawn black sun",
     M_WARM_BLOOD | M_SPEAKS | M_SEE_INVIS,
-    MR_NO_FLAGS,
+    mrd(MR_RES_COLD, 3),
     10, MONS_DEMONSPAWN, MONS_DEMONSPAWN, MH_NATURAL | MH_DEMONIC, 60,
     { {AT_HIT, AF_PLAIN, 25}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    15, 375,
-    0, 0, MST_DEMONSPAWN_BLACK_SUN, true, S_SHOUT,
+    15, 925,
+    9, 12, MST_DEMONSPAWN_BLACK_SUN, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_BLACK_SUN}, TILE_ERROR
+    {TILEP_MONS_DEMONSPAWN_BLACK_SUN}, TILE_ERROR
 },
 
 // minor demons: imps, etc. ('5')
@@ -5339,7 +5744,7 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
 
 {
     MONS_SHADOW_IMP, '5', MAGENTA, "shadow imp",
-    M_SEE_INVIS | M_SPEAKS,
+    M_SPEAKS,
     MR_RES_POISON | mrd(MR_RES_COLD, 2),
     11, MONS_SHADOW_IMP, MONS_SHADOW_IMP, MH_DEMONIC, 10,
     { {AT_HIT, AF_PLAIN, 6}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -5396,7 +5801,7 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
     M_FIGHTER | M_FLIES,
     MR_RES_POISON | mrd(MR_RES_FIRE, 3) | MR_VUL_COLD,
     13, MONS_RED_DEVIL, MONS_RED_DEVIL, MH_DEMONIC, 60,
-    { {AT_HIT, AF_KITE, 19}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_BARBS, 19}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     7, 315,
     7, 13, MST_NO_SPELLS, false, S_SILENT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
@@ -5407,7 +5812,7 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
 
 {
     MONS_HELLWING, '4', LIGHTGREY, "hellwing",
-    M_FAST_REGEN | M_FLIES,
+    M_FLIES,
     MR_RES_POISON,
     12, MONS_HELLWING, MONS_HELLWING, MH_DEMONIC, 60,
     { {AT_HIT, AF_SWOOP, 17}, {AT_HIT, AF_PLAIN, 10}, AT_NO_ATK, AT_NO_ATK },
@@ -5433,23 +5838,22 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
 
 {
     MONS_CHAOS_SPAWN, '4', ETC_RANDOM, "chaos spawn",
-    M_SEE_INVIS,
+    M_NO_FLAGS,
     MR_NO_FLAGS,
     12, MONS_CHAOS_SPAWN, MONS_CHAOS_SPAWN, MH_DEMONIC, 60,
     { {AT_RANDOM, AF_CHAOTIC, 19}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     6, 330,
     7, 12, MST_NO_SPELLS, false, S_RANDOM,
     I_ANIMAL, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_OPEN_DOORS, SIZE_BIG, MON_SHAPE_MISC,
+    MONUSE_OPEN_DOORS, SIZE_LARGE, MON_SHAPE_MISC,
     {TILEP_MONS_CHAOS_SPAWN, TVARY_RANDOM}, TILE_ERROR
 },
 
 // middle demons ('3')
 {
     MONS_SUN_DEMON, '3', YELLOW, "sun demon",
-    M_SEE_INVIS | M_FLIES,
-    MR_RES_ELEC | MR_RES_POISON | MR_VUL_COLD | mrd(MR_RES_FIRE, 3)
-        | MR_VUL_WATER,
+    M_FLIES,
+    MR_RES_ELEC | MR_RES_POISON | MR_VUL_COLD | mrd(MR_RES_FIRE, 3),
     14, MONS_SUN_DEMON, MONS_SUN_DEMON, MH_DEMONIC, 80,
     { {AT_HIT, AF_FIRE, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 550,
@@ -5464,7 +5868,7 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
     M_SEE_INVIS | M_FLIES,
     MR_RES_POISON | MR_RES_COLD,
     13, MONS_SOUL_EATER, MONS_SOUL_EATER, MH_DEMONIC, 140,
-    { {AT_HIT, AF_DRAIN_XP, 25}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_DRAIN, 25}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     11, 605,
     18, 10, MST_SOUL_EATER, false, S_SILENT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
@@ -5474,7 +5878,7 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
 
 {
     MONS_SMOKE_DEMON, '3', LIGHTGREY, "smoke demon",
-    M_INSUBSTANTIAL | M_UNBREATHING | M_FLIES,
+    M_INSUBSTANTIAL | M_FLIES,
     MR_RES_POISON | mrd(MR_RES_FIRE, 2),
     15, MONS_SMOKE_DEMON, MONS_SMOKE_DEMON, MH_DEMONIC, 60,
     { {AT_HIT, AF_PLAIN, 8}, {AT_HIT, AF_PLAIN, 5}, {AT_HIT, AF_PLAIN, 5},
@@ -5501,7 +5905,7 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
 
 {
     MONS_YNOXINUL, '3', LIGHTCYAN, "ynoxinul",
-    M_SEE_INVIS | M_FLIES,
+    M_FLIES,
     MR_RES_ELEC | MR_RES_POISON | MR_RES_COLD,
     13, MONS_YNOXINUL, MONS_YNOXINUL, MH_DEMONIC, 40,
     { {AT_HIT, AF_PLAIN, 12}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -5569,7 +5973,7 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
 {
     MONS_BALRUG, '2', RED, "balrug",
     M_FIGHTER | M_SEE_INVIS | M_FLIES,
-    MR_RES_POISON | mrd(MR_RES_FIRE, 3) | MR_VUL_COLD | MR_VUL_WATER,
+    MR_RES_POISON | mrd(MR_RES_FIRE, 3) | MR_VUL_COLD,
     12, MONS_BALRUG, MONS_BALRUG, MH_DEMONIC, 160,
     { {AT_HIT, AF_FIRE, 25}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     14, 770,
@@ -5581,7 +5985,7 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
 
 {
     MONS_CACODEMON, '2', YELLOW, "cacodemon",
-    M_SEE_INVIS | M_FAST_REGEN | M_FLIES,
+    M_SEE_INVIS | M_FLIES,
     MR_RES_POISON | MR_RES_ELEC,
     16, MONS_CACODEMON, MONS_CACODEMON, MH_DEMONIC, 160,
     { {AT_HIT, AF_PLAIN, 22}, {AT_HIT, AF_PLAIN, 22}, AT_NO_ATK, AT_NO_ATK },
@@ -5624,7 +6028,7 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
     M_FIGHTER | M_SEE_INVIS | M_SPEAKS,
     MR_RES_POISON | MR_RES_COLD,
     14, MONS_REAPER, MONS_REAPER, MH_DEMONIC, 100,
-    { {AT_HIT, AF_PLAIN, 45}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 40}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     14, 770,
     15, 10, MST_NO_SPELLS, false, S_SILENT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
@@ -5662,9 +6066,8 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
 {
     MONS_BRIMSTONE_FIEND, '1', LIGHTRED, "Brimstone Fiend",
     M_SEE_INVIS | M_FLIES,
-    MR_RES_POISON | MR_RES_DAMNATION | mrd(MR_RES_FIRE, 3) | MR_VUL_COLD
-        | MR_VUL_WATER,
-    17, MONS_BRIMSTONE_FIEND, MONS_BRIMSTONE_FIEND, MH_DEMONIC, MAG_IMMUNE,
+    MR_RES_POISON | MR_RES_DAMNATION | mrd(MR_RES_FIRE, 3) | MR_VUL_COLD,
+    17, MONS_BRIMSTONE_FIEND, MONS_BRIMSTONE_FIEND, MH_DEMONIC, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 25}, {AT_HIT, AF_PLAIN, 15}, {AT_HIT, AF_PLAIN, 15},
        AT_NO_ATK },
     18, 990,
@@ -5678,7 +6081,7 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
     MONS_ICE_FIEND, '1', WHITE, "Ice Fiend",
     M_SEE_INVIS | M_FLIES,
     MR_RES_POISON | MR_VUL_FIRE | mrd(MR_RES_COLD, 3),
-    17, MONS_ICE_FIEND, MONS_ICE_FIEND, MH_DEMONIC, MAG_IMMUNE,
+    17, MONS_ICE_FIEND, MONS_ICE_FIEND, MH_DEMONIC, WILL_INVULN,
     { {AT_CLAW, AF_COLD, 25}, {AT_CLAW, AF_COLD, 25}, AT_NO_ATK, AT_NO_ATK },
     18, 990,
     15, 6, MST_ICE_FIEND, false, S_ROAR,
@@ -5691,8 +6094,8 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
     MONS_TZITZIMITL, '1', MAGENTA, "Tzitzimitl",
     M_SEE_INVIS | M_FLIES,
     MR_RES_POISON | mrd(MR_RES_COLD, 2) | MR_RES_ELEC,
-    13, MONS_TZITZIMITL, MONS_TZITZIMITL, MH_DEMONIC, MAG_IMMUNE,
-    { {AT_ENGULF, AF_DRAIN_SPEED, 25}, {AT_BITE, AF_ROT, 25},
+    13, MONS_TZITZIMITL, MONS_TZITZIMITL, MH_DEMONIC, WILL_INVULN,
+    { {AT_ENGULF, AF_DRAIN_SPEED, 25}, {AT_BITE, AF_DRAIN, 25},
       AT_NO_ATK, AT_NO_ATK },
     22, 1050,
     12, 16, MST_TZITZIMITL, false, S_ROAR,
@@ -5703,10 +6106,10 @@ DUMMY(MONS_PLAYER, '@', LIGHTGREY, "player", TILEP_MONS_PLAYER_GHOST)
 
 {
     MONS_HELL_SENTINEL, '1', BROWN, "Hell Sentinel",
-    M_SEE_INVIS | M_SPINY,
+    M_SEE_INVIS,
     MR_RES_DAMNATION
         | mrd(MR_RES_FIRE | MR_RES_POISON | MR_RES_COLD | MR_RES_ELEC, 3),
-    10, MONS_HELL_SENTINEL, MONS_HELL_SENTINEL, MH_DEMONIC, MAG_IMMUNE,
+    10, MONS_HELL_SENTINEL, MONS_HELL_SENTINEL, MH_DEMONIC, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 40}, {AT_HIT, AF_PLAIN, 25}, AT_NO_ATK, AT_NO_ATK },
     19, 1425,
     25, 3, MST_HELL_SENTINEL, false, S_ROAR,
@@ -5734,13 +6137,13 @@ DUMMY(MONS_ANIMATED_TREE, '7', ETC_TREE, "animated tree", TILEP_MONS_TREANT)
 
 // non-living creatures
 // golems ('8')
-DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
+DUMMY(MONS_GOLEM, '9', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
 
 {
-    MONS_SALTLING, '8', WHITE, "saltling",
+    MONS_SALTLING, '9', WHITE, "saltling",
     M_NO_FLAGS,
     MR_NO_FLAGS,
-    10, MONS_GOLEM, MONS_SALTLING, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_GOLEM, MONS_SALTLING, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     8, 270,
     15, 5, MST_NO_SPELLS, false, S_SILENT,
@@ -5750,10 +6153,10 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
 },
 
 {
-    MONS_PEACEKEEPER, '8', YELLOW, "peacekeeper",
+    MONS_PEACEKEEPER, '9', YELLOW, "peacekeeper",
     M_SEE_INVIS,
     MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC,
-    10, MONS_GOLEM, MONS_PEACEKEEPER, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_GOLEM, MONS_PEACEKEEPER, MH_NONLIVING, WILL_INVULN,
     { {AT_BITE, AF_PLAIN, 25}, {AT_CLAW, AF_PLAIN, 15}, AT_NO_ATK, AT_NO_ATK },
     12, 450,
     20, 3, MST_PEACEKEEPER, false, S_ROAR,
@@ -5763,23 +6166,23 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
 },
 
 {
-    MONS_IRON_GOLEM, '8', CYAN, "iron golem",
+    MONS_IRON_GOLEM, '9', CYAN, "iron golem",
     M_NO_FLAGS,
     mrd(MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC, 3),
-    10, MONS_GOLEM, MONS_IRON_GOLEM, MH_NONLIVING, MAG_IMMUNE,
-    { {AT_HIT, AF_PLAIN, 35}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    15, 1350,
-    15, 3, MST_NO_SPELLS, false, S_SILENT,
-    I_BRAINLESS, HT_LAND, 7, DEFAULT_ENERGY,
+    10, MONS_GOLEM, MONS_IRON_GOLEM, MH_NONLIVING, WILL_INVULN,
+    { {AT_HIT, AF_PLAIN, 50}, {AT_HIT, AF_PLAIN, 50}, AT_NO_ATK, AT_NO_ATK },
+    15, 3000,
+    25, 5, MST_NO_SPELLS, false, S_SILENT,
+    I_BRAINLESS, HT_LAND, 7, ATTACK_ENERGY(7),
     MONUSE_OPEN_DOORS, SIZE_LARGE, MON_SHAPE_HUMANOID,
     {TILEP_MONS_IRON_GOLEM}, TILE_ERROR
 },
 
 {
-    MONS_CRYSTAL_GUARDIAN, '8', GREEN, "crystal guardian",
+    MONS_CRYSTAL_GUARDIAN, '9', GREEN, "crystal guardian",
     M_SEE_INVIS | M_SPEAKS,
     mrd(MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC, 3),
-    10, MONS_GOLEM, MONS_CRYSTAL_GUARDIAN, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_GOLEM, MONS_CRYSTAL_GUARDIAN, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 35}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     16, 640,
     22, 0, MST_CRYSTAL_GUARDIAN, false, S_SILENT,
@@ -5789,10 +6192,10 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
 },
 
 {
-    MONS_TOENAIL_GOLEM, '8', RED, "toenail golem",
+    MONS_TOENAIL_GOLEM, '9', RED, "toenail golem",
     M_NO_FLAGS,
     MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC,
-    10, MONS_GOLEM, MONS_TOENAIL_GOLEM, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_GOLEM, MONS_TOENAIL_GOLEM, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 13}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     9, 585,
     8, 5, MST_NO_SPELLS, false, S_SILENT,
@@ -5802,10 +6205,10 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
 },
 
 {
-    MONS_ELECTRIC_GOLEM, '8', LIGHTCYAN, "electric golem",
+    MONS_ELECTRIC_GOLEM, '9', LIGHTBLUE, "electric golem",
     M_SEE_INVIS | M_INSUBSTANTIAL | M_SPEAKS,
     mrd(MR_RES_ELEC, 3) | MR_RES_FIRE | MR_RES_COLD,
-    12, MONS_GOLEM, MONS_ELECTRIC_GOLEM, MH_NONLIVING, MAG_IMMUNE,
+    12, MONS_GOLEM, MONS_ELECTRIC_GOLEM, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_ELEC, 15}, {AT_HIT, AF_ELEC, 15}, {AT_HIT, AF_PLAIN, 15},
       {AT_HIT, AF_PLAIN, 15} },
     15, 1350,
@@ -5816,10 +6219,10 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
 },
 
 {
-    MONS_USHABTI, '8', BROWN, "ushabti",
+    MONS_USHABTI, '9', BROWN, "ushabti",
     M_FIGHTER | M_SEE_INVIS,
     MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC,
-    10, MONS_GOLEM, MONS_USHABTI, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_GOLEM, MONS_USHABTI, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     7, 455,
     9, 6, MST_USHABTI, false, S_SILENT,
@@ -5829,10 +6232,10 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
 },
 
 {
-    MONS_GUARDIAN_GOLEM, '8', LIGHTGREEN, "guardian golem",
+    MONS_GUARDIAN_GOLEM, '9', LIGHTGREEN, "guardian golem",
     M_NO_EXP_GAIN,
     MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC,
-    10, MONS_GOLEM, MONS_GUARDIAN_GOLEM, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_GOLEM, MONS_GUARDIAN_GOLEM, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     5, 400,
     10, 2, MST_NO_SPELLS, false, S_SILENT,
@@ -5842,14 +6245,14 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
 },
 
 {
-    MONS_SPELLFORGED_SERVITOR, '8', LIGHTMAGENTA, "spellforged servitor",
+    MONS_SPELLFORGED_SERVITOR, '9', LIGHTMAGENTA, "spellforged servitor",
     M_NO_POLY_TO | M_FLIES | M_NO_EXP_GAIN,
     mrd(MR_RES_FIRE | MR_RES_COLD, 2) | MR_RES_ELEC,
-    10, MONS_GOLEM, MONS_SPELLFORGED_SERVITOR, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_GOLEM, MONS_SPELLFORGED_SERVITOR, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     8, 800,
     10, 10, MST_NO_SPELLS, false, S_SILENT,
-    I_BRAINLESS, HT_LAND, 10, DEFAULT_ENERGY,
+    I_BRAINLESS, HT_LAND, 10, SPELL_ENERGY(18),
     MONUSE_NOTHING, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_SPELLFORGED_SERVITOR}, TILE_ERROR
 },
@@ -5859,7 +6262,7 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
     MONS_ICE_STATUE, '8', LIGHTBLUE, "ice statue",
     M_STATIONARY | M_SPEAKS,
     MR_VUL_FIRE | mrd(MR_RES_COLD, 3) | MR_RES_ELEC | MR_RES_PETRIFY,
-    10, MONS_STATUE, MONS_ICE_STATUE, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_STATUE, MONS_ICE_STATUE, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     8, 720,
     12, 1, MST_ICE_STATUE, false, S_SILENT,
@@ -5873,7 +6276,7 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
     M_STATIONARY | M_SPEAKS | M_SEE_INVIS,
     mrd(MR_RES_FIRE | MR_RES_COLD, 2) | MR_RES_ELEC
         | MR_RES_PETRIFY,
-    10, MONS_STATUE, MONS_OBSIDIAN_STATUE, MH_NONLIVING | MH_EVIL, MAG_IMMUNE,
+    10, MONS_STATUE, MONS_OBSIDIAN_STATUE, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 700,
     12, 1, MST_OBSIDIAN_STATUE, false, S_SILENT,
@@ -5886,7 +6289,7 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
     MONS_ORANGE_STATUE, '8', LIGHTRED, "orange crystal statue",
     M_STATIONARY | M_SPEAKS | M_SEE_INVIS,
     mrd(MR_RES_FIRE | MR_RES_COLD, 2) | MR_RES_ELEC | MR_RES_PETRIFY,
-    10, MONS_STATUE, MONS_ORANGE_STATUE, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_STATUE, MONS_ORANGE_STATUE, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 700,
     12, 1, MST_ORANGE_CRYSTAL_STATUE, false, S_SILENT,
@@ -5899,7 +6302,7 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
     MONS_STATUE, '8', LIGHTGREY, "statue",
     M_STATIONARY | M_SPEAKS | M_ARCHER | M_PREFER_RANGED | M_NO_POLY_TO,
     mrd(MR_RES_FIRE | MR_RES_COLD, 2) | MR_RES_ELEC | MR_RES_PETRIFY,
-    10, MONS_STATUE, MONS_STATUE, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_STATUE, MONS_STATUE, MH_NONLIVING, WILL_INVULN,
     { {AT_WEAP_ONLY, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     8, 720,
     12, 1, MST_NO_SPELLS, false, S_SILENT,
@@ -5912,7 +6315,7 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
     MONS_TRAINING_DUMMY, '8', LIGHTGREY, "training dummy",
     M_STATIONARY,
     MR_RES_PETRIFY,
-    10, MONS_TRAINING_DUMMY, MONS_TRAINING_DUMMY, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_TRAINING_DUMMY, MONS_TRAINING_DUMMY, MH_NONLIVING, WILL_INVULN,
     { {AT_WEAP_ONLY, AF_PLAIN, 1}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     1, 60,
     0, 0, MST_NO_SPELLS, false, S_SILENT,
@@ -5925,7 +6328,7 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
     MONS_PILLAR_OF_SALT, '8', WHITE, "pillar of salt",
     M_NOT_DANGEROUS | M_STATIONARY,
     MR_NO_FLAGS,
-    10, MONS_PILLAR_OF_SALT, MONS_PILLAR_OF_SALT, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_PILLAR_OF_SALT, MONS_PILLAR_OF_SALT, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     1, 10,
     1, 0, MST_NO_SPELLS, false, S_SILENT,
@@ -5938,7 +6341,7 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
     MONS_BLOCK_OF_ICE, '8', ETC_ICE, "block of ice",
     M_NOT_DANGEROUS | M_STATIONARY,
     mrd(MR_RES_COLD, 3) | MR_VUL_FIRE,
-    10, MONS_BLOCK_OF_ICE, MONS_BLOCK_OF_ICE, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_BLOCK_OF_ICE, MONS_BLOCK_OF_ICE, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     3, 285,
     15, 0, MST_NO_SPELLS, false, S_SILENT,
@@ -5949,9 +6352,9 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
 
 {
     MONS_DIAMOND_OBELISK, '8', WHITE, "diamond obelisk",
-    M_STATIONARY | M_NO_EXP_GAIN | M_NO_POLY_TO,
+    M_STATIONARY | M_NOT_DANGEROUS | M_NO_POLY_TO,
     MR_RES_PETRIFY,
-    10, MONS_DIAMOND_OBELISK, MONS_DIAMOND_OBELISK, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_DIAMOND_OBELISK, MONS_DIAMOND_OBELISK, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     8, 96000,
     12, 1, MST_NO_SPELLS, false, S_SILENT,
@@ -5964,7 +6367,7 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
     MONS_LIGHTNING_SPIRE, '8', ETC_ELECTRICITY, "lightning spire",
     M_STATIONARY | M_NO_POLY_TO,
     mrd(MR_RES_FIRE | MR_RES_COLD, 2) | mrd(MR_RES_ELEC, 3) | MR_RES_PETRIFY,
-    10, MONS_LIGHTNING_SPIRE, MONS_LIGHTNING_SPIRE, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_LIGHTNING_SPIRE, MONS_LIGHTNING_SPIRE, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     3, 210,
     13, 3, MST_ZAPPER, false, S_SILENT,
@@ -5973,12 +6376,26 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
     {TILEP_MONS_LIGHTNING_SPIRE}, TILE_ERROR
 },
 
+{
+    MONS_STRANGE_MACHINE, '8', ETC_SILVER, "strange machine",
+    M_STATIONARY | M_NO_POLY_TO,
+    mrd(MR_RES_FIRE | MR_RES_COLD, 2) | MR_RES_ELEC | MR_RES_PETRIFY,
+    10, MONS_STRANGE_MACHINE, MONS_STRANGE_MACHINE, MH_NONLIVING, WILL_INVULN,
+    { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    21, 900,
+    12, 1, MST_STRANGE_MACHINE, false, S_SILENT,
+    I_BRAINLESS, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_MISC,
+    {TILEP_MONS_STRANGE_MACHINE}, TILE_ERROR
+},
+
+
 // gargoyles ('9')
 {
     MONS_GARGOYLE, '9', LIGHTGREY, "gargoyle",
     M_FLIES,
     MR_RES_ELEC | MR_RES_PETRIFY,
-    26, MONS_GARGOYLE, MONS_GARGOYLE, MH_NONLIVING, 40,
+    26, MONS_GOLEM, MONS_GARGOYLE, MH_NONLIVING, 40,
     { {AT_HIT, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     6, 270,
     18, 6, MST_GARGOYLE, false, S_SILENT,
@@ -5989,10 +6406,10 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
 },
 
 {
-    MONS_WAR_GARGOYLE, '9', CYAN, "war gargoyle",
+    MONS_WAR_GARGOYLE, '9', LIGHTCYAN, "war gargoyle",
     M_SEE_INVIS | M_FIGHTER | M_FLIES,
     MR_RES_ELEC | MR_RES_FIRE | MR_RES_COLD | MR_RES_PETRIFY,
-    18, MONS_GARGOYLE, MONS_WAR_GARGOYLE, MH_NONLIVING, 100,
+    18, MONS_GOLEM, MONS_WAR_GARGOYLE, MH_NONLIVING, 100,
     { {AT_HIT, AF_PLAIN, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     13, 520,
     22, 4, MST_SPLINTER_BREATH, false, S_SILENT,
@@ -6003,10 +6420,10 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
 },
 
 {
-    MONS_MOLTEN_GARGOYLE, '9', RED, "molten gargoyle",
+    MONS_MOLTEN_GARGOYLE, '9', LIGHTRED, "molten gargoyle",
     M_FLIES,
     MR_RES_ELEC | mrd(MR_RES_FIRE, 3) | MR_RES_PETRIFY,
-    18, MONS_GARGOYLE, MONS_MOLTEN_GARGOYLE, MH_NONLIVING, 60,
+    18, MONS_GOLEM, MONS_MOLTEN_GARGOYLE, MH_NONLIVING, 60,
     { {AT_HIT, AF_FIRE, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     7, 315,
     14, 7, MST_MOLTEN_GARGOYLE, false, S_SILENT,
@@ -6016,12 +6433,25 @@ DUMMY(MONS_GOLEM, '8', LIGHTGREY, "golem", TILEP_MONS_IRON_GOLEM)
     {TILEP_MONS_MOLTEN_GARGOYLE}, TILE_ERROR
 },
 
+{
+    MONS_NARGUN, '9', BLUE, "nargun",
+    M_SEE_INVIS | M_FIGHTER,
+    MR_RES_ELEC | mrd(MR_RES_COLD, 3) | MR_RES_PETRIFY,
+    10, MONS_GOLEM, MONS_NARGUN, MH_NONLIVING, 100,
+    { {AT_HIT, AF_VULN, 40}, {AT_BITE, AF_COLD, 30}, AT_NO_ATK, AT_NO_ATK },
+    22, 540,
+    25, 4, MST_NARGUN, false, S_SILENT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_MEDIUM, MON_SHAPE_BLOB,
+    {TILEP_MONS_NARGUN}, TILE_ERROR
+},
+
 // major demons ('&')
 // Random demon in pan - only one per level. Stats are stored in ghost struct.
 {
     MONS_PANDEMONIUM_LORD, '&', COLOUR_UNDEF, "pandemonium lord",
     // See invis is also set in ghost.cc
-    M_FIGHTER | M_SPEAKS | M_HYBRID | M_SEE_INVIS | M_GHOST_DEMON | M_TALL_TILE,
+    M_FIGHTER | M_SPEAKS | M_SEE_INVIS | M_GHOST_DEMON | M_TALL_TILE,
     MR_RES_POISON,
     14, MONS_PANDEMONIUM_LORD, MONS_PANDEMONIUM_LORD, MH_DEMONIC, -5,
     { {AT_HIT, AF_PLAIN, 5}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -6037,9 +6467,9 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 // explodey things / orb of fire ('*')
 {
     MONS_BALL_LIGHTNING, '*', LIGHTCYAN, "ball lightning",
-    M_INSUBSTANTIAL | M_CONJURED | M_FLIES,
-    mrd(MR_RES_ELEC | MR_RES_FIRE | MR_RES_COLD, 3) | MR_RES_TORNADO,
-    20, MONS_BALL_LIGHTNING, MONS_BALL_LIGHTNING, MH_NONLIVING, MAG_IMMUNE,
+    M_INSUBSTANTIAL | M_CONJURED | M_FLIES | M_NO_EXP_GAIN,
+    mrd(MR_RES_ELEC | MR_RES_FIRE | MR_RES_COLD, 3),
+    20, MONS_BALL_LIGHTNING, MONS_BALL_LIGHTNING, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 5}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     1, 10,
     0, 10, MST_NO_SPELLS, false, S_SILENT,
@@ -6052,7 +6482,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_BALLISTOMYCETE_SPORE, '*', GREEN, "ballistomycete spore",
     M_FLIES | M_NO_EXP_GAIN,
     MR_RES_POISON,
-    10, MONS_FUNGUS, MONS_BALLISTOMYCETE_SPORE, MH_PLANT, MAG_IMMUNE,
+    10, MONS_FUNGUS, MONS_BALLISTOMYCETE_SPORE, MH_PLANT, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 1}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     1, 10,
     0, 10, MST_NO_SPELLS, false, S_SILENT,
@@ -6065,7 +6495,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_LOST_SOUL, '*', LIGHTGREEN, "lost soul",
     M_INSUBSTANTIAL | M_MAINTAIN_RANGE | M_FLIES | M_NO_EXP_GAIN | M_SEE_INVIS,
     MR_RES_ELEC | MR_RES_FIRE | MR_RES_COLD,
-    2, MONS_LOST_SOUL, MONS_LOST_SOUL, MH_UNDEAD, MAG_IMMUNE,
+    2, MONS_LOST_SOUL, MONS_LOST_SOUL, MH_UNDEAD, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 250,
     0, 10, MST_NO_SPELLS, false, S_SILENT,
@@ -6090,8 +6520,8 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 {
     MONS_ORB_OF_FIRE, '*', RED, "orb of fire",
     M_SEE_INVIS | M_INSUBSTANTIAL | M_FLIES,
-    mrd(MR_RES_FIRE | MR_RES_ELEC, 3) | MR_RES_COLD | MR_VUL_WATER,
-    13, MONS_ORB_OF_FIRE, MONS_ORB_OF_FIRE, MH_NONLIVING, MAG_IMMUNE,
+    mrd(MR_RES_FIRE | MR_RES_ELEC, 3) | MR_RES_COLD,
+    13, MONS_ORB_OF_FIRE, MONS_ORB_OF_FIRE, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     30, 1500,
     20, 20, MST_ORB_OF_FIRE, false, S_SILENT,
@@ -6100,13 +6530,26 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     {TILEP_MONS_ORB_OF_FIRE}, TILE_ERROR
 },
 
+{
+    MONS_CREEPING_INFERNO, '*', LIGHTRED, "creeping inferno",
+    M_INSUBSTANTIAL | M_FLIES | M_NO_EXP_GAIN,
+    mrd(MR_RES_FIRE, 3),
+    10, MONS_CREEPING_INFERNO, MONS_CREEPING_INFERNO, MH_NONLIVING, 10,
+    { {AT_HIT, AF_PLAIN, 1}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    15, 10,
+    0, 10, MST_NO_SPELLS, false, S_SILENT,
+    I_BRAINLESS, HT_LAND, 14, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_SMALL, MON_SHAPE_ORB,
+    {TILEP_MONS_CREEPING_INFERNO}, TILE_ERROR
+},
+
 { // not an actual monster, used by a spell
     MONS_ORB_OF_DESTRUCTION, '*', WHITE, "orb of destruction",
     M_INSUBSTANTIAL | M_NOT_DANGEROUS | M_NO_POLY_TO | M_PROJECTILE | M_FLIES,
     mrd(MR_RES_COLD | MR_RES_ELEC | MR_RES_ACID | MR_RES_FIRE, 3)
         | MR_RES_DAMNATION | MR_RES_STICKY_FLAME,
     0, MONS_ORB_OF_DESTRUCTION, MONS_ORB_OF_DESTRUCTION,
-        MH_NONLIVING, MAG_IMMUNE,
+        MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     5, 50000, /* unkillable */
     0, 10, MST_NO_SPELLS, false, S_SILENT,
@@ -6120,7 +6563,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     M_SEE_INVIS | M_INSUBSTANTIAL | M_NOT_DANGEROUS | M_NO_POLY_TO
         | M_CONJURED | M_FLIES,
     mrd(MR_RES_FIRE, 3) | MR_RES_STICKY_FLAME,
-    0, MONS_FOXFIRE, MONS_FOXFIRE, MH_NONLIVING, MAG_IMMUNE,
+    0, MONS_FOXFIRE, MONS_FOXFIRE, MH_NONLIVING, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 1}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     1, 10, /* unkillable */
     0, 10, MST_NO_SPELLS, false, S_SILENT,
@@ -6134,7 +6577,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     M_NO_POLY_TO | M_STATIONARY | M_CONJURED | M_NO_EXP_GAIN
         | M_FLIES,
     MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC,
-    0, MONS_FULMINANT_PRISM, MONS_FULMINANT_PRISM, MH_NONLIVING, MAG_IMMUNE,
+    0, MONS_FULMINANT_PRISM, MONS_FULMINANT_PRISM, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     5, 150,
     3, 0, MST_NO_SPELLS, false, S_SILENT,
@@ -6147,7 +6590,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_WRETCHED_STAR, '*', MAGENTA, "wretched star",
     M_SEE_INVIS | M_INSUBSTANTIAL | M_FLIES,
     MR_RES_ELEC | MR_RES_FIRE | MR_RES_COLD,
-    13, MONS_WRETCHED_STAR, MONS_WRETCHED_STAR, MH_NONLIVING, MAG_IMMUNE,
+    13, MONS_WRETCHED_STAR, MONS_WRETCHED_STAR, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 700,
     10, 10, MST_WRETCHED_STAR, false, S_SILENT,
@@ -6162,7 +6605,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
         | M_MAINTAIN_RANGE | M_AVATAR | M_FLIES | M_UNBLINDABLE,
     mrd(MR_RES_COLD | MR_RES_FIRE, 2) | mrd(MR_RES_ELEC, 3)
         | MR_RES_ACID | MR_RES_STICKY_FLAME,
-    0, MONS_BATTLESPHERE, MONS_BATTLESPHERE, MH_NONLIVING, MAG_IMMUNE,
+    0, MONS_BATTLESPHERE, MONS_BATTLESPHERE, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     5, 150,
     0, 5, MST_NO_SPELLS, false, S_SILENT,
@@ -6189,7 +6632,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 // "A"ngels.
 {
     MONS_MENNAS, 'A', LIGHTCYAN, "Mennas",
-    M_FIGHTER | M_SEE_INVIS | M_SPEAKS | M_UNIQUE | M_MALE | M_FLIES,
+    M_FIGHTER | M_SPEAKS | M_UNIQUE | M_MALE | M_FLIES,
     MR_RES_POISON | MR_RES_ELEC,
     18, MONS_ANGEL, MONS_ANGEL, MH_HOLY, 160,
     { {AT_HIT, AF_PLAIN, 30}, {AT_HIT, AF_PLAIN, 20}, AT_NO_ATK,
@@ -6202,13 +6645,27 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     {TILEP_MONS_MENNAS}, TILE_ERROR
 },
 
+//  "a"ncients.
+{
+    MONS_ZENATA, 'a' /*should be @?*/, LIGHTGRAY, "Zenata",
+    M_SPEAKS | M_WARM_BLOOD | M_UNIQUE | M_FEMALE,
+    MR_NO_FLAGS,
+    15, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 100,
+    { {AT_HIT, AF_PLAIN, 35}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    15, 1800,
+    10, 10, MST_ZENATA, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_ZENATA}, TILE_ERROR
+},
+
 // "c"entaurs.
 {
     MONS_NESSOS, 'c', MAGENTA, "Nessos",
     M_UNIQUE | M_WARM_BLOOD | M_ARCHER | M_SPEAKS | M_GENDER_NEUTRAL,
     MR_NO_FLAGS,
     18, MONS_CENTAUR, MONS_CENTAUR, MH_NATURAL, 20,
-    { {AT_HIT, AF_PLAIN, 16}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 13}, {AT_KICK, AF_PLAIN, 5}, AT_NO_ATK, AT_NO_ATK },
     9, 720,
     4, 8, MST_NESSOS, true, S_SHOUT,
     I_HUMAN, HT_LAND, 15, DEFAULT_ENERGY,
@@ -6231,7 +6688,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 },
 
 {
-    MONS_POLYPHEMUS, 'C', GREEN, "Polyphemus",
+    MONS_POLYPHEMUS, 'C', BLUE, "Polyphemus",
     M_UNIQUE | M_WARM_BLOOD | M_SPEAKS | M_MALE,
     MR_NO_FLAGS,
     10, MONS_GIANT, MONS_CYCLOPS, MH_NATURAL, 60,
@@ -6244,11 +6701,11 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 },
 
 {
-    MONS_ANTAEUS, 'C', LIGHTCYAN, "Antaeus",
+    MONS_ANTAEUS, 'C', WHITE, "Antaeus",
     M_UNIQUE | M_WARM_BLOOD | M_FIGHTER | M_SEE_INVIS | M_MALE
         | M_SPEAKS | M_TALL_TILE,
     mrd(MR_RES_ELEC, 3) | mrd(MR_RES_COLD, 2) | MR_VUL_FIRE,
-    10, MONS_GIANT, MONS_TITAN, MH_DEMONIC, MAG_IMMUNE,
+    10, MONS_GIANT, MONS_TITAN, MH_DEMONIC, WILL_INVULN,
     { {AT_HIT, AF_COLD, 75}, {AT_HIT, AF_COLD, 30}, AT_NO_ATK, AT_NO_ATK },
     22, 6820,
     28, 4, MST_ANTAEUS, false, S_DEMON_TAUNT,
@@ -6269,7 +6726,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     // Gets her breath in
     30, 10, MST_NO_SPELLS, false, S_ROAR,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
-    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM,
+    MONUSE_WEAPONS_ARMOUR, SIZE_LARGE, // bigtile!
         MON_SHAPE_HUMANOID_WINGED_TAILED,
     {TILEP_MONS_PROGRAM_BUG}, TILE_ERROR
 },
@@ -6364,7 +6821,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     M_SEE_INVIS | M_UNIQUE | M_CRASH_DOORS | M_FLIES | M_TALL_TILE,
     MR_RES_POISON | mrd(MR_RES_COLD, 2),
     18, MONS_DRAGON, MONS_SERPENT_OF_HELL, MH_DEMONIC, 180,
-    { {AT_BITE, AF_DRAIN_XP, 35}, {AT_CLAW, AF_PLAIN, 15},
+    { {AT_BITE, AF_DRAIN, 35}, {AT_CLAW, AF_PLAIN, 15},
       {AT_TRAMPLE, AF_TRAMPLE, 15}, AT_NO_ATK },
     17, 3230,
     16, 12, MST_SERPENT_OF_HELL_TAR, false, S_LOUD_ROAR,
@@ -6375,7 +6832,8 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 
 {
     MONS_BAI_SUZHEN_DRAGON, 'D', ETC_ELECTRICITY, "Bai Suzhen",
-    M_UNIQUE | M_SEE_INVIS | M_COLD_BLOOD | M_SPEAKS | M_FEMALE | M_FLIES,
+    M_UNIQUE | M_SEE_INVIS | M_COLD_BLOOD | M_SPEAKS | M_FEMALE | M_FLIES
+        | M_THUNDER_RING,
     mrd(MR_RES_ELEC, 3) | MR_RES_COLD | MR_RES_POISON,
     18, MONS_DRAGON, MONS_STORM_DRAGON, MH_NATURAL, 100,
     { {AT_BITE, AF_PLAIN, 30}, {AT_CLAW, AF_PLAIN, 16},
@@ -6421,7 +6879,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     16, MONS_ELF, MONS_ELF, MH_NATURAL, 80,
     { {AT_HIT, AF_PLAIN, 8}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 800,
-    0, 15, MST_FANNAR, true, S_SHOUT,
+    4, 15, MST_FANNAR, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_FANNAR}, TILE_ERROR
@@ -6435,7 +6893,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     12, MONS_FROG, MONS_HUMAN, MH_NATURAL, 40,
     { {AT_HIT, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     6, 390,
-    0, 16, MST_PRINCE_RIBBIT, true, S_CROAK,
+    0, 16, MST_BLINKER, true, S_CROAK,
     I_HUMAN, HT_AMPHIBIOUS, 14, SWIM_ENERGY(6),
     MONUSE_NOTHING, SIZE_MEDIUM, MON_SHAPE_QUADRUPED_TAILLESS,
     {TILEP_MONS_PRINCE_RIBBIT}, TILE_ERROR
@@ -6460,7 +6918,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     M_UNIQUE | M_WARM_BLOOD | M_SPEAKS | M_GENDER_NEUTRAL,
     MR_NO_FLAGS,
     10, MONS_GOBLIN, MONS_HOBGOBLIN, MH_NATURAL, 10,
-    { {AT_HIT, AF_PLAIN, 5}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 2}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     2, 160,
     1, 8, MST_ROBIN, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
@@ -6507,12 +6965,25 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     {TILEP_MONS_JORGRUN}, TILE_ERROR
 },
 
+{
+    MONS_GRUNN, 'g', LIGHTGREEN, "Grunn",
+    M_UNIQUE | M_SPEAKS | M_MALE,
+    MR_NO_FLAGS,
+    10, MONS_GNOLL, MONS_GNOLL, MH_UNDEAD, 100,
+    { {AT_HIT, AF_PLAIN, 50}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    16, 2000,
+    6, 6, MST_NO_SPELLS, true, S_GROWL,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_GRUNN}, TILE_ERROR
+},
+
 // "h" - carnivorous quadrupeds
 {
     MONS_NATASHA, 'h', MAGENTA, "Natasha",
     M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS | M_UNIQUE | M_FEMALE,
     MR_NO_FLAGS,
-    10, MONS_FELID, MONS_FELID, MH_NATURAL | MH_EVIL, 20,
+    10, MONS_FELID, MONS_FELID, MH_NATURAL, 20,
     { {AT_CLAW, AF_PLAIN, 10}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     3, 150,
     2, 12, MST_NATASHA, true, S_HISS,
@@ -6524,7 +6995,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 // "H"ybrids.
 {
     MONS_ARACHNE, 'H', LIGHTCYAN, "Arachne",
-    M_UNIQUE | M_WARM_BLOOD | M_SPEAKS | M_SEE_INVIS | M_FEMALE,
+    M_UNIQUE | M_WARM_BLOOD | M_SPEAKS | M_SEE_INVIS | M_FEMALE | M_WEB_IMMUNE,
     MR_NO_FLAGS, // no rPois- (breathes through the human half)
     10, MONS_SPIDER, MONS_ARACHNE, MH_NATURAL, 60,
     { {AT_HIT, AF_PLAIN, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -6537,9 +7008,9 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 
 {
     MONS_ASTERION, 'H', LIGHTBLUE, "Asterion",
-    M_HYBRID | M_WARM_BLOOD | M_SPEAKS | M_SEE_INVIS | M_UNIQUE | M_MALE,
+    M_WARM_BLOOD | M_SPEAKS | M_SEE_INVIS | M_UNIQUE | M_MALE,
     MR_NO_FLAGS,
-    15, MONS_MINOTAUR, MONS_MINOTAUR, MH_NATURAL | MH_EVIL, 100,
+    15, MONS_MINOTAUR, MONS_MINOTAUR, MH_NATURAL, 100,
     { {AT_HIT, AF_PLAIN, 35}, {AT_GORE, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK },
     15, 1275,
     4, 4, MST_ASTERION, true, S_BELLOW,
@@ -6579,7 +7050,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 {
     MONS_ROYAL_JELLY, 'J', YELLOW, "the Royal Jelly",
     M_SEE_INVIS | M_UNBLINDABLE | M_ACID_SPLASH | M_UNIQUE | M_EAT_DOORS
-        | M_TALL_TILE,
+        | M_TALL_TILE | M_WEB_IMMUNE | M_NO_SKELETON,
     MR_RES_POISON | mrd(MR_RES_ACID, 3),
     20, MONS_JELLY, MONS_JELLY, MH_NATURAL, 180,
     { {AT_HIT, AF_ACID, 50}, {AT_HIT, AF_ACID, 30}, AT_NO_ATK, AT_NO_ATK },
@@ -6593,7 +7064,8 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 {
     MONS_DISSOLUTION, 'J', LIGHTMAGENTA, "Dissolution",
     M_UNIQUE | M_SEE_INVIS | M_UNBLINDABLE | M_ACID_SPLASH | M_BURROWS
-        | M_SPEAKS | M_FAST_REGEN | M_GENDER_NEUTRAL | M_EAT_DOORS,
+        | M_SPEAKS | M_FAST_REGEN | M_GENDER_NEUTRAL | M_EAT_DOORS
+        | M_WEB_IMMUNE | M_NO_SKELETON,
     MR_RES_POISON | mrd(MR_RES_ACID, 3),
     60, MONS_JELLY, MONS_JELLY, MH_NATURAL, 120,
     { {AT_HIT, AF_ACID, 50}, {AT_HIT, AF_ACID, 30}, AT_NO_ATK, AT_NO_ATK },
@@ -6624,7 +7096,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_PIKEL, 'K', BLUE, "Pikel",
     M_WARM_BLOOD | M_SPEAKS | M_UNIQUE | M_MALE,
     MR_NO_FLAGS,
-    32, MONS_KOBOLD, MONS_BIG_KOBOLD, MH_NATURAL, 20,
+    32, MONS_KOBOLD, MONS_KOBOLD, MH_NATURAL, 20,
     { {AT_HIT, AF_PLAIN, 9}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     6, 390,
     4, 12, MST_NO_SPELLS, true, S_SHOUT,
@@ -6639,14 +7111,28 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_BORIS, 'L', RED, "Boris",
     M_UNIQUE | M_SEE_INVIS | M_SPEAKS | M_MALE,
     mrd(MR_RES_COLD, 2) | MR_RES_ELEC,
-    15, MONS_LICH, MONS_LICH, MH_UNDEAD, MAG_IMMUNE,
-    { {AT_HIT, AF_PLAIN, 25}, {AT_TOUCH, AF_DRAIN_XP, 15}, AT_NO_ATK,
+    15, MONS_LICH, MONS_LICH, MH_UNDEAD, WILL_INVULN,
+    { {AT_HIT, AF_PLAIN, 25}, {AT_TOUCH, AF_DRAIN, 15}, AT_NO_ATK,
        AT_NO_ATK },
     22, 1540,
     12, 10, MST_BORIS, false, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_BORIS}, TILE_ERROR
+},
+
+{
+    MONS_JOSEPHINA, 'L', LIGHTBLUE, "Josephina",
+    M_UNIQUE | M_SEE_INVIS | M_SPEAKS | M_FEMALE,
+    mrd(MR_RES_COLD, 3),
+    20, MONS_LICH, MONS_LICH, MH_UNDEAD, WILL_INVULN,
+    { {AT_HIT, AF_COLD, 27}, {AT_TOUCH, AF_DRAIN, 15}, AT_NO_ATK,
+       AT_NO_ATK },
+    21, 1500,
+    10, 21, MST_JOSEPHINA, false, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_JOSEPHINA}, TILE_ERROR
 },
 
 // "M"ummies.
@@ -6711,12 +7197,25 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     M_UNIQUE | M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS | M_FEMALE,
     MR_NO_FLAGS,
     50, MONS_OGRE, MONS_OGRE, MH_NATURAL, 60,
-    { {AT_HIT, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    { {AT_HIT, AF_PLAIN, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     6, 540,
-    3, 7, MST_NO_SPELLS, true, S_SHOUT,
-    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    3, 7, MST_WIZARD, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, ATTACK_ENERGY(15),
     MONUSE_WEAPONS_ARMOUR, SIZE_LARGE, MON_SHAPE_HUMANOID,
     {TILEP_MONS_EROLCHA}, TILE_ERROR
+},
+
+{
+    MONS_LODUL, 'O', CYAN, "Lodul",
+    M_UNIQUE | M_WARM_BLOOD | M_SPEAKS | M_MALE,
+    MR_NO_FLAGS,
+    25, MONS_OGRE, MONS_OGRE, MH_NATURAL, 40,
+    { {AT_HIT, AF_PLAIN, 30}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    6, 700,
+    3, 7, MST_LODUL, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, ATTACK_ENERGY(15),
+    MONUSE_WEAPONS_ARMOUR, SIZE_LARGE, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_LODUL}, TILE_ERROR
 },
 
 // "o"rcs.
@@ -6727,7 +7226,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     15, MONS_ORC, MONS_ORC, MH_NATURAL, 20,
     { {AT_HIT, AF_PLAIN, 7}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     3, 315,
-    0, 9, MST_ORC_WIZARD_III, true, S_SHOUT,
+    0, 9, MST_BLORK, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_BLORK_THE_ORC}, TILE_ERROR
@@ -6750,7 +7249,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_NERGALLE, 'o', WHITE, "Nergalle",
     M_UNIQUE | M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS | M_FEMALE,
     MR_NO_FLAGS,
-    12, MONS_ORC, MONS_ORC, MH_NATURAL | MH_EVIL, 60,
+    12, MONS_ORC, MONS_ORC, MH_NATURAL, 60,
     { {AT_HIT, AF_PLAIN, 6}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 600,
     9, 11, MST_NERGALLE, true, S_SHOUT,
@@ -6763,7 +7262,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_SAINT_ROKA, 'o', LIGHTBLUE, "Saint Roka",
     M_UNIQUE | M_FIGHTER | M_WARM_BLOOD | M_SPEAKS | M_GENDER_NEUTRAL,
     MR_NO_FLAGS,
-    15, MONS_ORC, MONS_ORC, MH_NATURAL | MH_EVIL, 80,
+    15, MONS_ORC, MONS_ORC, MH_NATURAL, 80,
     { {AT_HIT, AF_PLAIN, 35}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     18, 1980,
     3, 10, MST_SAINT_ROKA, true, S_SHOUT,
@@ -6777,7 +7276,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_SOJOBO, 'Q', LIGHTGREEN, "Sojobo",
     M_FIGHTER | M_SEE_INVIS | M_WARM_BLOOD | M_SPEAKS | M_UNIQUE | M_FEMALE
         | M_FLIES,
-    MR_RES_TORNADO,
+    MR_NO_FLAGS,
     20, MONS_TENGU, MONS_TENGU, MH_NATURAL, 140,
     { {AT_HIT, AF_PLAIN, 28}, {AT_PECK, AF_PLAIN, 14}, {AT_CLAW, AF_PLAIN, 14},
        AT_NO_ATK },
@@ -6792,8 +7291,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 {
     MONS_AZRAEL, 'R', LIGHTRED, "Azrael",
     M_UNIQUE | M_SPEAKS | M_MALE | M_FLIES,
-    MR_RES_POISON | MR_RES_DAMNATION | mrd(MR_RES_FIRE, 3) | MR_VUL_COLD
-        | MR_VUL_WATER,
+    MR_RES_POISON | MR_RES_DAMNATION | mrd(MR_RES_FIRE, 3) | MR_VUL_COLD,
     12, MONS_EFREET, MONS_EFREET, MH_DEMONIC, 40,
     { {AT_HIT, AF_PLAIN, 17}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     11, 880,
@@ -6847,7 +7345,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 },
 
 {
-    MONS_PURGY, 'T', GREEN, "Purgy",
+    MONS_PARGI, 'T', GREEN, "Pargi",
     M_UNIQUE | M_WARM_BLOOD | M_SPEAKS | M_FAST_REGEN | M_MALE,
     MR_NO_FLAGS,
     10, MONS_TROLL, MONS_TROLL, MH_NATURAL, 10,
@@ -6857,7 +7355,21 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     1, 12, MST_NO_SPELLS, true, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_OPEN_DOORS, SIZE_LARGE, MON_SHAPE_HUMANOID,
-    {TILEP_MONS_PURGY}, TILE_ERROR
+    {TILEP_MONS_PARGI}, TILE_ERROR
+},
+
+{
+    MONS_PARGHIT, 'T', GREEN, "Parghit",
+    M_UNIQUE | M_WARM_BLOOD | M_SPEAKS | M_FAST_REGEN | M_MALE,
+    MR_NO_FLAGS,
+    10, MONS_TROLL, MONS_TROLL, MH_NATURAL, 140,
+    { {AT_BITE, AF_PLAIN, 50}, {AT_CLAW, AF_PLAIN, 40},
+      {AT_CLAW, AF_PLAIN, 40}, AT_NO_ATK },
+    27, 1200,
+    1, 12, MST_NO_SPELLS, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_STARTING_EQUIPMENT, SIZE_LARGE, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_PARGHIT}, TILE_ERROR
 },
 
 // Semi-unique in the moon base wizlab
@@ -6872,7 +7384,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     18, 990,
     20, 4, MST_MOON_TROLL, false, S_SHOUT,
     I_HUMAN, HT_LAND, 12, DEFAULT_ENERGY,
-    MONUSE_WEAPONS_ARMOUR, SIZE_BIG, MON_SHAPE_HUMANOID,
+    MONUSE_WEAPONS_ARMOUR, SIZE_LARGE, MON_SHAPE_HUMANOID,
     {TILEP_MONS_MOON_TROLL}, TILE_ERROR
 },
 
@@ -6902,8 +7414,22 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     20, 1500,
     2, 1, MST_GASTRONOK, true, S_GURGLE,
     I_HUMAN, HT_AMPHIBIOUS, 5, DEFAULT_ENERGY,
-    MONUSE_STARTING_EQUIPMENT, SIZE_BIG, MON_SHAPE_SNAIL,
-    {TILEP_MONS_GASTRONOK}, TILE_ERROR
+    MONUSE_STARTING_EQUIPMENT, SIZE_GIANT, MON_SHAPE_SNAIL,
+    {TILEP_MONS_GASTRONOK, TVARY_MOD}, TILE_ERROR
+},
+
+// Horrors
+{
+    MONS_MLIOGLOTL, 'X', BROWN, "Mlioglotl",
+    M_UNIQUE | M_SPEAKS | M_MALE,
+    MR_RES_ELEC | MR_RES_POISON | MR_RES_COLD,
+    13, MONS_THRASHING_HORROR, MONS_MLIOGLOTL, MH_DEMONIC, 120,
+    { {AT_HIT, AF_PLAIN, 20}, {AT_TRAMPLE, AF_TRAMPLE, 25}, AT_NO_ATK, AT_NO_ATK },
+    15, 1400,
+    10, 5, MST_MLIOGLOTL, false, S_SHOUT,
+    I_HUMAN, HT_LAND, 14, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_GIANT, MON_SHAPE_MISC,
+    {TILEP_MONS_MLIOGLOTL}, TILE_ERROR
 },
 
 // Elephants.
@@ -6926,7 +7452,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_MURRAY, 'z', LIGHTRED, "Murray",
     M_UNIQUE | M_SEE_INVIS | M_SPEAKS | M_MALE,
     mrd(MR_RES_FIRE | MR_RES_COLD, 2) | MR_RES_ELEC,
-    15, MONS_CURSE_SKULL, MONS_CURSE_SKULL, MH_UNDEAD, MAG_IMMUNE,
+    15, MONS_CURSE_SKULL, MONS_CURSE_SKULL, MH_UNDEAD, WILL_INVULN,
     { {AT_BITE, AF_PLAIN, 20}, {AT_BITE, AF_PLAIN, 20}, AT_NO_ATK, AT_NO_ATK },
     14, 1610,
     30, 10, MST_MURRAY, false, S_MOAN,
@@ -6952,7 +7478,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 
 {
     MONS_GRINDER, '5', BLUE, "Grinder",
-    M_UNIQUE | M_SEE_INVIS | M_SPEAKS | M_NO_HT_WAND | M_FEMALE,
+    M_UNIQUE | M_SPEAKS | M_NO_HT_WAND | M_FEMALE,
     MR_RES_POISON | mrd(MR_RES_COLD, 2),
     11, MONS_SHADOW_IMP, MONS_SHADOW_IMP, MH_DEMONIC, 20,
     { {AT_HIT, AF_PAIN, 11}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -6964,19 +7490,46 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 },
 
 {
+    MONS_AMAEMON, '6', GREEN, "Amaemon",
+    M_UNIQUE | M_WARM_BLOOD | M_SPEAKS | M_MALE,
+    MR_NO_FLAGS,
+    15, MONS_DEMONSPAWN, MONS_DEMONSPAWN, MH_NATURAL | MH_DEMONIC, 60,
+    { {AT_HIT, AF_PLAIN, 12}, {AT_CLAW, AF_PLAIN, 12},
+      {AT_TAIL_SLAP, AF_POISON, 8}, AT_NO_ATK },
+    7, 875,
+    3, 12, MST_AMAEMON, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_AMAEMON}, TILE_ERROR
+},
+
+{
     // Roxanne obviously can't use items, but we want to equip her with
     // a spellbook, so MONUSE_STARTING_EQUIPMENT is necessary.
     MONS_ROXANNE, '8', BLUE, "Roxanne",
     M_UNIQUE | M_STATIONARY | M_SPEAKS | M_NO_WAND | M_FEMALE,
     mrd(MR_RES_FIRE | MR_RES_COLD, 2) | MR_RES_ELEC
         | MR_RES_PETRIFY,
-    10, MONS_STATUE, MONS_STATUE, MH_NONLIVING, MAG_IMMUNE,
+    10, MONS_STATUE, MONS_STATUE, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     14, 1820,
     20, 0, MST_ROXANNE, false, S_SILENT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_STARTING_EQUIPMENT, SIZE_LARGE, MON_SHAPE_HUMANOID,
     {TILEP_MONS_ROXANNE}, TILE_ERROR
+},
+
+{
+    MONS_VV, '9', MAGENTA, "Vv",
+    M_UNIQUE | M_FEMALE,
+    MR_RES_FIRE | MR_RES_COLD | MR_RES_ELEC | MR_RES_PETRIFY,
+    10, MONS_VV, MONS_VV, MH_NONLIVING, 140,
+    { {AT_HIT, AF_COLD, 35}, {AT_HIT, AF_FIRE, 35}, AT_NO_ATK, AT_NO_ATK },
+    23, 2700,
+    27, 12, MST_VV, false, S_SILENT,
+    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    MONUSE_OPEN_DOORS, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
+    {TILEP_MONS_VV}, TILE_ERROR
 },
 
 // human uniques
@@ -6997,7 +7550,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_JESSICA, '@', LIGHTGREY, "Jessica",
     M_UNIQUE | M_WARM_BLOOD | M_SPEAKS | M_FEMALE,
     MR_NO_FLAGS,
-    125, MONS_HUMAN, MONS_HUMAN, MH_NATURAL | MH_EVIL, 10,
+    125, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 10,
     { {AT_HIT, AF_PLAIN, 5}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     1, 95,
     0, 10, MST_JESSICA, true, S_SHOUT,
@@ -7010,11 +7563,11 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_SIGMUND, '@', YELLOW, "Sigmund",
     M_UNIQUE | M_WARM_BLOOD | M_SPEAKS | M_MALE,
     MR_NO_FLAGS,
-    50, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 10,
-    { {AT_HIT, AF_PLAIN, 5}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
-    3, 300,
-    0, 11, MST_ORC_WIZARD_II, true, S_SHOUT,
-    I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
+    55, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 10,
+    { {AT_HIT, AF_PLAIN, 1}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    3, 270,
+    0, 11, MST_ORC_WIZARD, true, S_SHOUT,
+    I_HUMAN, HT_LAND, 10, ATTACK_ENERGY(15),
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_SIGMUND}, TILE_ERROR
 },
@@ -7036,10 +7589,10 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_PSYCHE, '@', LIGHTMAGENTA, "Psyche",
     M_UNIQUE | M_WARM_BLOOD | M_SPEAKS | M_FEMALE,
     MR_NO_FLAGS,
-    20, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 20,
+    20, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 60,
     { {AT_HIT, AF_PLAIN, 7}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     5, 400,
-    0, 12, MST_ORC_WIZARD_III, true, S_SHOUT,
+    0, 12, MST_PSYCHE, true, S_SHOUT,
     I_HUMAN, HT_LAND, 13, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_MEDIUM, MON_SHAPE_HUMANOID,
     {TILEP_MONS_PSYCHE}, TILE_ERROR
@@ -7088,7 +7641,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_JOSEPHINE, '@', WHITE, "Josephine",
     M_UNIQUE | M_WARM_BLOOD | M_SPEAKS | M_FEMALE,
     mrd(MR_RES_NEG, 3),
-    20, MONS_HUMAN, MONS_HUMAN, MH_NATURAL | MH_EVIL, 60,
+    20, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 60,
     { {AT_HIT, AF_PLAIN, 11}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     10, 700,
     0, 10, MST_JOSEPHINE, true, S_SHOUT,
@@ -7127,7 +7680,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_FRANCES, '@', YELLOW, "Frances",
     M_UNIQUE | M_WARM_BLOOD | M_SEE_INVIS | M_FEMALE | M_SPEAKS,
     MR_NO_FLAGS,
-    15, MONS_HUMAN, MONS_HUMAN, MH_NATURAL | MH_EVIL, 100,
+    15, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 100,
     { {AT_HIT, AF_PLAIN, 29}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     14, 1330,
     0, 10, MST_FRANCES, true, S_SHOUT,
@@ -7138,7 +7691,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 
 {
     MONS_RUPERT, '@', LIGHTRED, "Rupert",
-    M_UNIQUE | M_WARM_BLOOD | M_SEE_INVIS | M_SPEAKS | M_MALE,
+    M_UNIQUE | M_WARM_BLOOD | M_SPEAKS | M_MALE,
     MR_NO_FLAGS,
     18, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 100,
     { {AT_HIT, AF_PLAIN, 21}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
@@ -7205,7 +7758,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_EUSTACHIO, '@', BLUE, "Eustachio",
     M_UNIQUE | M_WARM_BLOOD | M_SPEAKS | M_MALE,
     MR_NO_FLAGS,
-    20, MONS_HUMAN, MONS_HUMAN, MH_NATURAL | MH_EVIL, 20,
+    20, MONS_HUMAN, MONS_HUMAN, MH_NATURAL, 20,
     { {AT_HIT, AF_PLAIN, 6}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     4, 400,
     0, 13, MST_EUSTACHIO, true, S_SHOUT,
@@ -7246,7 +7799,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     M_UNIQUE | M_FIGHTER | M_SEE_INVIS | M_SPEAKS | M_TALL_TILE
         | M_GENDER_NEUTRAL,
     MR_RES_ELEC | MR_RES_POISON | MR_RES_FIRE,
-    15, MONS_PANDEMONIUM_LORD, MONS_MNOLEG, MH_DEMONIC, MAG_IMMUNE,
+    15, MONS_PANDEMONIUM_LORD, MONS_MNOLEG, MH_DEMONIC, WILL_INVULN,
     { {AT_CLAW, AF_PLAIN, 40}, {AT_TENTACLE_SLAP, AF_MUTATE, 35},
       {AT_GORE, AF_PLAIN, 30}, {AT_KICK, AF_BLINK, 23} },
     17, 3485,
@@ -7261,7 +7814,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     M_UNIQUE | M_FIGHTER | M_SEE_INVIS | M_SPEAKS | M_FLIES | M_TALL_TILE
         | M_GENDER_NEUTRAL,
     MR_RES_POISON | MR_RES_FIRE | mrd(MR_RES_COLD | MR_RES_ELEC, 3),
-    15, MONS_PANDEMONIUM_LORD, MONS_LOM_LOBON, MH_DEMONIC, MAG_IMMUNE,
+    15, MONS_PANDEMONIUM_LORD, MONS_LOM_LOBON, MH_DEMONIC, WILL_INVULN,
     { {AT_HIT, AF_ANTIMAGIC, 40}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     19, 3895,
     10, 20, MST_LOM_LOBON, false, S_SCREAM,
@@ -7275,7 +7828,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     M_UNIQUE | M_FIGHTER | M_SEE_INVIS | M_SPEAKS | M_TALL_TILE
         | M_GENDER_NEUTRAL,
     MR_RES_POISON | MR_RES_DAMNATION | mrd(MR_RES_FIRE, 3),
-    15, MONS_PANDEMONIUM_LORD, MONS_CEREBOV, MH_DEMONIC, MAG_IMMUNE,
+    15, MONS_PANDEMONIUM_LORD, MONS_CEREBOV, MH_DEMONIC, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 60}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     21, 6510,
     30, 8, MST_CEREBOV, false, S_SHOUT,
@@ -7289,7 +7842,7 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     M_UNIQUE | M_FIGHTER | M_SEE_INVIS | M_SPEAKS | M_FLIES | M_TALL_TILE
         | M_GENDER_NEUTRAL,
     MR_RES_POISON | MR_RES_COLD | MR_RES_ELEC,
-    15, MONS_PANDEMONIUM_LORD, MONS_GLOORX_VLOQ, MH_DEMONIC, MAG_IMMUNE,
+    15, MONS_PANDEMONIUM_LORD, MONS_GLOORX_VLOQ, MH_DEMONIC, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 45}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     16, 3520,
     10, 10, MST_GLOORX_VLOQ, false, S_MOAN,
@@ -7319,10 +7872,10 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
         | M_GENDER_NEUTRAL,
     mrd(MR_RES_ELEC | MR_RES_FIRE, 3) | MR_RES_POISON | MR_RES_DAMNATION
         | MR_RES_COLD,
-    15, MONS_HELL_LORD, MONS_DISPATER, MH_DEMONIC, MAG_IMMUNE,
+    15, MONS_HELL_LORD, MONS_DISPATER, MH_DEMONIC, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 50}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     16, 4480,
-    40, 3, MST_DISPATER, false, S_SHOUT,
+    35, 3, MST_DISPATER, false, S_SHOUT,
     I_HUMAN, HT_LAND, 10, DEFAULT_ENERGY,
     MONUSE_WEAPONS_ARMOUR, SIZE_LARGE, MON_SHAPE_HUMANOID,
     {TILEP_MONS_DISPATER}, TILE_ERROR
@@ -7331,9 +7884,9 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
 {
     MONS_ASMODEUS, '&', LIGHTRED, "Asmodeus",
     M_UNIQUE | M_FIGHTER | M_SEE_INVIS | M_SPEAKS | M_MALE | M_FLIES
-        | M_TALL_TILE,
+        | M_TALL_TILE | M_FIRE_RING,
     MR_RES_ELEC | MR_RES_POISON | MR_RES_DAMNATION | mrd(MR_RES_FIRE, 3),
-    25, MONS_HELL_LORD, MONS_ASMODEUS, MH_DEMONIC, MAG_IMMUNE,
+    25, MONS_HELL_LORD, MONS_ASMODEUS, MH_DEMONIC, WILL_INVULN,
     { {AT_HIT, AF_PLAIN, 50}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     17, 4505,
     30, 7, MST_ASMODEUS, false, S_SHOUT,
@@ -7346,8 +7899,8 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_ERESHKIGAL, '&', WHITE, "Ereshkigal",
     M_UNIQUE | M_SEE_INVIS | M_SPEAKS | M_FEMALE | M_TALL_TILE,
     MR_RES_ELEC | MR_RES_POISON | MR_RES_COLD,
-    15, MONS_HELL_LORD, MONS_ERESHKIGAL, MH_DEMONIC, MAG_IMMUNE,
-    { {AT_HIT, AF_DRAIN_XP, 40}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    15, MONS_HELL_LORD, MONS_ERESHKIGAL, MH_DEMONIC, WILL_INVULN,
+    { {AT_HIT, AF_DRAIN, 40}, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     18, 3510,
     10, 30, MST_ERESHKIGAL, false, S_SHOUT,
     I_HUMAN, HT_LAND, 14, DEFAULT_ENERGY,
@@ -7362,8 +7915,8 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     MONS_TEST_SPAWNER, 'X', WHITE, "test spawner",
     M_STATIONARY | M_INSUBSTANTIAL | M_NO_POLY_TO | M_FAST_REGEN,
     mrd(MR_RES_ELEC | MR_RES_FIRE | MR_RES_COLD
-        | MR_RES_ROTTING | MR_RES_ACID, 4) | MR_RES_STICKY_FLAME,
-    15, MONS_TEST_SPAWNER, MONS_TEST_SPAWNER, MH_NONLIVING, MAG_IMMUNE,
+        | MR_RES_MIASMA | MR_RES_ACID, 4) | MR_RES_STICKY_FLAME,
+    15, MONS_TEST_SPAWNER, MONS_TEST_SPAWNER, MH_NONLIVING, WILL_INVULN,
     { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
     1000, 10000000,
     127, 127, MST_TEST_SPAWNER, false, S_SILENT,
@@ -7384,6 +7937,20 @@ DUMMY(MONS_HELL_LORD, '&', COLOUR_UNDEF, "hell lord", TILEP_MONS_PROGRAM_BUG)
     I_BRAINLESS, HT_AMPHIBIOUS, 14, SWIM_ENERGY(6),
     MONUSE_NOTHING, SIZE_LARGE, MON_SHAPE_MISC,
     {TILEP_MONS_TEST_SPAWNER}, TILE_ERROR
+},
+
+// tons of hp, does not attack, but not stationary
+{
+    MONS_TEST_BLOB, 'J', WHITE, "test blob",
+    M_NO_POLY_TO | M_FAST_REGEN | M_NO_THREAT,
+    MR_NO_FLAGS,
+    15, MONS_TEST_STATUE, MONS_TEST_STATUE, MH_NONLIVING, 20,
+    { AT_NO_ATK, AT_NO_ATK, AT_NO_ATK, AT_NO_ATK },
+    1000, 10000000,
+    0, 0, MST_NO_SPELLS, false, S_SILENT,
+    I_BRAINLESS, HT_AMPHIBIOUS, 10, DEFAULT_ENERGY,
+    MONUSE_NOTHING, SIZE_MEDIUM, MON_SHAPE_MISC,
+    {TILEP_MONS_JELLY}, TILE_ERROR
 },
 
 

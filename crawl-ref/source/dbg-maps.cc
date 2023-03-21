@@ -22,6 +22,8 @@
 #include "shopping.h"
 #include "state.h"
 #include "stringutil.h"
+#include "syscalls.h"
+#include "tag-version.h"
 #include "view.h"
 
 #ifdef DEBUG_STATISTICS
@@ -116,7 +118,7 @@ static bool _do_build_level()
             {
                 const coord_def pos(x, y);
 
-                objstat_record_feature(grd[x][y], map_masked(pos, MMT_VAULT));
+                objstat_record_feature(env.grid[x][y], map_masked(pos, MMT_VAULT));
 
                 monster *mons = monster_at(pos);
                 if (mons)
@@ -131,16 +133,16 @@ static bool _do_build_level()
                 }
             }
 
-            if (grd[x][y] == DNGN_RUNED_DOOR)
-                grd[x][y] = DNGN_CLOSED_DOOR;
-            else if (grd[x][y] == DNGN_RUNED_CLEAR_DOOR)
-                grd[x][y] = DNGN_CLOSED_CLEAR_DOOR;
+            if (env.grid[x][y] == DNGN_RUNED_DOOR)
+                env.grid[x][y] = DNGN_CLOSED_DOOR;
+            else if (env.grid[x][y] == DNGN_RUNED_CLEAR_DOOR)
+                env.grid[x][y] = DNGN_CLOSED_CLEAR_DOOR;
         }
 
 
     // Record floor items for objstat.
     if (crawl_state.obj_stat_gen)
-        for (auto &item : mitm)
+        for (auto &item : env.item)
             if (item.defined())
                 objstat_record_item(item);
 
@@ -161,7 +163,7 @@ static bool _do_build_level()
         if (!vaults.empty())
             vaults = " (" + vaults + ")";
 
-        FILE *fp = fopen("map.dump", "w");
+        FILE *fp = fopen_u("map.dump", "w");
         fprintf(fp, "Bad (disconnected) level (%s) on %s%s.\n\n",
                 env.level_build_method.c_str(),
                 level_id::current().describe().c_str(),
@@ -210,7 +212,7 @@ static void _dungeon_places()
 
 static bool _build_dungeon()
 {
-    for (const level_id lid : generated_levels)
+    for (const level_id &lid: generated_levels)
     {
         you.where_are_you = lid.branch;
         you.depth = lid.depth;
@@ -333,7 +335,7 @@ static void _check_mapless(const level_id &lid, vector<level_id> &mapless)
 static void _write_map_stats()
 {
     const char *out_file = "mapstat.log";
-    FILE *outf = fopen(out_file, "w");
+    FILE *outf = fopen_u(out_file, "w");
     printf("Writing map stats to %s...", out_file);
     fflush(stdout);
     fprintf(outf, "Map Generation Stats\n\n");
@@ -500,9 +502,9 @@ bool mapstat_find_forced_map()
     }
 
     if (map->is_minivault())
-        you.props["force_minivault"] = map->name;
+        you.props[FORCE_MINIVAULT_KEY] = map->name;
     else
-        you.props["force_map"] = map->name;
+        you.props[FORCE_MAP_KEY] = map->name;
 
     return true;
 }

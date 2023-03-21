@@ -4,7 +4,7 @@ enum conduct_type
 {
     DID_NOTHING,
     DID_EVIL,                             // hated by good gods
-    DID_HOLY,                             // holy wrath, holy word scrolls
+    DID_HOLY,                             // holy wrath
     DID_ATTACK_HOLY,
     DID_ATTACK_NEUTRAL,
     DID_ATTACK_FRIEND,
@@ -29,14 +29,12 @@ enum conduct_type
     DID_CHAOS,                            // Zin (used chaotic weapon/magic)
     DID_DESECRATE_ORCISH_REMAINS,         // Beogh
     DID_KILL_SLIME,                       // Jiyva
-    DID_KILL_PLANT,                       // Fedhas
     DID_HASTY,                            // Cheibriados
     DID_ATTACK_IN_SANCTUARY,              // Zin
     DID_KILL_NONLIVING,
     DID_EXPLORATION,                      // Ashenzari, wrath timers
     DID_SEE_MONSTER,                      // TSO
     DID_SACRIFICE_LOVE,                   // Ru
-    DID_CHANNEL,                          // Pakellas
     DID_HURT_FOE,                         // Uskayaw
     DID_WIZARDLY_ITEM,                    // Trog
     NUM_CONDUCTS

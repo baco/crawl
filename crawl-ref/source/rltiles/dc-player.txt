@@ -2,7 +2,6 @@
 %startvalue TILE_MAIN_MAX main
 %prefix TILEP
 
-%include dc-demon.txt
 %include dc-mon.txt
 
 effect/net_trap TRAP_NET
@@ -41,21 +40,6 @@ halfling_m HALFLING
 halfling_f
 orc_f ORC
 orc_m
-%rim 0
-lorc_m0 LAVA_ORC
-lorc_f0
-lorc_m1 LAVA_ORC_HEAT
-lorc_m2
-lorc_m3
-lorc_m4
-lorc_m5
-lorc_m6
-lorc_f1
-lorc_f2
-lorc_f3
-lorc_f4
-lorc_f5
-lorc_f6
 %rim 1
 kobold_m KOBOLD
 kobold_f
@@ -73,8 +57,34 @@ naga_blue_f
 naga_blue_m
 naga_red_f
 naga_red_m
+naga_bushfire_f
+naga_bushfire_m
+naga_cave_f
+naga_cave_m
+naga_deep_f
+naga_deep_m
+naga_dune_f
+naga_dune_m
+naga_milksnake_f
+naga_milksnake_m
+naga_orange_f
+naga_orange_m
+naga_purple_f
+naga_purple_m
+naga_rattlesnake_f
+naga_rattlesnake_m
+naga_river_f
+naga_river_m
+naga_shadow_f
+naga_shadow_m
+naga_stream_f
+naga_stream_m
+naga_swamp_f
+naga_swamp_m
 ogre_m OGRE
 ogre_f
+meteoran_f METEORAN
+meteoran_m
 troll_f TROLL
 troll_m
 octopode1 OCTOPODE
@@ -85,41 +95,29 @@ octopode5
 %rim 0
 djinni_f DJINNI
 djinni_m
+djinni_blue_f
+djinni_blue_m
+djinni_gold_f
+djinni_gold_m
+djinni_purple_f
+djinni_purple_m
 %rim 1
 formicid FORMICID
 vine_stalker_f VINE_STALKER
 vine_stalker_m
 
 # draconians
-draconian_f DRACONIAN DRACONIAN_FIRST
-draconian_m
-draconian_black_f DRACONIAN_BLACK
-draconian_black_m
-draconian_gold_f DRACONIAN_GOLD
-draconian_gold_m
-draconian_gray_f DRACONIAN_GREY
-draconian_gray_m
-draconian_green_f DRACONIAN_GREEN
-draconian_green_m
-draconian_pale_f DRACONIAN_PALE
-draconian_pale_m
-draconian_purple_f DRACONIAN_PURPLE
-draconian_purple_m
-draconian_red_f DRACONIAN_RED
-draconian_red_m
-draconian_white_f DRACONIAN_WHITE
-draconian_white_m DRACONIAN_LAST
+draconian DRACONIAN DRACONIAN_FIRST
+draconian_black DRACONIAN_BLACK
+draconian_yellow DRACONIAN_YELLOW
+draconian_grey DRACONIAN_GREY
+draconian_green DRACONIAN_GREEN
+draconian_pale DRACONIAN_PALE
+draconian_purple DRACONIAN_PURPLE
+draconian_red DRACONIAN_RED
+draconian_white DRACONIAN_WHITE DRACONIAN_LAST
 
-centaur_lightgrey_f CENTAUR
-centaur_lightgrey_m
-centaur_darkgrey_f
-centaur_darkgrey_m
-centaur_darkbrown_f
-centaur_darkbrown_m
-centaur_brown_f
-centaur_brown_m
-centaur_lightbrown_f
-centaur_lightbrown_m
+armataur ARMATAUR
 demigod_f DEMIGOD
 demigod_m
 spriggan_m SPRIGGAN
@@ -148,8 +146,6 @@ merfolk_water_f MERFOLK_WATER
 merfolk_water_m
 vampire_f VAMPIRE
 vampire_m
-deep_dwarf_m DEEP_DWARF
-deep_dwarf_f
 gargoyle_m GARGOYLE
 gargoyle_f
 gargoyle_red_m
@@ -224,6 +220,7 @@ short_red SHORT_RED FIRST_NORM
 short_purple SHORT_PURPLE
 short_brown SHORT_BROWN
 short_brown2 SHORT_BROWN2
+short_blue SHORT_BLUE
 pj PJ
 middle_brown MIDDLE_BROWN
 middle_gray MIDDLE_GRAY
@@ -241,6 +238,8 @@ mesh_black MESH_BLACK
 mesh_white MESH_WHITE
 mesh_blue MESH_BLUE LAST_NORM
 spider SPIDER
+seven_league_boots SEVEN_LEAGUE_BOOTS
+slippers SLIPPERS
 
 ## Mutations
 hooves HOOVES
@@ -521,6 +520,7 @@ capt_cutlass CAPT_CUTLASS
 arc_blade ARC_BLADE
 gyre GYRE
 thermic_engine THERMIC_ENGINE
+throatcutter THROATCUTTER
 ## blunt
 wucad_mu WUCAD_MU
 mace_of_variability MACE_OF_VARIABILITY
@@ -539,11 +539,12 @@ glaive_of_prune GLAIVE_OF_PRUNE
 finisher FINISHER
 glaive_of_the_guard GLAIVE_OF_THE_GUARD
 wyrmbane WYRMBANE
+force_lance FORCE_LANCE
 rift RIFT
+lochaber_axe LOCHABER_AXE
 ## staves
 elemental_staff ELEMENTAL_STAFF
 asmodeus ASMODEUS
-dispater DISPATER
 olgreb OLGREB
 order ORDER
 battle_staff BATTLE_STAFF
@@ -551,6 +552,7 @@ battle_staff BATTLE_STAFF
 axe_trog AXE_TROG
 arga ARGA
 demon_axe DEMON_AXE
+holy_axe HOLY_AXE
 axe_of_woe AXE_OF_WOE
 frostbite FROSTBITE
 ## launchers
@@ -558,6 +560,7 @@ blowgun_assassin BLOWGUN_ASSASSIN
 punk PUNK
 sniper SNIPER
 crossbow_fire FIERY_DEVIL
+condemnation CONDEMNATION
 zephyr ZEPHYR
 sceptre_of_torment SCEPTRE_OF_TORMENT
 # start TAG_MAJOR_VERSION == 34
@@ -566,6 +569,7 @@ chilly_death CHILLY_DEATH
 crystal_spear CRYSTAL_SPEAR
 flaming_death FLAMING_DEATH
 # end TAG_MAJOR_VERSION
+skullcrusher SKULLCRUSHER
 
 %sdir player/hand1
 # blades
@@ -633,6 +637,10 @@ morningstar MORNINGSTAR
 morningstar2
 eveningstar EVENINGSTAR
 eveningstar2
+hammer HAMMER
+hammer2
+hammer_one HAMMER1
+hammer_two HAMMER2
 large_mace LARGE_MACE
 black_whip BLACK_WHIP
 sacred_scourge SACRED_SCOURGE
@@ -692,6 +700,7 @@ trishula TRISHULA
 lajatang1 LAJATANG
 lajatang2
 lajatang3
+xmas-scythe XMAS_SCYTHE
 
 ## staves
 
@@ -744,8 +753,7 @@ axe_blood AXE_BLOOD
 axe_short AXE_SHORT
 
 ## launchers
-sling HUNTING_SLING
-fustibalus FUSTIBALUS
+sling SLING
 bow BOW
 bow_two BOW2
 bow_three BOW3
@@ -831,7 +839,14 @@ tower_shield_quartered TOWER_SHIELD_QUARTERED
 tower_shield_teal TOWER_SHIELD_TEAL
 tower_shield_spiral TOWER_SHIELD_SPIRAL TOWER_SHIELD_LAST_NORM
 
+## orbs
+orb1 ORB1 ORB_FIRST
+orb2 ORB2
+orb3 ORB3 ORB_LAST
+
 ##unrand (or unique) shields
+orb_of_dispater ORB_OF_DISPATER
+
 buckler_spriggan BUCKLER_SPRIGGAN
 buckler_warlock BUCKLER_WARLOCK
 
@@ -839,6 +854,7 @@ kite_shield_donald KITE_SHIELD_DONALD
 kite_shield_bullseye KITE_SHIELD_BULLSEYE
 kite_shield_gong KITE_SHIELD_GONG
 kite_shield_of_resistance KITE_SHIELD_OF_RESISTANCE
+kite_shield_storm_queen KITE_SHIELD_STORM_QUEEN
 
 tower_shield_of_ignorance TOWER_SHIELD_OF_IGNORANCE
 tower_shield_louise TOWER_SHIELD_LOUISE
@@ -1056,6 +1072,11 @@ turban_white TURBAN_WHITE
 turban_brown TURBAN_BROWN
 turban_purple TURBAN_PURPLE HAT_LAST_NORM
 pumpkin PUMPKIN
+santa_hat SANTA
+hat_archer ARCHER
+hat_archer2 ARCHER2
+hat_explorer EXPLORER
+hat_explorer2 EXPLORER2
 
 ## Mutations
 horns1 HORNS1
@@ -1149,6 +1170,7 @@ hood_ybrown HOOD_YBROWN
 hood_green HOOD_GREEN
 ninja_black MASK_NINJA_BLACK
 hood_purple HOOD_PURPLE
+hood_assassin HOOD_ASSASSIN
 %end_ctg
 
 # draconian wings and heads, need same order as draconians
@@ -1163,17 +1185,4 @@ drcwing_pale PALE
 drcwing_purple PURPLE
 drcwing_red RED
 drcwing_white WHITE
-%end_ctg
-
-%parts_ctg DRCHEAD
-%sdir player/drchead
-drchead_brown BROWN
-drchead_black BLACK
-drchead_yellow YELLOW
-drchead_grey GREY
-drchead_green GREEN
-drchead_pale PALE
-drchead_purple PURPLE
-drchead_red RED
-drchead_white WHITE
 %end_ctg

@@ -5,12 +5,16 @@
 
 #pragma once
 
+#include <vector>
+
 #include "enum.h"
 #include "branch-type.h"
 #include "item-prop-enum.h"
 #include "player.h"
 
 #define BRANCH_NOISE_AMOUNT 6
+
+using std::vector;
 
 enum class brflag
 {
@@ -32,6 +36,9 @@ enum class branch_noise
     quiet,
     loud,
 };
+
+static const int DEFAULT_MON_DIE_SIZE = 12;
+static const int HELL_MON_DIE_SIZE = 6;
 
 struct Branch
 {
@@ -58,6 +65,7 @@ struct Branch
     int travel_shortcut;         // Which key to press for travel.
     vector<rune_type> runes;      // Contained rune(s) (if any).
     branch_noise ambient_noise; // affects noise loudness
+    int mon_die_size;           // size of the dice to roll to determine mons/floor
 };
 
 enum class branch_iterator_type
@@ -111,10 +119,13 @@ branch_type get_branch_at(const coord_def& pos);
 bool branch_is_unfinished(branch_type branch);
 
 branch_type parent_branch(branch_type branch);
-int runes_for_branch(branch_type branch);
 
 string branch_noise_desc(branch_type br);
 string branch_rune_desc(branch_type br, bool remaining_only);
 branch_type rune_location(rune_type rune);
 
 vector<branch_type> random_choose_disabled_branches();
+
+bool vaults_is_locked();
+void lock_vaults();
+void unlock_vaults();

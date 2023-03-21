@@ -150,7 +150,7 @@ public:
     // Environment state functions
     virtual void set_window_title(const char *title) = 0;
     virtual bool set_window_icon(const char* icon_name) = 0;
-    virtual tiles_key_mod get_mod_state() const = 0;
+    virtual unsigned char get_mod_state() const = 0;
     virtual void set_mod_state(tiles_key_mod mod) = 0;
     virtual void set_mouse_cursor(mouse_cursor_type id) = 0;
     virtual unsigned short get_mouse_state(int *x, int *y) const = 0;
@@ -167,7 +167,6 @@ public:
     // Event functions
     virtual int wait_event(wm_event *event, int timeout) = 0;
     virtual bool next_event_is(wm_event_type type) = 0;
-    virtual void show_keyboard() = 0;
 
     // Display functions
     virtual bool init_hidpi() = 0;

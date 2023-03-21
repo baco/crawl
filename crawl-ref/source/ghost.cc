@@ -12,6 +12,7 @@
 #include "act-iter.h"
 #include "colour.h"
 #include "database.h"
+#include "enchant-type.h"
 #include "env.h"
 #include "god-type.h"
 #include "item-name.h"
@@ -19,11 +20,14 @@
 #include "jobs.h"
 #include "mon-cast.h"
 #include "mon-transit.h"
+#include "mpr.h"
 #include "ng-input.h"
+#include "options.h"
 #include "skills.h"
 #include "spl-util.h"
 #include "state.h"
 #include "stringutil.h"
+#include "tag-version.h"
 #include "unwind.h"
 
 #define MAX_GHOST_DAMAGE     50
@@ -54,7 +58,7 @@ static spell_type search_order_conj[] =
     SPELL_QUICKSILVER_BOLT,
     SPELL_IOOD,
     SPELL_ENERGY_BOLT,
-    SPELL_DISINTEGRATE,
+    SPELL_MINDBURST,
     SPELL_BOLT_OF_FIRE,
     SPELL_BOLT_OF_COLD,
     SPELL_IRON_SHOT,
@@ -139,6 +143,7 @@ void ghost_demon::reset()
     resists          = 0;
     colour           = COLOUR_UNDEF;
     flies            = false;
+    cloud_ring_ench  = ENCH_NONE;
 }
 
 #define ADD_SPELL(which_spell) \
@@ -173,9 +178,11 @@ static attack_type _pan_lord_random_attack_type()
     attack_type attack = AT_HIT;
     if (one_chance_in(4))
     {
-        do {
+        do
+        {
             attack = static_cast<attack_type>(random_range(AT_FIRST_ATTACK, AT_LAST_REAL_ATTACK));
-        } while (attack == AT_HIT || !is_plain_attack_type(attack));
+        }
+        while (attack == AT_HIT || !is_plain_attack_type(attack));
     }
     return attack;
 }
@@ -187,13 +194,15 @@ struct attack_form
     attack_flavour flavour = AF_PLAIN;
 };
 
-static attack_form _brand_attack(brand_type brand) {
+static attack_form _brand_attack(brand_type brand)
+{
     attack_form form;
     form.brand = brand;
     return form;
 }
 
-static attack_form _flavour_attack(attack_flavour flavour) {
+static attack_form _flavour_attack(attack_flavour flavour)
+{
     attack_form form;
     form.flavour = flavour;
     return form;
@@ -214,7 +223,6 @@ void ghost_demon::set_pan_lord_special_attack()
         4, _flavour_attack(AF_DRAIN_STR),
         4, _flavour_attack(AF_DRAIN_INT),
         2, _flavour_attack(AF_DRAIN_DEX),
-        10, _flavour_attack(AF_ROT),
         10, _flavour_attack(AF_DROWN),
         // Normal chance
         20, _brand_attack(SPWPN_FLAMING),
@@ -239,7 +247,8 @@ void ghost_demon::set_pan_lord_special_attack()
 
     if (brand == SPWPN_VENOM && coinflip())
         att_type = AT_STING; // such flavour!
-    switch (att_flav) {
+    switch (att_flav)
+    {
         case AF_TRAMPLE:
             att_type = AT_TRAMPLE;
             break;
@@ -251,7 +260,36 @@ void ghost_demon::set_pan_lord_special_attack()
     }
 }
 
-void ghost_demon::init_pandemonium_lord()
+void ghost_demon::set_pan_lord_cloud_ring()
+{
+    if (brand == SPWPN_ELECTROCUTION)
+        cloud_ring_ench = ENCH_RING_OF_THUNDER;
+    else if (brand == SPWPN_FLAMING)
+        cloud_ring_ench = ENCH_RING_OF_FLAMES;
+    else if (brand == SPWPN_CHAOS)
+        cloud_ring_ench = ENCH_RING_OF_CHAOS;
+    else if (brand == SPWPN_FREEZING)
+        cloud_ring_ench = ENCH_RING_OF_ICE;
+    else if (att_flav == AF_CORRODE)
+        cloud_ring_ench = ENCH_RING_OF_ACID;
+    else if (brand == SPWPN_DRAINING)
+        cloud_ring_ench = ENCH_RING_OF_DRAINING;
+    else
+    {
+        cloud_ring_ench = random_choose_weighted(
+            20, ENCH_RING_OF_THUNDER,
+            20, ENCH_RING_OF_FLAMES,
+            20, ENCH_RING_OF_ICE,
+            10, ENCH_RING_OF_DRAINING,
+             5, ENCH_RING_OF_CHAOS,
+             5, ENCH_RING_OF_ACID,
+             5, ENCH_RING_OF_MIASMA,
+             5, ENCH_RING_OF_MUTATION);
+    }
+    dprf("This pan lord has a cloud ring ench of %d", cloud_ring_ench);
+}
+
+void ghost_demon::init_pandemonium_lord(bool friendly)
 {
     do
     {
@@ -304,7 +342,12 @@ void ghost_demon::init_pandemonium_lord()
     if (one_chance_in(3) || !spellcaster)
         set_pan_lord_special_attack();
 
-    // Non-caster demons are fast, casters may get haste.
+    // Spellcasters get a (smaller) chance of a cloud ring below. Friendly pan
+    // lords don't get cloud rings so they won't harm the player.
+    if (!friendly && !spellcaster && one_chance_in(7))
+        set_pan_lord_cloud_ring();
+
+    // Non-casters are fast, casters may get haste.
     if (!spellcaster)
         speed = 11 + roll_dice(2,4);
     else if (one_chance_in(3))
@@ -337,7 +380,11 @@ void ghost_demon::init_pandemonium_lord()
                 }
             }
             else
+            {
                 ADD_SPELL(RANDOM_ELEMENT(search_order_aoe_conj));
+                if (!friendly && one_chance_in(7))
+                    set_pan_lord_cloud_ring();
+            }
         }
 
         if (coinflip())
@@ -375,7 +422,7 @@ void ghost_demon::init_player_ghost()
 
     name   = you.your_name;
     max_hp = min(get_real_hp(false, false), MAX_GHOST_HP);
-    ev     = min(you.evasion(ev_ignore::helpless), MAX_GHOST_EVASION);
+    ev     = min(you.evasion(true), MAX_GHOST_EVASION);
     ac     = you.armour_class();
     dprf("ghost ac: %d, ev: %d", ac, ev);
 
@@ -391,7 +438,7 @@ void ghost_demon::init_player_ghost()
     // multi-level for players, boolean as an innate monster resistance
     set_resist(resists, MR_RES_STEAM, player_res_steam() ? 1 : 0);
     set_resist(resists, MR_RES_STICKY_FLAME, player_res_sticky_flame());
-    set_resist(resists, MR_RES_ROTTING, you.res_rotting());
+    set_resist(resists, MR_RES_MIASMA, you.res_miasma());
     set_resist(resists, MR_RES_PETRIFY, you.res_petrify());
 
     move_energy = 10;
@@ -437,7 +484,7 @@ void ghost_demon::init_player_ghost()
                 case STAFF_POISON: brand = SPWPN_VENOM; break;
                 case STAFF_DEATH: brand = SPWPN_PAIN; break;
                 case STAFF_AIR: brand = SPWPN_ELECTROCUTION; break;
-                case STAFF_EARTH: brand = SPWPN_VORPAL; break;
+                case STAFF_EARTH: brand = SPWPN_HEAVY; break;
                 default: ;
                 }
             }
@@ -689,27 +736,16 @@ void ghost_demon::init_dancing_weapon(const item_def& weapon, int power)
     damage = max(1, damage * power / 100);
 }
 
-void ghost_demon::init_spectral_weapon(const item_def& weapon, int power)
+void ghost_demon::init_spectral_weapon(const item_def& weapon)
 {
-    int damg = property(weapon, PWPN_DAMAGE);
-
-    if (power > 100)
-        power = 100;
-
     colour = weapon.get_colour();
-    flies = true;
-
-    // Offense and defenses all scale with power.
-    xl        = 2 + div_rand_round(power, 4);
-    damage    = damg;
-    int scale = 250 * 150 / (50 + power);
-    damage   *= scale + 125;
-    damage   /= scale;
-
+    flies  = true;
+    xl     = 15;
+    damage = property(weapon, PWPN_DAMAGE) * 4 / 3;
     speed  = 30;
-    ev     = 10 + div_rand_round(power, 10);
-    ac     = 2 + div_rand_round(power, 10);
-    max_hp = 10 + div_rand_round(power, 3);
+    ev     = 15;
+    ac     = 7;
+    max_hp = random_range(20, 30);
 }
 
 // Used when creating ghosts: goes through and finds spells for the
@@ -746,8 +782,10 @@ spell_type ghost_demon::translate_spell(spell_type spell) const
 {
     switch (spell)
     {
+#if TAG_MAJOR_VERSION == 34
     case SPELL_CONTROLLED_BLINK:
         return SPELL_BLINK;        // approximate
+#endif
     case SPELL_DRAGON_CALL:
         return SPELL_SUMMON_DRAGON;
     case SPELL_SWIFTNESS:
@@ -762,6 +800,8 @@ spell_type ghost_demon::translate_spell(spell_type spell) const
 const vector<ghost_demon> ghost_demon::find_ghosts(bool include_player)
 {
     vector<ghost_demon> gs;
+    if (Options.no_player_bones)
+        include_player = false;
 
     if (include_player && you.undead_state(false) == US_ALIVE)
     {
@@ -858,7 +898,7 @@ bool debug_check_ghost(const ghost_demon &ghost)
         return false;
     if (ghost.brand < SPWPN_NORMAL || ghost.brand > MAX_GHOST_BRAND)
         return false;
-    if (!species_type_valid(ghost.species))
+    if (!species::is_valid(ghost.species))
         return false;
     if (!job_type_valid(ghost.job))
         return false;
